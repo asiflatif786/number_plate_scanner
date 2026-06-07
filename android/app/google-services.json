@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "637283930672",
+    "project_id": "vehicle-scan-9e261",
+    "storage_bucket": "vehicle-scan-9e261.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:637283930672:android:56702dc60dd423b8f993f5",
+        "android_client_info": {
+          "package_name": "com.example.vehicle"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAOuPD9zmRdS9UF5_f6c_9-WsKwKnXivJI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
