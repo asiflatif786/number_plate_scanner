@@ -16,14 +16,6 @@ class _TransactionHistoryScreenState
   final TextEditingController _searchController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TransactionHistoryViewModel>().loadInitial();
-    });
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -32,7 +24,7 @@ class _TransactionHistoryScreenState
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => TransactionHistoryViewModel(),
+      create: (_) => TransactionHistoryViewModel()..loadInitial(),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Transaction History'),

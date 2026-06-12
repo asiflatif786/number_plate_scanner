@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/constants/route_constants.dart';
+import '../../app/routes.dart';
 import 'admin_dashboard_viewmodel.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -147,25 +147,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   icon: Icons.person_add,
                   label: 'Add Agent',
                   onTap: () => Navigator.pushNamed(
-                      context, RouteConstants.agentRegistration),
+                      context, AppRoutes.agentRegistration),
                 ),
                 _menuCard(
                   icon: Icons.people,
                   label: 'View Agents',
                   onTap: () => Navigator.pushNamed(
-                      context, RouteConstants.viewAgents),
+                      context, AppRoutes.viewAgents),
                 ),
                 _menuCard(
                   icon: Icons.receipt_long,
                   label: 'Transactions',
                   onTap: () => Navigator.pushNamed(
-                      context, RouteConstants.transactionHistory),
+                      context, AppRoutes.transactionHistory),
                 ),
                 _menuCard(
                   icon: Icons.search,
                   label: 'Search Vehicle',
                   onTap: () => Navigator.pushNamed(
-                      context, RouteConstants.vehicleSearch),
+                      context, AppRoutes.vehicleSearch),
                 ),
               ],
             ),

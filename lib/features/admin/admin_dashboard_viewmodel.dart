@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../app/routes.dart';
 import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
 
@@ -45,7 +46,7 @@ class AdminDashboardViewModel extends ChangeNotifier {
       await session.clearSession();
       AppLogger.logInfo(_tag, 'Admin logged out');
       if (!context.mounted) return;
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushReplacementNamed(context, AppRoutes.login);
     }
   }
 }

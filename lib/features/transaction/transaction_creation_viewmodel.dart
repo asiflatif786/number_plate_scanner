@@ -59,6 +59,11 @@ class TransactionCreationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearError() {
+    errorMessage = null;
+    notifyListeners();
+  }
+
   Future<void> submit(BuildContext context) async {
     isSubmitting = true;
     errorMessage = null;

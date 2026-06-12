@@ -3,7 +3,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 
 import 'app/routes.dart';
-import 'core/constants/route_constants.dart';
 import 'core/session/session_manager.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/logger.dart';
@@ -103,7 +102,7 @@ class RouteNotFoundScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => Navigator.pushReplacementNamed(context, RouteConstants.splash),
+              onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.splash),
               child: const Text('Go Home'),
             ),
           ],

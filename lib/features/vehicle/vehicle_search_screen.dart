@@ -30,16 +30,18 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      appBar: AppBar(
-        title: const Text('Vehicle Search'),
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
-      ),
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: Consumer<VehicleSearchViewModel>(
+    return ChangeNotifierProvider(
+      create: (_) => VehicleSearchViewModel(),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F6FA),
+        appBar: AppBar(
+          title: const Text('Vehicle Search'),
+          backgroundColor: const Color(0xFF1A237E),
+          foregroundColor: Colors.white,
+        ),
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Consumer<VehicleSearchViewModel>(
           builder: (context, vm, _) {
             return SingleChildScrollView(
               padding: const EdgeInsets.all(20),
@@ -63,7 +65,8 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
           },
         ),
       ),
-    );
+    ),
+   );
   }
 
   Widget _buildInfoCard() {

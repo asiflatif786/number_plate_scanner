@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../app/routes.dart';
 import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
 
@@ -53,6 +54,6 @@ class OnboardingCompleteViewModel extends ChangeNotifier {
   }
 
   void proceedToDashboard(BuildContext context) {
-    Navigator.pushReplacementNamed(context, '/agent-dashboard');
+    Navigator.pushReplacementNamed(context, AppRoutes.agentDashboard);
   }
 }

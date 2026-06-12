@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../app/routes.dart';
 import '../../core/errors/failure.dart';
 import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
@@ -484,7 +485,7 @@ class AgentRegistrationViewModel extends ChangeNotifier {
           _tag, 'Agent created — number: ${agent.agentNumber}');
 
         if (!context.mounted) return;
-        Navigator.pushReplacementNamed(context, '/terminal-profiling');
+        Navigator.pushReplacementNamed(context, AppRoutes.terminalProfiling);
       } else if (result.failure != null) {
         errorMessage = _friendlyMessage(result.failure!);
         AppLogger.logWarning(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
+import '../../app/routes.dart';
 import '../../core/errors/failure.dart';
 import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
@@ -119,9 +120,9 @@ class LoginViewModel extends ChangeNotifier {
         );
 
         if (user.isAdmin) {
-          Navigator.pushReplacementNamed(context, '/admin-dashboard');
+          Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
         } else {
-          Navigator.pushReplacementNamed(context, '/agent-dashboard');
+          Navigator.pushReplacementNamed(context, AppRoutes.agentDashboard);
         }
       } else if (result.failure != null) {
         errorMessage = _friendlyMessage(result.failure!);

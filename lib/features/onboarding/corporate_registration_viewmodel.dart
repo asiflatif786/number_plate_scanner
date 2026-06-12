@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/routes.dart';
 import '../../core/errors/failure.dart';
 import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
@@ -189,7 +190,7 @@ class CorporateRegistrationViewModel extends ChangeNotifier {
 
     try {
       final payload = {
-        'company_name': name,
+        'name': name,
         'rc_number': rcNumber,
         'tin': tin,
         'email': email,
@@ -217,7 +218,7 @@ class CorporateRegistrationViewModel extends ChangeNotifier {
         );
 
         if (!context.mounted) return;
-        Navigator.pushReplacementNamed(context, '/agent-registration');
+        Navigator.pushReplacementNamed(context, AppRoutes.agentRegistration);
       } else if (result.failure != null) {
         errorMessage = _friendlyMessage(result.failure!);
         AppLogger.logWarning(_tag, 'Create company failed: ${result.failure!.message}');

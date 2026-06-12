@@ -15,23 +15,13 @@ class PaymentProcessingScreen extends StatefulWidget {
 class _PaymentProcessingScreenState
     extends State<PaymentProcessingScreen> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context
-          .read<PaymentProcessingViewModel>()
-          .init();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final transaction =
         ModalRoute.of(context)!.settings.arguments as TransactionModel;
 
     return ChangeNotifierProvider(
       create: (_) => PaymentProcessingViewModel(
-          pendingTransaction: transaction),
+          pendingTransaction: transaction)..init(),
       child: Consumer<PaymentProcessingViewModel>(
         builder: (context, vm, _) {
           final isProcessing =

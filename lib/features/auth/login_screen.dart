@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/constants/route_constants.dart';
+import '../../app/routes.dart';
 import 'login_viewmodel.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -332,7 +332,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         GestureDetector(
           onTap: () =>
-              Navigator.pushReplacementNamed(context, RouteConstants.corporateRegistration),
+              Navigator.pushReplacementNamed(context, AppRoutes.corporateRegistration),
           child: const Text(
             'Register Here',
             style: TextStyle(

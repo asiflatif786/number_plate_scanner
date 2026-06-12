@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/routes.dart';
 import '../../core/errors/failure.dart';
 import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
@@ -102,7 +103,7 @@ class TerminalProfilingViewModel extends ChangeNotifier {
             _tag, 'Terminal linked — ID: $terminalId, Serial: $serial');
 
         if (!context.mounted) return;
-        Navigator.pushReplacementNamed(context, '/onboarding-complete');
+        Navigator.pushReplacementNamed(context, AppRoutes.onboardingComplete);
       } else if (result.failure != null) {
         errorMessage = _friendlyMessage(result.failure!);
         AppLogger.logWarning(
@@ -137,7 +138,7 @@ class TerminalProfilingViewModel extends ChangeNotifier {
               await session.clearSession();
               if (!context.mounted) return;
               Navigator.pushReplacementNamed(
-                  context, '/corporate-registration');
+                  context, AppRoutes.corporateRegistration);
             },
             child: const Text('Restart'),
           ),

@@ -500,8 +500,7 @@ class _TransactionCreationBody extends StatelessWidget {
             ),
             InkWell(
               onTap: () {
-                vm.errorMessage = null;
-                vm.notifyListeners();
+                vm.clearError();
               },
               child: Icon(Icons.close, size: 18, color: Colors.red.shade400),
             ),
