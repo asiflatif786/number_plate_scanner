@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/routes.dart';
+import '../../core/utils/logger.dart';
 import '../../data/models/lga_model.dart';
 import '../../data/models/state_model.dart';
 import '../../data/models/transaction_draft_model.dart';
@@ -8,10 +9,13 @@ import '../../data/models/vehicle_model.dart';
 import '../../data/repositories/location_repository.dart';
 
 class VehicleRegistrationViewModel extends ChangeNotifier {
+  static const String _tag = 'VehRegVM';
+
   final VehicleModel vehicle;
   final LocationRepository _repository = LocationRepository();
 
   VehicleRegistrationViewModel({required this.vehicle}) {
+    AppLogger.logDebug(_tag, 'Init for ${vehicle.vehicleLicense}');
     loadStates();
   }
 
@@ -37,12 +41,14 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
+    AppLogger.logInfo(_tag, 'Loading states...');
     final result = await _repository.getStates();
     if (result.success) {
       states = result.data ?? [];
+      AppLogger.logInfo(_tag, 'Loaded ${states.length} states');
     } else {
-      final failure = result.failure!;
-      errorMessage = _mapFailureMessage(failure.runtimeType.toString());
+      AppLogger.logWarning(_tag, 'Failed to load states: ${result.failure?.message}');
+      errorMessage = _mapFailureMessage(result.failure!.runtimeType.toString());
     }
     isLoadingStates = false;
     notifyListeners();
@@ -54,6 +60,7 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
     originLgas = [];
     notifyListeners();
     if (state != null) {
+      AppLogger.logDebug(_tag, 'Origin state: ${state.stateName}');
       _loadOriginLgas(state.stateId);
     }
   }
@@ -68,10 +75,13 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
+    AppLogger.logInfo(_tag, 'Loading origin LGAs for state $stateId');
     final result = await _repository.getLgas(stateId);
     if (result.success) {
       originLgas = result.data ?? [];
+      AppLogger.logInfo(_tag, 'Loaded ${originLgas.length} origin LGAs');
     } else {
+      AppLogger.logWarning(_tag, 'Failed origin LGAs: ${result.failure?.message}');
       errorMessage = _mapFailureMessage(result.failure!.runtimeType.toString());
     }
     isLoadingOriginLgas = false;
@@ -80,6 +90,7 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
 
   void onOriginLgaChanged(LgaModel? lga) {
     selectedOriginLga = lga;
+    if (lga != null) AppLogger.logDebug(_tag, 'Origin LGA: ${lga.lgaName}');
     notifyListeners();
   }
 
@@ -89,6 +100,7 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
     destinationLgas = [];
     notifyListeners();
     if (state != null) {
+      AppLogger.logDebug(_tag, 'Dest state: ${state.stateName}');
       _loadDestinationLgas(state.stateId);
     }
   }
@@ -98,10 +110,13 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
+    AppLogger.logInfo(_tag, 'Loading dest LGAs for state $stateId');
     final result = await _repository.getLgas(stateId);
     if (result.success) {
       destinationLgas = result.data ?? [];
+      AppLogger.logInfo(_tag, 'Loaded ${destinationLgas.length} dest LGAs');
     } else {
+      AppLogger.logWarning(_tag, 'Failed dest LGAs: ${result.failure?.message}');
       errorMessage = _mapFailureMessage(result.failure!.runtimeType.toString());
     }
     isLoadingDestinationLgas = false;
@@ -110,6 +125,7 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
 
   void onDestinationLgaChanged(LgaModel? lga) {
     selectedDestinationLga = lga;
+    if (lga != null) AppLogger.logDebug(_tag, 'Dest LGA: ${lga.lgaName}');
     notifyListeners();
   }
 
@@ -152,8 +168,13 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
       payerEmail: 'customer@tms.ng',
     );
 
+    AppLogger.logInfo(_tag, 'Submitting draft: ${vehicle.vehicleLicense} → '
+        '${selectedOriginState!.stateName}/${selectedOriginLga!.lgaName} '
+        '→ ${selectedDestinationState!.stateName}/${selectedDestinationLga!.lgaName}');
+
     Navigator.pushNamed(context, AppRoutes.transactionCreation, arguments: draft)
         .then((_) {
+      AppLogger.logDebug(_tag, 'Returned from creation screen');
       isSubmitting = false;
       notifyListeners();
     });

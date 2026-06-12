@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../app/routes.dart';
+import '../../core/utils/logger.dart';
 import '../../data/local/transaction_log_store.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/repositories/transaction_repository.dart';
 
 class TransactionHistoryViewModel extends ChangeNotifier {
+  static const String _tag = 'TxHistVM';
+
   final TransactionRepository _repository = TransactionRepository();
   final TransactionLogStore _logStore = TransactionLogStore();
 
@@ -26,8 +29,10 @@ class TransactionHistoryViewModel extends ChangeNotifier {
 
     try {
       allTransactions = await _logStore.getAll();
+      AppLogger.logInfo(_tag, 'Loaded ${allTransactions.length} from local log');
       _applyFilters();
-    } catch (_) {
+    } catch (e) {
+      AppLogger.logWarning(_tag, 'Load error: $e');
       errorMessage = 'Failed to load transaction history';
       allTransactions = [];
       filteredTransactions = [];
@@ -38,6 +43,7 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    AppLogger.logDebug(_tag, 'Refresh');
     await loadInitial();
   }
 
@@ -71,16 +77,19 @@ class TransactionHistoryViewModel extends ChangeNotifier {
       }).toList();
     }
 
+    AppLogger.logDebug(_tag, 'Filters: status=$selectedStatus, search="$searchQuery" → ${result.length} results');
     filteredTransactions = result;
     notifyListeners();
   }
 
   void onStatusFilterChanged(String? status) {
+    AppLogger.logDebug(_tag, 'Status filter: $status');
     selectedStatus = status;
     _applyFilters();
   }
 
   void onDateRangeChanged(DateTime? start, DateTime? end) {
+    AppLogger.logDebug(_tag, 'Date range: ${start?.toIso8601String()} ~ ${end?.toIso8601String()}');
     startDate = start;
     endDate = end;
     _applyFilters();
@@ -92,6 +101,7 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   }
 
   void clearFilters() {
+    AppLogger.logDebug(_tag, 'Clear filters');
     selectedStatus = null;
     startDate = null;
     endDate = null;
@@ -101,6 +111,7 @@ class TransactionHistoryViewModel extends ChangeNotifier {
 
   void onTransactionTapped(
       BuildContext context, TransactionModel transaction) {
+    AppLogger.logDebug(_tag, '→ detail: ${transaction.transactionReference}');
     Navigator.pushNamed(
       context,
       AppRoutes.transactionDetail,
@@ -110,6 +121,7 @@ class TransactionHistoryViewModel extends ChangeNotifier {
 
   Future<void> verifyStatus(
       BuildContext context, TransactionModel transaction) async {
+    AppLogger.logInfo(_tag, 'Verify: ${transaction.transactionReference}');
     final result = await _repository
         .verifyTransaction(transaction.transactionReference);
 
@@ -117,9 +129,11 @@ class TransactionHistoryViewModel extends ChangeNotifier {
 
     if (result.success && result.data != null) {
       final v = result.data!;
+      AppLogger.logInfo(_tag, 'Verify result: ${v.status} (was ${transaction.status})');
       if (v.status != transaction.status) {
         await _logStore.updateStatus(
             transaction.transactionReference, v.status);
+        AppLogger.logDebug(_tag, 'Status updated in log');
         await loadInitial();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -134,6 +148,7 @@ class TransactionHistoryViewModel extends ChangeNotifier {
         );
       }
     } else {
+      AppLogger.logWarning(_tag, 'Verify failed');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text(

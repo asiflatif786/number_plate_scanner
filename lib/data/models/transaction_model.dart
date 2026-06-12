@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/utils/logger.dart';
 import 'transaction_draft_model.dart';
 
 class TransactionModel {
+  static const String _tag = 'TxModel';
   final String transactionReference;
   final String? transactionId;
   final String customerName;
@@ -82,6 +84,7 @@ class TransactionModel {
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
     final details = json['transaction_details'] as Map<String, dynamic>? ?? {};
+    AppLogger.logDebug(_tag, 'fromJson: ref=${json['transaction_reference']} status=${json['status']}');
     return TransactionModel(
       transactionReference:
           json['transaction_reference'] as String? ?? '',
@@ -119,9 +122,11 @@ class TransactionModel {
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
 
+    final ref = responseData['transaction_reference'] as String? ?? '';
+    AppLogger.logInfo(_tag, 'fromDraftAndResponse: ref=$ref plate=${draft.vehicle.vehicleLicense}');
+
     return TransactionModel(
-      transactionReference:
-          responseData['transaction_reference'] as String? ?? '',
+      transactionReference: ref,
       status: (responseData['status'] as String? ?? 'pending').toLowerCase(),
       totalAmount: _parseDouble(details['total']),
       customerName: draft.vehicle.customerName,

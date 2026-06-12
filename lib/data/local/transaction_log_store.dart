@@ -1,20 +1,24 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/utils/logger.dart';
 import '../models/transaction_model.dart';
 
 class TransactionLogStore {
+  static const String _tag = 'TxLogStore';
   static const String _key = 'transaction_log';
   static const int _maxEntries = 200;
 
   Future<void> saveTransaction(TransactionModel transaction) async {
+    AppLogger.logInfo(_tag, 'Saving: ${transaction.transactionReference}');
     final prefs = await SharedPreferences.getInstance();
     final existing = _decodeList(prefs.getString(_key));
     existing.insert(0, transaction);
     if (existing.length > _maxEntries) {
       existing.removeRange(_maxEntries, existing.length);
     }
-    await prefs.setString(
-        _key, jsonEncode(existing.map((e) => e.toJson()).toList()));
+    final encoded = jsonEncode(existing.map((e) => e.toJson()).toList());
+    await prefs.setString(_key, encoded);
+    AppLogger.logDebug(_tag, 'Saved. Log size=${existing.length}');
   }
 
   Future<List<TransactionModel>> getAll() async {
@@ -22,14 +26,18 @@ class TransactionLogStore {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_key);
       if (raw == null) return [];
-      return _decodeList(raw);
-    } catch (_) {
+      final list = _decodeList(raw);
+      AppLogger.logDebug(_tag, 'getAll: ${list.length} entries');
+      return list;
+    } catch (e) {
+      AppLogger.logWarning(_tag, 'getAll error: $e');
       return [];
     }
   }
 
   Future<void> updateStatus(
       String transactionReference, String newStatus) async {
+    AppLogger.logInfo(_tag, 'Update status $transactionReference → $newStatus');
     final prefs = await SharedPreferences.getInstance();
     final list = _decodeList(prefs.getString(_key));
     bool found = false;
@@ -43,10 +51,14 @@ class TransactionLogStore {
     if (found) {
       await prefs.setString(
           _key, jsonEncode(list.map((e) => e.toJson()).toList()));
+      AppLogger.logDebug(_tag, 'Status updated in log');
+    } else {
+      AppLogger.logWarning(_tag, 'Ref not found in log');
     }
   }
 
   Future<void> clear() async {
+    AppLogger.logDebug(_tag, 'Clear all');
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_key);
   }

@@ -3,15 +3,20 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app/routes.dart';
+import '../../core/utils/logger.dart';
 import '../../data/models/transaction_model.dart';
 
 class TransactionSuccessViewModel extends ChangeNotifier {
+  static const String _tag = 'TxSuccessVM';
+
   final TransactionModel transaction;
 
   bool isCopied = false;
   bool isSharing = false;
 
-  TransactionSuccessViewModel({required this.transaction});
+  TransactionSuccessViewModel({required this.transaction}) {
+    AppLogger.logInfo(_tag, 'Showing receipt: ${transaction.transactionReference} (${transaction.status})');
+  }
 
   String _buildReceiptText() {
     final t = transaction;
@@ -64,6 +69,7 @@ class TransactionSuccessViewModel extends ChangeNotifier {
     try {
       await Clipboard.setData(ClipboardData(text: _buildReceiptText()));
       isCopied = true;
+      AppLogger.logDebug(_tag, 'Receipt copied');
       notifyListeners();
       await Future.delayed(const Duration(milliseconds: 2500));
       isCopied = false;
@@ -75,6 +81,7 @@ class TransactionSuccessViewModel extends ChangeNotifier {
     try {
       isSharing = true;
       notifyListeners();
+      AppLogger.logDebug(_tag, 'Sharing receipt');
       await Share.share(
         _buildReceiptText(),
         subject:
@@ -86,6 +93,7 @@ class TransactionSuccessViewModel extends ChangeNotifier {
   }
 
   void newTransaction(BuildContext context) {
+    AppLogger.logDebug(_tag, '→ new transaction');
     Navigator.pushNamedAndRemoveUntil(
       context,
       AppRoutes.vehicleSearch,
@@ -94,6 +102,7 @@ class TransactionSuccessViewModel extends ChangeNotifier {
   }
 
   void goToDashboard(BuildContext context) {
+    AppLogger.logDebug(_tag, '→ dashboard');
     Navigator.pushNamedAndRemoveUntil(
       context,
       AppRoutes.agentDashboard,

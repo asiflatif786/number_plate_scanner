@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../app/routes.dart';
+import '../../core/utils/logger.dart';
 import '../../data/models/transaction_draft_model.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../core/session/session_manager.dart';
 
 class TransactionCreationViewModel extends ChangeNotifier {
+  static const String _tag = 'TxCreateVM';
+
   final TransactionDraftModel draft;
   final TransactionRepository _repository = TransactionRepository();
   final TextEditingController payerNameController;
@@ -18,7 +21,9 @@ class TransactionCreationViewModel extends ChangeNotifier {
                 ? draft.vehicle.customerName
                 : ''),
         payerPhoneController = TextEditingController(
-            text: draft.vehicle.phoneNumber ?? '');
+            text: draft.vehicle.phoneNumber ?? '') {
+    AppLogger.logDebug(_tag, 'Init: ${draft.vehicle.vehicleLicense}');
+  }
 
   String selectedPaymentMethod = 'card';
   bool isSubmitting = false;
@@ -49,6 +54,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
   ];
 
   void onPaymentMethodChanged(String method) {
+    AppLogger.logDebug(_tag, 'Payment method: $method');
     selectedPaymentMethod = method;
     notifyListeners();
   }
@@ -58,11 +64,14 @@ class TransactionCreationViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
+    AppLogger.logInfo(_tag, 'Submitting: ${draft.vehicle.vehicleLicense}, method=$selectedPaymentMethod');
+
     final session = await SessionManager.instance;
     final agentNumber = session.agentNumber;
     final terminalId = session.terminalId;
 
     if (agentNumber == null || agentNumber.isEmpty) {
+      AppLogger.logWarning(_tag, 'Session error – missing agent number');
       errorMessage =
           'Session error. Agent number missing. Please restart.';
       isSubmitting = false;
@@ -80,6 +89,8 @@ class TransactionCreationViewModel extends ChangeNotifier {
     );
 
     if (result.success && result.data != null) {
+      AppLogger.logInfo(_tag, 'Created: ${result.data!['transaction_reference']}');
+
       final pendingTransaction =
           TransactionModel.fromDraftAndResponse(
         draft,
@@ -98,6 +109,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
         arguments: pendingTransaction,
       );
     } else {
+      AppLogger.logWarning(_tag, 'Creation failed: ${result.failure?.message}');
       errorMessage = _mapFailureMessage(result.failure!.message);
       isSubmitting = false;
       notifyListeners();
