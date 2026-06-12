@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'scanner_view.dart';
+import 'features/vehicle/scanner_view.dart';
 import 'login_screen.dart';
 
 class AgentDashboard extends StatelessWidget {

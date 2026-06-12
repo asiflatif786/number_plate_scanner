@@ -1,4 +1,4 @@
-abstract class Failure {
+sealed class Failure {
   final String message;
   const Failure(this.message);
 }
@@ -21,6 +21,10 @@ class NotFoundFailure extends Failure {
 
 class DuplicateFailure extends Failure {
   const DuplicateFailure(super.message);
+}
+
+class TimeoutFailure extends Failure {
+  const TimeoutFailure(super.message);
 }
 
 class UnknownFailure extends Failure {

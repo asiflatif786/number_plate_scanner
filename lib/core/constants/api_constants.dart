@@ -1,44 +1,33 @@
 class ApiConstants {
-  static const String baseUrl = 'https://tmsdev.cyber1apps.com';
-  static const String apiKey = 'GJU3DCRTYDPTBL18';
-  static const String channelNumber = 'CH84693954642';
-  static const String serviceNumber = 'S13401182324';
+  ApiConstants._();
 
-  // Corporate
-  static const String createCompany = '/api/corporate/create-company';
-  static const String getCompany = '/api/corporate/get-company';
-  static const String getCompanyStatus = '/api/corporate/get-company-status';
-  static const String getCompanyKycStatus = '/api/corporate/get-company-kycstatus';
+  static const String baseUrl = 'https://tms-local-api.justerrand.ie/api/api_data';
+  static const String apiKey = 'YOUR_API_KEY_HERE';
 
-  // Agent
-  static const String addAgent = '/api/agent/add-agent';
-  static const String getAgent = '/api/agent/get-agent';
-  static const String getAgentStatus = '/api/agent/get-agent-status';
-  static const String listAgents = '/api/agent/list-agents';
-  static const String assignAgentToCompany = '/api/agent/assign-agent-to-company';
+  static const Duration timeout = Duration(seconds: 30);
 
-  // Terminal
-  static const String createTerminal = '/api/terminal/create-terminal-profile';
-  static const String assignTerminal = '/api/terminal/assign-terminal';
-  static const String getTerminalProfile = '/api/terminal/getterminalprofile';
-  static const String terminalStatus = '/api/terminal/terminal-status';
-  static const String enableDisableTerminal = '/api/terminal/enable-disableterminal';
+  static const String actionCreateCompany = 'create-company';
+  static const String actionAddAgent = 'add-agent';
+  static const String actionCreateTerminal = 'create-terminal';
+  static const String actionValidateCustomer = 'validate-customer';
+  static const String actionCreateTransaction = 'create-transaction';
+  static const String actionApproveTransaction = 'approve-transaction';
+  static const String actionDeclineTransaction = 'decline-transaction';
+  static const String actionVerifyTransaction = 'verify-transaction';
+  static const String actionGetStates = 'get-states';
+  static const String actionGetLgas = 'get-lgas';
+  static const String actionLogin = 'login';
 
-  // Validation
-  static const String validateCustomer = '/api/validation/validate-customer';
-  static const String registerVehicle = '/api/vehicle/register-vehicle';
+  static const String paymentMethodCard = 'card';
+  static const String paymentMethodWallet = 'wallet';
+  static const String paymentMethodTransfer = 'transfer';
 
-  // Transaction
-  static const String createTransaction = '/api/transaction/create-transaction';
-  static const String approveTransaction = '/api/transaction/approve-transaction';
-  static const String declineTransaction = '/api/transaction/decline-transaction';
-  static const String verifyTransaction = '/api/transaction/verify-transaction';
-  static const String listTransactions = '/api/transaction/listtransactions';
-  static const String abandonTransaction = '/api/transaction/abandon-transaction';
+  static const String transactionTypeSingle = 'single';
+  static const String transactionTypeComplete = 'complete';
 
-  // Enums
-  static const String getTitles = '/api/enum/get-title';
-  static const String getIdentityTypes = '/api/enum/get-identity-type';
-  static const String getStates = '/api/state/get-states';
-  static const String getLgas = '/api/state/get-lgas';
+  static List<String> get paymentMethods =>
+      [paymentMethodCard, paymentMethodWallet, paymentMethodTransfer];
+
+  static List<String> get transactionTypes =>
+      [transactionTypeSingle, transactionTypeComplete];
 }
