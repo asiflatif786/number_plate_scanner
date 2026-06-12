@@ -31,45 +31,7 @@ class NetworkClient {
     String endpoint, {
     Map<String, String>? queryParams,
   }) async {
-    final isConnected = await ConnectivityHelper.isConnected();
-    if (!isConnected) {
-      AppLogger.error(_tag, 'No internet connection');
-      throw const NetworkFailure(
-        'No internet connection. Please check your network.',
-      );
-    }
-
-    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint').replace(
-      queryParameters: queryParams,
-    );
-    final headers = _buildHeaders();
-    final stopwatch = Stopwatch()..start();
-
-    RequestLogger.logRequest(
-      method: 'GET',
-      url: uri.toString(),
-      headers: headers,
-    );
-
-    try {
-      final response = await _client
-          .get(uri, headers: headers)
-          .timeout(const Duration(seconds: 30));
-
-      stopwatch.stop();
-      final body = _parseBody(response);
-      RequestLogger.logResponse(
-        url: uri.toString(),
-        statusCode: response.statusCode,
-        body: body,
-        durationMs: stopwatch.elapsedMilliseconds,
-      );
-
-      return _handleResponse(response);
-    } catch (e) {
-      stopwatch.stop();
-      throw ExceptionHandler.handle(e, _tag);
-    }
+    return post(endpoint, body: queryParams ?? {});
   }
 
   Future<Map<String, dynamic>> post(
@@ -84,15 +46,21 @@ class NetworkClient {
       );
     }
 
-    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final uri = Uri.parse(ApiConstants.baseUrl);
     final headers = _buildHeaders();
     final stopwatch = Stopwatch()..start();
+
+    final requestBody = {
+      'key': ApiConstants.apiKey,
+      'action': endpoint,
+      ...body,
+    };
 
     RequestLogger.logRequest(
       method: 'POST',
       url: uri.toString(),
       headers: headers,
-      body: body,
+      body: requestBody,
     );
 
     try {
@@ -100,7 +68,7 @@ class NetworkClient {
           .post(
             uri,
             headers: headers,
-            body: jsonEncode(body),
+            body: jsonEncode(requestBody),
           )
           .timeout(const Duration(seconds: 30));
 
@@ -124,48 +92,7 @@ class NetworkClient {
     String endpoint, {
     required Map<String, dynamic> body,
   }) async {
-    final isConnected = await ConnectivityHelper.isConnected();
-    if (!isConnected) {
-      AppLogger.error(_tag, 'No internet connection');
-      throw const NetworkFailure(
-        'No internet connection. Please check your network.',
-      );
-    }
-
-    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
-    final headers = _buildHeaders();
-    final stopwatch = Stopwatch()..start();
-
-    RequestLogger.logRequest(
-      method: 'PUT',
-      url: uri.toString(),
-      headers: headers,
-      body: body,
-    );
-
-    try {
-      final response = await _client
-          .put(
-            uri,
-            headers: headers,
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      stopwatch.stop();
-      final responseBody = _parseBody(response);
-      RequestLogger.logResponse(
-        url: uri.toString(),
-        statusCode: response.statusCode,
-        body: responseBody,
-        durationMs: stopwatch.elapsedMilliseconds,
-      );
-
-      return _handleResponse(response);
-    } catch (e) {
-      stopwatch.stop();
-      throw ExceptionHandler.handle(e, _tag);
-    }
+    return post(endpoint, body: body);
   }
 
   Map<String, dynamic> _handleResponse(http.Response response) {

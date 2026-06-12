@@ -9,11 +9,12 @@ class TransactionLogStore {
   Future<void> saveTransaction(TransactionModel transaction) async {
     final prefs = await SharedPreferences.getInstance();
     final existing = _decodeList(prefs.getString(_key));
-    existing.insert(0, transaction.toJson());
+    existing.insert(0, transaction);
     if (existing.length > _maxEntries) {
       existing.removeRange(_maxEntries, existing.length);
     }
-    await prefs.setString(_key, jsonEncode(existing));
+    await prefs.setString(
+        _key, jsonEncode(existing.map((e) => e.toJson()).toList()));
   }
 
   Future<List<TransactionModel>> getAll() async {
@@ -54,8 +55,7 @@ class TransactionLogStore {
     if (raw == null) return [];
     final List<dynamic> decoded = jsonDecode(raw);
     return decoded
-        .map((e) =>
-            TransactionModel.fromJson(e as Map<String, dynamic>))
+        .map((e) => TransactionModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 }

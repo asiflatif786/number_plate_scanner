@@ -16,13 +16,13 @@ class AgentRepositoryImpl implements AgentRepository {
 
   @override
   Future<String> registerAgent(AgentEntity agent) async {
-    AppLogger.info(_tag,
-        'Registering agent: ${agent.firstName} ${agent.lastName}');
+    AppLogger.info(
+        _tag, 'Registering agent: ${agent.firstName} ${agent.lastName}');
 
     try {
       final json = AgentModel.toJson(agent);
       final response = await _networkClient.post(
-        ApiConstants.addAgent,
+        ApiConstants.actionAddAgent,
         body: json,
       );
 
@@ -48,7 +48,7 @@ class AgentRepositoryImpl implements AgentRepository {
 
     try {
       final response = await _networkClient.get(
-        ApiConstants.getAgent,
+        ApiConstants.actionGetAgentDetails,
         queryParams: {'agent_number': agentNumber},
       );
 
@@ -66,7 +66,7 @@ class AgentRepositoryImpl implements AgentRepository {
 
     try {
       final response = await _networkClient.get(
-        ApiConstants.getAgentStatus,
+        ApiConstants.actionGetAgentStatus,
         queryParams: {'agent_number': agentNumber},
       );
 
@@ -85,12 +85,12 @@ class AgentRepositoryImpl implements AgentRepository {
   @override
   Future<void> assignAgentToCompany(
       String companyNumber, String agentNumber) async {
-    AppLogger.info(_tag,
-        'Assigning agent $agentNumber to company $companyNumber');
+    AppLogger.info(
+        _tag, 'Assigning agent $agentNumber to company $companyNumber');
 
     try {
       await _networkClient.put(
-        ApiConstants.assignAgentToCompany,
+        ApiConstants.actionAssignAgentToCompany,
         body: {
           'company_number': companyNumber,
           'agent_number': agentNumber,
