@@ -7,6 +7,7 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/utils/logger.dart';
+import '../../core/utils/plate_extractor.dart';
 
 class ScannerViewModel extends ChangeNotifier {
   static const String _tag = 'ScannerVM';
@@ -167,22 +168,7 @@ class ScannerViewModel extends ChangeNotifier {
   }
 
   String? _extractLicensePlate(String rawText) {
-    final cleaned = rawText
-        .replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
-        .toUpperCase();
-    final pattern = RegExp(r'[A-Z]{3}\d{2,3}[A-Z]{2}');
-    final match = pattern.firstMatch(cleaned);
-    if (match != null) return match.group(0);
-
-    final words = rawText.toUpperCase().split(RegExp(r'[\s,]+'));
-    for (final word in words) {
-      final cleanedWord = word.replaceAll(RegExp(r'[^A-Z0-9]'), '');
-      if (pattern.hasMatch(cleanedWord)) {
-        return pattern.firstMatch(cleanedWord)!.group(0);
-      }
-    }
-
-    return null;
+    return PlateExtractor.extractPlate(rawText);
   }
 
   Future<void> toggleTorch() async {

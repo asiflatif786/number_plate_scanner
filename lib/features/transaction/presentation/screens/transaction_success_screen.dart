@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/utils/responsive_helper.dart';
 import '../../domain/entities/transaction_entity.dart';
+import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/detail_row.dart';
+import '../../../../core/widgets/section_header.dart';
 
 class TransactionSuccessScreen extends StatefulWidget {
   final TransactionEntity transaction;
@@ -127,66 +130,59 @@ class _TransactionSuccessScreenState extends State<TransactionSuccessScreen>
   }
 
   Widget _buildReceiptCard(TransactionEntity txn) {
-    final cardContent = Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.receipt_long,
-                  size: 20, color: Color(0xFF1A237E)),
-              SizedBox(width: 8),
-              Text(
-                'Payment Receipt',
-                style: TextStyle(
-                  fontSize: 16,
+    final cardContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: 'Payment Receipt', fontSize: 16.0),
+        const Divider(height: 24),
+        DetailRow(label: 'Reference', value: txn.transactionRef),
+        DetailRow(
+            label: 'License Plate', value: txn.vehicleLicense),
+        DetailRow(label: 'Vehicle Type', value: txn.vehicleType),
+        DetailRow(
+            label: 'Payer',
+            value: '${txn.payerFirstName} ${txn.payerLastName}'),
+        DetailRow(label: 'Phone', value: txn.payerPhone),
+        DetailRow(
+            label: 'Payment Method',
+            value: txn.paymentMethod.toUpperCase()),
+        DetailRow(
+          label: 'Trip Type',
+          value: txn.transactionType == 'complete'
+              ? 'Complete Trip'
+              : 'Single Trip',
+        ),
+        const Divider(height: 16),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(
+              width: 110,
+              child: Text('Total Paid',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF757575))),
+            ),
+            Expanded(
+              child: Text(
+                CurrencyFormatter.format(txn.totalAmount),
+                style: const TextStyle(
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A237E),
+                  color: Color(0xFF2E7D32),
                 ),
               ),
-            ],
-          ),
-          const Divider(height: 24),
-          _buildReceiptRow('Reference', txn.transactionRef),
-          const SizedBox(height: 8),
-          _buildReceiptRow(
-              'License Plate', txn.vehicleLicense),
-          const SizedBox(height: 8),
-          _buildReceiptRow('Vehicle Type', txn.vehicleType),
-          const SizedBox(height: 8),
-          _buildReceiptRow(
-              'Payer', '${txn.payerFirstName} ${txn.payerLastName}'),
-          const SizedBox(height: 8),
-          _buildReceiptRow('Phone', txn.payerPhone),
-          const SizedBox(height: 8),
-          _buildReceiptRow(
-              'Payment Method', txn.paymentMethod.toUpperCase()),
-          const SizedBox(height: 8),
-          _buildReceiptRow(
-              'Trip Type',
-              txn.transactionType == 'complete'
-                  ? 'Complete Trip'
-                  : 'Single Trip'),
-          const Divider(height: 16),
-          _buildReceiptRow(
-            'Total Paid',
-            CurrencyFormatter.format(txn.totalAmount),
-            isBold: true,
-            color: const Color(0xFF2E7D32),
-          ),
-          if (txn.createdAt != null) ...[
-            const Divider(height: 16),
-            _buildReceiptRow('Date', txn.createdAt!),
+            ),
           ],
+        ),
+        if (txn.createdAt != null) ...[
+          const Divider(height: 16),
+          DetailRow(label: 'Date', value: txn.createdAt!),
         ],
-      ),
+      ],
     );
-    final card = Card(
+    final card = AppCard(
       elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      borderRadius: 16,
+      padding: const EdgeInsets.all(20),
       child: cardContent,
     );
     if (ResponsiveHelper.isTablet(context)) {
@@ -200,57 +196,17 @@ class _TransactionSuccessScreenState extends State<TransactionSuccessScreen>
     return card;
   }
 
-  Widget _buildReceiptRow(
-    String label,
-    String value, {
-    bool isBold = false,
-    Color? color,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 110,
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF757575)),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-              color: color ?? const Color(0xFF212121),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildDoneButton() {
-    final button = SizedBox(
-      width: double.infinity,
+    final button = AppButton(
+      label: 'Done',
+      onPressed: () {
+        Navigator.popUntil(context, (route) => route.isFirst);
+      },
+      icon: Icons.home,
+      color: const Color(0xFF1A237E),
+      textColor: Colors.white,
       height: ResponsiveHelper.buttonHeight(context),
-      child: ElevatedButton.icon(
-        onPressed: () {
-          Navigator.popUntil(context, (route) => route.isFirst);
-        },
-        icon: const Icon(Icons.home, color: Colors.white),
-        label: const Text(
-          'Done',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A237E),
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-          ),
-        ),
-      ),
+      fontSize: 16,
     );
     if (ResponsiveHelper.isTablet(context)) {
       return Center(

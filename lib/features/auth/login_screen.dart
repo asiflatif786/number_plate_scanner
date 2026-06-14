@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/routes.dart';
+import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_text_field.dart';
 import 'login_viewmodel.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,6 +15,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
 
   @override
   void initState() {
@@ -28,7 +32,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    // controllers disposed by viewmodel
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -212,11 +217,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildEmailField(LoginViewModel vm) {
-    return TextFormField(
+    return AppTextField(
+      label: 'Email Address',
       controller: vm.emailController,
       keyboardType: TextInputType.emailAddress,
       textInputAction: TextInputAction.next,
-      decoration: _inputDeco('Email Address', Icons.email_outlined),
+      prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF1A237E)),
       validator: (v) {
         if (v == null || v.trim().isEmpty) return 'Email address is required';
         final regex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
@@ -227,41 +233,25 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildPasswordField(LoginViewModel vm) {
-    return TextFormField(
+    return AppTextField(
+      label: 'Password',
       controller: vm.passwordController,
       obscureText: !vm.isPasswordVisible,
       textInputAction: TextInputAction.done,
-      decoration: InputDecoration(
-        labelText: 'Password',
-        prefixIcon: const Icon(Icons.lock_outlined, color: Color(0xFF1A237E)),
-        suffixIcon: IconButton(
-          icon: Icon(
-            vm.isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-            color: const Color(0xFF9E9E9E),
-          ),
-          onPressed: vm.togglePasswordVisibility,
+      prefixIcon: const Icon(Icons.lock_outlined, color: Color(0xFF1A237E)),
+      suffixIcon: IconButton(
+        icon: Icon(
+          vm.isPasswordVisible ? Icons.visibility_off : Icons.visibility,
+          color: const Color(0xFF9E9E9E),
         ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF1A237E), width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFC62828)),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFC62828), width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        onPressed: vm.togglePasswordVisibility,
       ),
       validator: (v) {
         if (v == null || v.isEmpty) return 'Password is required';
         if (v.length < 6) return 'Password must be at least 6 characters';
         return null;
       },
-      onFieldSubmitted: (_) => vm.login(context),
+      onSubmitted: (_) => vm.login(context),
     );
   }
 
@@ -294,31 +284,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildLoginButton(LoginViewModel vm) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: vm.isLoading ? null : () => vm.login(context),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A237E),
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: const Color(0xFF1A237E).withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: vm.isLoading
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : const Text(
-                'Sign In',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-      ),
+    return AppButton(
+      label: 'Sign In',
+      onPressed: vm.isLoading ? null : () => vm.login(context),
+      isLoading: vm.isLoading,
+      color: const Color(0xFF1A237E),
     );
   }
 
@@ -344,27 +314,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  InputDecoration _inputDeco(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFF1A237E)),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF1A237E), width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFC62828)),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFC62828), width: 2),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
   }
 }

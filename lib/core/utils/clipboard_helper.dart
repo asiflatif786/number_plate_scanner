@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'logger.dart';
 
 class ClipboardHelper {
@@ -11,14 +10,15 @@ class ClipboardHelper {
   ) async {
     await Clipboard.setData(ClipboardData(text: value));
 
-    await Fluttertoast.showToast(
-      msg: '$label copied to clipboard',
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-      backgroundColor: const Color(0xFF323232),
-      textColor: Colors.white,
-      fontSize: 14,
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$label copied to clipboard'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
 
     AppLogger.debug('ClipboardHelper', '$label copied');
   }

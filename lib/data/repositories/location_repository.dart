@@ -13,15 +13,18 @@ class LocationRepository {
       return ApiResponse.success(_cachedStates!, 'Loaded from cache');
     }
 
-    final response = await ApiClient.instance.post({
-      'action': ApiConstants.actionGetStates,
-    });
+    // POST to /api_data with action: 'get-states'
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGetStates,
+    );
 
     if (response.success && response.data != null) {
-      final raw = response.data!['data_list'] as List<dynamic>? ?? [];
-      final states = raw
-          .map((e) => StateModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final raw = response.data!['data'] ?? response.data!['data_list'] ?? [];
+      final states = (raw as List).map((e) {
+        if (e is Map<String, dynamic>) return StateModel.fromJson(e);
+        final stateName = e.toString();
+        return StateModel(stateId: stateName, stateName: stateName);
+      }).toList();
       _cachedStates = states;
       return ApiResponse.success(states, response.message);
     }
@@ -34,16 +37,21 @@ class LocationRepository {
       return ApiResponse.success(_lgaCache[stateId]!, 'Loaded from cache');
     }
 
-    final response = await ApiClient.instance.post({
-      'action': ApiConstants.actionGetLgas,
-      'state_id': stateId,
-    });
+    // POST to /api_data with action: 'get-lgas'
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGetLgas,
+      fields: {
+        'state_id': stateId,
+      },
+    );
 
     if (response.success && response.data != null) {
-      final raw = response.data!['data_list'] as List<dynamic>? ?? [];
-      final lgas = raw
-          .map((e) => LgaModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final raw = response.data!['data'] ?? response.data!['data_list'] ?? [];
+      final lgas = (raw as List).map((e) {
+        if (e is Map<String, dynamic>) return LgaModel.fromJson(e);
+        final lgaName = e.toString();
+        return LgaModel(lgaId: lgaName, lgaName: lgaName, stateId: stateId);
+      }).toList();
       _lgaCache[stateId] = lgas;
       return ApiResponse.success(lgas, response.message);
     }

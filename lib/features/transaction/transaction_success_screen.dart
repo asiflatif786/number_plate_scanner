@@ -83,14 +83,13 @@ class _TransactionSuccessScreenState extends State<TransactionSuccessScreen>
         ModalRoute.of(context)!.settings.arguments as TransactionModel;
 
     return ChangeNotifierProvider(
-      create: (_) =>
-          TransactionSuccessViewModel(transaction: transaction),
+      create: (_) => TransactionSuccessViewModel(transaction: transaction),
       child: PopScope(
         canPop: false,
         child: Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            title: const Text('Transaction Complete'),
+            title: const Text('Transaction Created'),
             backgroundColor: Colors.green.shade700,
             foregroundColor: Colors.white,
             actions: [
@@ -160,8 +159,7 @@ class _SuccessBody extends StatelessWidget {
               FadeTransition(
                 opacity: panelFade,
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(
-                      24, 16, 24, 40),
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
                   decoration: BoxDecoration(
                     color: Colors.green.shade700,
                     borderRadius: const BorderRadius.only(
@@ -183,7 +181,7 @@ class _SuccessBody extends StatelessWidget {
                       FadeTransition(
                         opacity: textFade,
                         child: const Text(
-                          'Transaction Successful',
+                          'Transaction Created!',
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -223,67 +221,166 @@ class _SuccessBody extends StatelessWidget {
                   ),
                 ),
               ),
+              if (t.status == 'pending')
+                FadeTransition(
+                  opacity: buttonsFade,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: vm.isApproving
+                                ? null
+                                : () => vm.approveTransaction(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green.shade600,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: vm.isApproving
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Approve Transaction',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: OutlinedButton(
+                            onPressed: vm.isDeclining
+                                ? null
+                                : () => _confirmDecline(context, vm),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: vm.isDeclining
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.red,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Decline Transaction',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               FadeTransition(
                 opacity: buttonsFade,
                 child: Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     children: [
                       SizedBox(
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton.icon(
-                          onPressed: () =>
-                              vm.newTransaction(context),
-                          icon: const Icon(
-                              Icons.add_circle_outline),
-                          label: const Text(
-                            'New Transaction',
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold),
+                          onPressed: vm.isVerifying
+                              ? null
+                              : () => vm.verifyTransaction(),
+                          icon: vm.isVerifying
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.verified),
+                          label: Text(
+                            vm.isVerifying
+                                ? 'Verifying...'
+                                : 'Verify Transaction',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                const Color(0xFF1A237E),
+                            backgroundColor: const Color(0xFF1A237E),
                             foregroundColor: Colors.white,
-                            shape:
-                                RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: OutlinedButton.icon(
-                          onPressed: () =>
-                              vm.goToDashboard(context),
-                          icon: const Icon(Icons.dashboard),
-                          label: const Text(
-                            'Back to Dashboard',
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor:
-                                const Color(0xFF1A237E),
-                            side: const BorderSide(
-                                color: Color(0xFF1A237E)),
-                            shape:
-                                RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(10),
-                            ),
+                      if (vm.statusMessage != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          vm.statusMessage!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: t.status == 'declined'
+                                ? Colors.red
+                                : Colors.green.shade700,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ),
+                      ],
                     ],
+                  ),
+                ),
+              ),
+              FadeTransition(
+                opacity: buttonsFade,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton.icon(
+                      onPressed: () => vm.goToDashboard(context),
+                      icon: const Icon(Icons.dashboard),
+                      label: const Text(
+                        'Back to Dashboard',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF1A237E),
+                        side: const BorderSide(color: Color(0xFF1A237E)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -292,20 +389,16 @@ class _SuccessBody extends StatelessWidget {
                 opacity: shareFade,
                 child: Consumer<TransactionSuccessViewModel>(
                   builder: (context, vm, _) => TextButton.icon(
-                    onPressed:
-                        vm.isSharing ? null : () => vm.shareReceipt(),
+                    onPressed: vm.isSharing ? null : () => vm.shareReceipt(),
                     icon: vm.isSharing
                         ? const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.share, size: 18),
                     label: Text(
-                      vm.isSharing
-                          ? 'Sharing...'
-                          : 'Share Receipt',
+                      vm.isSharing ? 'Sharing...' : 'Share Receipt',
                     ),
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.grey,
@@ -321,19 +414,56 @@ class _SuccessBody extends StatelessWidget {
     );
   }
 
+  void _confirmDecline(BuildContext context, TransactionSuccessViewModel vm) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Decline Transaction'),
+        content: const Text(
+          'Are you sure you want to decline this transaction? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              vm.declineTransaction();
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Decline'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatusChip(String status) {
-    final isApproved = status == 'approved';
+    MaterialColor chipColor;
+    String label;
+    switch (status) {
+      case 'approved':
+        chipColor = Colors.green;
+        label = 'APPROVED';
+        break;
+      case 'declined':
+        chipColor = Colors.red;
+        label = 'DECLINED';
+        break;
+      default:
+        chipColor = Colors.amber;
+        label = 'PENDING';
+    }
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: isApproved
-            ? Colors.green.shade600
-            : Colors.amber.shade600,
+        color: chipColor.shade600,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
-        isApproved ? 'APPROVED' : 'PENDING',
+        label,
         style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.bold,
@@ -367,15 +497,24 @@ class _SuccessBody extends StatelessWidget {
           children: [
             _buildReceiptHeader(vm),
             const Divider(),
-            _buildTransactionInfo(t),
+            _buildInfoRow('Transaction Ref', t.transactionReference,
+                isMonospace: true, isSelectable: true),
+            const SizedBox(height: 6),
+            _buildInfoRow('Payer Name', t.customerName),
+            _buildInfoRow('Vehicle Plate', t.vehicleLicense,
+                isMonospace: true, isSelectable: true),
+            const SizedBox(height: 4),
+            _buildTripTypeChip(t.transactionType),
             const Divider(),
-            _buildCustomerVehicle(t),
-            const Divider(),
+            _buildInfoRow('Payment Method', t.paymentMethodDisplay),
+            const SizedBox(height: 6),
             _buildRouteSection(t),
             const Divider(),
             _buildPaymentBreakdown(t),
             const Divider(),
-            _buildProcessedBy(t),
+            _buildInfoRow('Date & Time', t.createdAt),
+            const SizedBox(height: 4),
+            _buildInfoRow('Terminal ID', t.terminalId, isMonospace: true),
             const Divider(),
             _buildReceiptFooter(),
           ],
@@ -384,16 +523,14 @@ class _SuccessBody extends StatelessWidget {
     );
   }
 
-  Widget _buildReceiptHeader(
-      TransactionSuccessViewModel vm) {
+  Widget _buildReceiptHeader(TransactionSuccessViewModel vm) {
     return Row(
       children: [
-        const Icon(Icons.receipt_long,
-            size: 20, color: Color(0xFF1A237E)),
+        const Icon(Icons.receipt_long, size: 20, color: Color(0xFF1A237E)),
         const SizedBox(width: 8),
         const Expanded(
           child: Text(
-            'Transaction Receipt',
+            'Official Receipt',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -405,27 +542,20 @@ class _SuccessBody extends StatelessWidget {
           onTap: () => vm.copyReceipt(),
           borderRadius: BorderRadius.circular(8),
           child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: vm.isCopied
-                    ? Colors.green
-                    : Colors.grey.shade300,
+                color: vm.isCopied ? Colors.green : Colors.grey.shade300,
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  vm.isCopied
-                      ? Icons.check
-                      : Icons.content_copy,
+                  vm.isCopied ? Icons.check : Icons.content_copy,
                   size: 16,
-                  color: vm.isCopied
-                      ? Colors.green
-                      : Colors.grey,
+                  color: vm.isCopied ? Colors.green : Colors.grey,
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -433,9 +563,7 @@ class _SuccessBody extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: vm.isCopied
-                        ? Colors.green
-                        : Colors.grey,
+                    color: vm.isCopied ? Colors.green : Colors.grey,
                   ),
                 ),
               ],
@@ -446,45 +574,16 @@ class _SuccessBody extends StatelessWidget {
     );
   }
 
-  Widget _buildTransactionInfo(t) {
-    return Column(
-      children: [
-        _buildInfoRow('Transaction Ref',
-            t.transactionReference, isSelectable: true),
-        const SizedBox(height: 6),
-        _buildInfoRow('Date & Time', t.createdAt),
-        const SizedBox(height: 6),
-        _buildStatusRow(t),
-      ],
-    );
-  }
-
-  Widget _buildCustomerVehicle(t) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildInfoRow('Customer Name', t.customerName),
-        const SizedBox(height: 6),
-        _buildInfoRow('License Plate', t.vehicleLicense,
-            isMonospace: true, isSelectable: true),
-        const SizedBox(height: 6),
-        _buildTripTypeChip(t.transactionType),
-      ],
-    );
-  }
-
   Widget _buildRouteSection(t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Text('Route',
                   style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey,
-                      letterSpacing: 1)),
+                      fontSize: 11, color: Colors.grey, letterSpacing: 1)),
             ),
           ],
         ),
@@ -501,13 +600,11 @@ class _SuccessBody extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF212121))),
                   Text(t.originState,
-                      style: const TextStyle(
-                          fontSize: 11, color: Colors.grey)),
+                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward,
-                size: 20, color: Color(0xFF1A237E)),
+            const Icon(Icons.arrow_forward, size: 20, color: Color(0xFF1A237E)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -518,8 +615,7 @@ class _SuccessBody extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF212121))),
                   Text(t.destinationState,
-                      style: const TextStyle(
-                          fontSize: 11, color: Colors.grey)),
+                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 ],
               ),
             ),
@@ -541,17 +637,15 @@ class _SuccessBody extends StatelessWidget {
         ),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-              horizontal: 8, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A237E)
-                .withValues(alpha: 0.05),
+            color: const Color(0xFF1A237E).withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
             children: [
               const Expanded(
-                child: Text('Total Paid',
+                child: Text('Total',
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -568,25 +662,6 @@ class _SuccessBody extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 6),
-        _buildPaymentMethodRow(t),
-      ],
-    );
-  }
-
-  Widget _buildProcessedBy(t) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Processed By',
-            style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey,
-                letterSpacing: 1)),
-        const SizedBox(height: 8),
-        _buildSmallRow('Agent Number', t.agentNumber),
-        const SizedBox(height: 4),
-        _buildSmallRow('Terminal ID', t.terminalId),
       ],
     );
   }
@@ -597,8 +672,7 @@ class _SuccessBody extends StatelessWidget {
         Center(
           child: Text(
             '- - - - - - - - - - - - - - - -',
-            style: TextStyle(
-                fontSize: 12, color: Colors.grey.shade400),
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
           ),
         ),
         const SizedBox(height: 8),
@@ -606,16 +680,7 @@ class _SuccessBody extends StatelessWidget {
           child: Text(
             'Thank you for using Cyber1 TMS',
             style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey),
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Center(
-          child: Text(
-            'Powered by Cyber1 Systems',
-            style: TextStyle(fontSize: 11, color: Colors.grey),
+                fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
           ),
         ),
       ],
@@ -623,84 +688,50 @@ class _SuccessBody extends StatelessWidget {
   }
 
   Widget _buildInfoRow(String label, String value,
-      {bool isMonospace = false,
-      bool isSelectable = false}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 120,
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 12, color: Colors.grey)),
-        ),
-        Expanded(
-          child: isSelectable
-              ? SelectableText(
-                  value.isEmpty ? 'N/A' : value,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF212121),
-                    fontFamily:
-                        isMonospace ? 'monospace' : null,
-                    letterSpacing:
-                        isMonospace ? 1 : null,
-                  ),
-                )
-              : Text(
-                  value.isEmpty ? 'N/A' : value,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF212121),
-                    fontFamily:
-                        isMonospace ? 'monospace' : null,
-                    letterSpacing:
-                        isMonospace ? 1 : null,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusRow(t) {
-    return Row(
-      children: [
-        const SizedBox(
-          width: 120,
-          child: Text('Status',
-              style: TextStyle(
-                  fontSize: 12, color: Colors.grey)),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 10, vertical: 3),
-          decoration: BoxDecoration(
-            color: t.statusColor.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
+      {bool isMonospace = false, bool isSelectable = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(label,
+                style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ),
-          child: Text(
-            t.status.toUpperCase(),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: t.statusColor,
-              letterSpacing: 1,
-            ),
+          Expanded(
+            child: isSelectable
+                ? SelectableText(
+                    value.isEmpty ? 'N/A' : value,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF212121),
+                      fontFamily: isMonospace ? 'monospace' : null,
+                      letterSpacing: isMonospace ? 1 : null,
+                    ),
+                  )
+                : Text(
+                    value.isEmpty ? 'N/A' : value,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF212121),
+                      fontFamily: isMonospace ? 'monospace' : null,
+                      letterSpacing: isMonospace ? 1 : null,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildTripTypeChip(String transactionType) {
     final isSingle = transactionType == 'single';
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: isSingle
             ? Colors.blue.withValues(alpha: 0.1)
@@ -723,8 +754,7 @@ class _SuccessBody extends StatelessWidget {
       children: [
         Expanded(
           child: Text(label,
-              style: const TextStyle(
-                  fontSize: 13, color: Colors.grey)),
+              style: const TextStyle(fontSize: 13, color: Colors.grey)),
         ),
         SelectableText(
           value,
@@ -732,67 +762,6 @@ class _SuccessBody extends StatelessWidget {
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: Color(0xFF212121),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPaymentMethodRow(t) {
-    IconData icon;
-    switch (t.paymentMethod) {
-      case 'card':
-        icon = Icons.credit_card;
-        break;
-      case 'wallet':
-        icon = Icons.account_balance_wallet;
-        break;
-      case 'transfer':
-        icon = Icons.swap_horiz;
-        break;
-      default:
-        icon = Icons.payment;
-    }
-    return Row(
-      children: [
-        const SizedBox(
-          width: 120,
-          child: Text('Payment Method',
-              style: TextStyle(
-                  fontSize: 12, color: Colors.grey)),
-        ),
-        Icon(icon, size: 16, color: Colors.grey),
-        const SizedBox(width: 4),
-        Text(
-          t.paymentMethodDisplay,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF212121),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSmallRow(String label, String value) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 120,
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 11, color: Colors.grey)),
-        ),
-        Expanded(
-          child: SelectableText(
-            value.isEmpty ? 'N/A' : value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontFamily: 'monospace',
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF212121),
-            ),
           ),
         ),
       ],

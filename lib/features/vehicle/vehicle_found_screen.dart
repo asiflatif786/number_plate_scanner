@@ -1,42 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_card.dart';
+import '../../core/widgets/detail_row.dart';
+import '../../core/widgets/section_header.dart';
 import '../../data/models/vehicle_model.dart';
 import 'vehicle_found_viewmodel.dart';
 
 class VehicleFoundScreen extends StatelessWidget {
   const VehicleFoundScreen({super.key});
-
-  Color _colorFromString(String colorName) {
-    switch (colorName.toLowerCase()) {
-      case 'black':
-        return Colors.black;
-      case 'white':
-        return Colors.white;
-      case 'red':
-        return Colors.red;
-      case 'blue':
-        return Colors.blue;
-      case 'green':
-        return Colors.green;
-      case 'yellow':
-        return Colors.yellow;
-      case 'silver':
-      case 'grey':
-      case 'gray':
-        return Colors.grey;
-      case 'orange':
-        return Colors.orange;
-      case 'purple':
-        return Colors.purple;
-      case 'brown':
-        return Colors.brown;
-      case 'gold':
-        return Colors.amber;
-      default:
-        return Colors.grey;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,22 +17,20 @@ class VehicleFoundScreen extends StatelessWidget {
 
     return ChangeNotifierProvider(
       create: (_) => VehicleFoundViewModel(vehicle: vehicle),
-      child: _VehicleFoundBody(colorFromString: _colorFromString),
+      child: const _VehicleFoundBody(),
     );
   }
 }
 
 class _VehicleFoundBody extends StatelessWidget {
-  final Color Function(String) colorFromString;
-
-  const _VehicleFoundBody({required this.colorFromString});
+  const _VehicleFoundBody();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vehicle Found'),
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
       body: Consumer<VehicleFoundViewModel>(
@@ -68,19 +39,13 @@ class _VehicleFoundBody extends StatelessWidget {
           return SingleChildScrollView(
             child: Column(
               children: [
-                _buildSuccessBanner(context, vehicle),
+                _buildStatusBanner(vehicle),
                 const SizedBox(height: 16),
-                _buildCustomerDetailsCard(context, vehicle),
+                _buildVehicleDetailsCard(vehicle),
                 const SizedBox(height: 12),
-                _buildVehicleDetailsCard(context, vehicle),
-                const SizedBox(height: 12),
-                _buildTransactionSummaryCard(context, vehicle),
-                const SizedBox(height: 8),
-                _buildDisclaimer(),
-                const SizedBox(height: 20),
-                _buildProceedButton(context, vm),
-                const SizedBox(height: 8),
-                _buildBottomNote(),
+                _buildFeeBreakdownCard(vm),
+                const SizedBox(height: 24),
+                _buildProceedButton(vm, context),
                 const SizedBox(height: 24),
               ],
             ),
@@ -90,27 +55,32 @@ class _VehicleFoundBody extends StatelessWidget {
     );
   }
 
-  Widget _buildSuccessBanner(BuildContext context, VehicleModel vehicle) {
+  Widget _buildStatusBanner(VehicleModel vehicle) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-      color: Colors.green.shade50,
+      color: Colors.green,
       child: Column(
         children: [
           const CircleAvatar(
             radius: 28,
-            backgroundColor: Colors.green,
+            backgroundColor: Colors.white24,
             child: Icon(Icons.check_circle, color: Colors.white, size: 36),
           ),
           const SizedBox(height: 12),
-          Text('Vehicle Verified',
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green.shade800)),
+          const Text(
+            'Vehicle Found',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text('Customer details loaded successfully',
-              style: TextStyle(fontSize: 13, color: Colors.green.shade600)),
+          const Text(
+            'This vehicle is registered in the Cyber1 database',
+            style: TextStyle(fontSize: 13, color: Colors.white70),
+          ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -134,136 +104,84 @@ class _VehicleFoundBody extends StatelessWidget {
     );
   }
 
-  Widget _buildCustomerDetailsCard(BuildContext context, VehicleModel vehicle) {
+  Widget _buildVehicleDetailsCard(VehicleModel vehicle) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Card(
+      child: AppCard(
         elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Customer Details',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF212121))),
-              const Divider(),
-              _buildDetailRow('Full Name', vehicle.customerName),
-              const Divider(height: 1),
-              _buildDetailRow(
-                  'Phone Number',
-                  (vehicle.phoneNumber != null && vehicle.phoneNumber != 'N/A')
-                      ? vehicle.phoneNumber!
-                      : 'Not provided'),
-              const Divider(height: 1),
-              _buildDetailRow('State of Origin', vehicle.stateOfOrigin),
-            ],
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SectionHeader(title: 'Vehicle Information'),
+            const Divider(),
+            DetailRow(label: 'License Plate', value: vehicle.vehicleLicense, isMonospace: true),
+            const Divider(height: 1),
+            DetailRow(label: 'Vehicle Type', value: vehicle.vehicleType),
+            const Divider(height: 1),
+            DetailRow(label: 'Issuing State', value: vehicle.stateOfOrigin),
+            const Divider(height: 1),
+            DetailRow(label: 'Enumerating State', value: vehicle.enumeratingState ?? 'N/A'),
+            const Divider(height: 1),
+            DetailRow(label: 'Enumerating LGA', value: vehicle.enumeratingLga ?? 'N/A'),
+            const Divider(height: 1),
+            _buildTripTypeChip(vehicle.transactionType),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildVehicleDetailsCard(BuildContext context, VehicleModel vehicle) {
+  Widget _buildFeeBreakdownCard(VehicleFoundViewModel vm) {
+    return AppCard(
+      elevation: 1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(title: 'Payment Breakdown'),
+          const Divider(),
+            _buildFeeRow('Base Amount', vm.formattedBaseAmount),
+            const Divider(height: 1),
+            _buildFeeRow('Admin Fee (2%)', vm.formattedAdminFee),
+            const Divider(height: 1),
+            _buildFeeRow('Processing Fee', vm.formattedFlatFee),
+            const Divider(height: 1),
+            _buildFeeRow('VAT (7.5%)', vm.formattedVatAmount),
+            const Divider(thickness: 1.5, height: 20),
+            _buildTotalPayableRow(vm.formattedTotalPayable),
+          ],
+        ),
+      );
+  }
+
+  Widget _buildProceedButton(VehicleFoundViewModel vm, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Card(
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Vehicle Information',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF212121))),
-              const Divider(),
-              _buildDetailRow(
-                  'License Plate', vehicle.vehicleLicense,
-                  isMonospace: true),
-              const Divider(height: 1),
-              _buildDetailRow('Vehicle Type', vehicle.vehicleType),
-              const Divider(height: 1),
-              _buildDetailRow(
-                  'Make & Model', '${vehicle.vehicleMake} ${vehicle.vehicleModel}'),
-              const Divider(height: 1),
-              _buildColorRow(vehicle.vehicleColor),
-            ],
-          ),
-        ),
+      child: AppButton(
+        label: vm.isProceeding ? 'Proceeding...' : 'Proceed to Payment',
+        onPressed:
+            vm.isProceeding ? null : () => vm.proceedToPayment(context),
+        isLoading: vm.isProceeding,
+        icon: Icons.arrow_forward,
+        color: Colors.green,
       ),
     );
   }
 
-  Widget _buildTransactionSummaryCard(
-      BuildContext context, VehicleModel vehicle) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Card(
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: const Border(
-              left: BorderSide(color: Colors.amber, width: 4),
-            ),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Transaction Summary',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF212121))),
-              const Divider(),
-              _buildDetailRow(
-                  'Trip Type',
-                  vehicle.transactionType == 'single'
-                      ? 'Single Trip'
-                      : 'Complete Trip'),
-              const Divider(height: 1),
-              _buildDetailRow('Base Amount', vehicle.price.formattedAmount),
-              const Divider(height: 1),
-              _buildDetailRow(
-                  'Service Fee', vehicle.price.formattedServiceFee),
-              const Divider(thickness: 1.5, height: 20),
-              _buildTotalRow(vehicle.price.formattedTotal),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value, {bool isMonospace = false}) {
+  Widget _buildFeeRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          SizedBox(
-            width: 120,
+          Expanded(
             child: Text(label,
                 style: const TextStyle(fontSize: 13, color: Colors.grey)),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF212121),
-                fontFamily: isMonospace ? 'monospace' : null,
-                letterSpacing: isMonospace ? 1.5 : null,
-              ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF212121),
             ),
           ),
         ],
@@ -271,45 +189,18 @@ class _VehicleFoundBody extends StatelessWidget {
     );
   }
 
-  Widget _buildColorRow(String colorName) {
-    final color = colorFromString(colorName);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          const SizedBox(
-            width: 120,
-            child: Text('Color',
-                style: TextStyle(fontSize: 13, color: Colors.grey)),
-          ),
-          Row(
-            children: [
-              CircleAvatar(radius: 10, backgroundColor: color),
-              const SizedBox(width: 8),
-              Text(
-                colorName,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF212121),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTotalRow(String formattedTotal) {
+  Widget _buildTotalPayableRow(String formattedTotal) {
     return Row(
       children: [
         const Expanded(
-          child: Text('Total Payable',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF212121))),
+          child: Text(
+            'Total Payable',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF212121),
+            ),
+          ),
         ),
         Text(
           formattedTotal,
@@ -323,56 +214,35 @@ class _VehicleFoundBody extends StatelessWidget {
     );
   }
 
-  Widget _buildDisclaimer() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 32),
-      child: Text(
-        'The agent will collect this amount from the customer before proceeding.',
-        textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 11, color: Colors.grey),
-      ),
-    );
-  }
-
-  Widget _buildProceedButton(BuildContext context, VehicleFoundViewModel vm) {
+  Widget _buildTripTypeChip(String transactionType) {
+    final isSingle = transactionType == 'single';
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SizedBox(
-        width: double.infinity,
-        height: 50,
-        child: ElevatedButton.icon(
-          onPressed:
-              vm.isProceeding ? null : () => vm.proceedToTransaction(context),
-          icon: vm.isProceeding
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white))
-              : const Icon(Icons.arrow_forward),
-          label: Text(
-            vm.isProceeding ? 'Proceeding...' : 'Proceed to Registration',
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 140,
+            child: Text('Trip Type',
+                style: TextStyle(fontSize: 13, color: Colors.grey)),
           ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: Colors.green.shade300,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: isSingle
+                  ? Colors.blue.withValues(alpha: 0.1)
+                  : Colors.purple.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              isSingle ? 'Single Trip' : 'Complete Trip',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isSingle ? Colors.blue : Colors.purple,
+              ),
+            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNote() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 32),
-      child: Text(
-        'Verify all details with the customer before proceeding',
-        textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 11, color: Colors.grey),
+        ],
       ),
     );
   }

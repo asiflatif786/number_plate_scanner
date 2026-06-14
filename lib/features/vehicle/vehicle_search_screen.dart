@@ -42,31 +42,31 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
         body: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: Consumer<VehicleSearchViewModel>(
-          builder: (context, vm, _) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildInfoCard(),
-                  const SizedBox(height: 24),
-                  _buildPlateField(vm),
-                  const SizedBox(height: 16),
-                  _buildScanButton(vm),
-                  const SizedBox(height: 28),
-                  _buildTripTypeSection(vm),
-                  const SizedBox(height: 16),
-                  _buildErrorBanner(vm),
-                  const SizedBox(height: 16),
-                  _buildSearchButton(vm),
-                ],
-              ),
-            );
-          },
+            builder: (context, vm, _) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInfoCard(),
+                    const SizedBox(height: 24),
+                    _buildPlateField(vm),
+                    const SizedBox(height: 16),
+                    _buildScanButton(vm),
+                    const SizedBox(height: 28),
+                    _buildTripTypeSection(vm),
+                    const SizedBox(height: 16),
+                    _buildErrorBanner(vm),
+                    const SizedBox(height: 16),
+                    _buildSearchButton(vm),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
-    ),
-   );
+    );
   }
 
   Widget _buildInfoCard() {
@@ -77,13 +77,12 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFF90CAF9)),
       ),
-      child: Row(
+      child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline,
-              size: 20, color: Color(0xFF1565C0)),
-          const SizedBox(width: 10),
-          const Expanded(
+          Icon(Icons.info_outline, size: 20, color: Color(0xFF1565C0)),
+          SizedBox(width: 10),
+          Expanded(
             child: Text(
               'Enter the vehicle license plate number or use the scanner to capture it automatically',
               style: TextStyle(fontSize: 13, color: Color(0xFF1565C0)),
@@ -122,8 +121,7 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
               color: const Color(0xFFBDBDBD).withValues(alpha: 0.5),
             ),
             suffixIcon: IconButton(
-              icon: const Icon(Icons.qr_code_scanner,
-                  color: Color(0xFF1A237E)),
+              icon: const Icon(Icons.qr_code_scanner, color: Color(0xFF1A237E)),
               onPressed: () => vm.navigateToScanner(context),
             ),
             border: OutlineInputBorder(
@@ -144,16 +142,14 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: vm.isLoading
-            ? null
-            : () => vm.navigateToScanner(context),
+        onPressed: vm.isLoading ? null : () => vm.navigateToScanner(context),
         icon: const Icon(Icons.document_scanner),
         label: const Text('Scan Number Plate'),
         style: OutlinedButton.styleFrom(
           foregroundColor: const Color(0xFF1A237E),
           side: const BorderSide(color: Color(0xFF1A237E)),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(vertical: 14),
         ),
       ),
@@ -218,9 +214,8 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
               : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF1A237E)
-                : const Color(0xFFE0E0E0),
+            color:
+                isSelected ? const Color(0xFF1A237E) : const Color(0xFFE0E0E0),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -255,8 +250,8 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFC62828).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-            color: const Color(0xFFC62828).withValues(alpha: 0.3)),
+        border:
+            Border.all(color: const Color(0xFFC62828).withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -264,8 +259,7 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(vm.errorMessage!,
-                style: const TextStyle(
-                    fontSize: 13, color: Color(0xFFC62828))),
+                style: const TextStyle(fontSize: 13, color: Color(0xFFC62828))),
           ),
           GestureDetector(
             onTap: vm.clearError,
@@ -287,8 +281,8 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
           foregroundColor: Colors.white,
           disabledBackgroundColor:
               const Color(0xFF1A237E).withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: vm.isLoading
             ? const SizedBox(
@@ -298,8 +292,7 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
                     strokeWidth: 2, color: Colors.white),
               )
             : const Text('Search Vehicle',
-                style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold)),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ),
     );
   }

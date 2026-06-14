@@ -8,7 +8,6 @@ import 'core/theme/app_theme.dart';
 import 'core/utils/logger.dart';
 import 'features/agent/agent_dashboard_viewmodel.dart';
 import 'features/admin/admin_dashboard_viewmodel.dart';
-import 'features/admin/view_agents_viewmodel.dart';
 import 'features/auth/login_viewmodel.dart';
 import 'features/onboarding/agent_registration_viewmodel.dart';
 import 'features/onboarding/corporate_registration_viewmodel.dart';
@@ -45,7 +44,6 @@ class Cyber1TMSApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TerminalProfilingViewModel()),
         ChangeNotifierProvider(create: (_) => OnboardingCompleteViewModel()),
         ChangeNotifierProvider(create: (_) => AdminDashboardViewModel()),
-        ChangeNotifierProvider(create: (_) => ViewAgentsViewModel()),
         ChangeNotifierProvider(create: (_) => AgentDashboardViewModel()),
       ],
       child: MaterialApp(
@@ -55,16 +53,13 @@ class Cyber1TMSApp extends StatelessWidget {
         initialRoute: AppRoutes.splash,
         routes: AppRoutes.routes,
         onUnknownRoute: (settings) => MaterialPageRoute(
-          builder: (_) => RouteNotFoundScreen(route: settings.name ?? 'unknown'),
+          builder: (_) =>
+              RouteNotFoundScreen(route: settings.name ?? 'unknown'),
         ),
       ),
     );
   }
 }
-
-
-
-
 
 class PlaceholderScreen extends StatelessWidget {
   final String title;
@@ -96,13 +91,15 @@ class RouteNotFoundScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.warning_amber_rounded, size: 64, color: Colors.orange),
+            const Icon(Icons.warning_amber_rounded,
+                size: 64, color: Colors.orange),
             const SizedBox(height: 16),
             Text('Route not found: $route',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.splash),
+              onPressed: () =>
+                  Navigator.pushReplacementNamed(context, AppRoutes.splash),
               child: const Text('Go Home'),
             ),
           ],

@@ -46,7 +46,7 @@ class NetworkClient {
       );
     }
 
-    final uri = Uri.parse(ApiConstants.baseUrl);
+    final uri = Uri.parse(ApiConstants.laravelBaseUrl);
     final headers = _buildHeaders();
     final stopwatch = Stopwatch()..start();
 

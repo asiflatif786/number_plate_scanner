@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/routes.dart';
+import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
 import '../../data/local/transaction_log_store.dart';
 import '../../data/models/transaction_model.dart';
@@ -39,8 +40,12 @@ class PaymentProcessingViewModel extends ChangeNotifier {
 
     if (paymentSuccessful) {
       AppLogger.logInfo(_tag, 'Payment OK → approving');
-      final result = await _repository
-          .approveTransaction(transaction.transactionReference);
+      final session = await SessionManager.instance;
+      final channelNumber = session.channelNumber ?? '';
+      final result = await _repository.approveTransaction(
+        transactionReference: transaction.transactionReference,
+        channelNumber: channelNumber,
+      );
 
       if (result.success) {
         AppLogger.logInfo(_tag, 'Approved');
@@ -54,8 +59,12 @@ class PaymentProcessingViewModel extends ChangeNotifier {
       }
     } else {
       AppLogger.logInfo(_tag, 'Payment failed → declining');
-      await _repository
-          .declineTransaction(transaction.transactionReference);
+      final session = await SessionManager.instance;
+      final channelNumber = session.channelNumber ?? '';
+      await _repository.declineTransaction(
+        transactionReference: transaction.transactionReference,
+        channelNumber: channelNumber,
+      );
       transaction = transaction.copyWith(status: 'declined');
       processingState = PaymentProcessingState.failed;
       errorMessage = 'Payment was not completed. Please try again.';

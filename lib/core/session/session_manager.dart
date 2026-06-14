@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../constants/api_constants.dart';
 import '../constants/app_constants.dart';
 import '../utils/logger.dart';
 
@@ -82,8 +83,7 @@ class SessionManager {
     AppLogger.logInfo(_tag, 'agentEmail saved');
   }
 
-  String? get agentFirstName =>
-      _p.getString(AppConstants.userFirstNameKey);
+  String? get agentFirstName => _p.getString(AppConstants.userFirstNameKey);
 
   Future<void> setAgentFirstName(String value) async {
     await _p.setString(AppConstants.userFirstNameKey, value);
@@ -125,6 +125,13 @@ class SessionManager {
   // ──────────────────────────────────────────────
   // Auth / Role
   // ──────────────────────────────────────────────
+
+  String? get authToken => _p.getString(AppConstants.authTokenKey);
+
+  Future<void> setAuthToken(String value) async {
+    await _p.setString(AppConstants.authTokenKey, value);
+    AppLogger.logInfo(_tag, 'authToken saved');
+  }
 
   String? get userRole => _p.getString(AppConstants.userRoleKey);
 
@@ -190,6 +197,43 @@ class SessionManager {
   }
 
   // ──────────────────────────────────────────────
+  // Channel / Service Numbers (from admin setup)
+  // ──────────────────────────────────────────────
+
+  String? get channelNumber =>
+      _p.getString(ApiConstants.channelNumberKey) ??
+      (ApiConstants.defaultChannelNumber.isNotEmpty
+          ? ApiConstants.defaultChannelNumber
+          : null);
+
+  Future<void> setChannelNumber(String value) async {
+    await _p.setString(ApiConstants.channelNumberKey, value);
+    AppLogger.logInfo(_tag, 'channelNumber saved');
+  }
+
+  String? get serviceNumberValidation =>
+      _p.getString(ApiConstants.serviceNumberValidationKey) ??
+      (ApiConstants.defaultValidationServiceNumber.isNotEmpty
+          ? ApiConstants.defaultValidationServiceNumber
+          : null);
+
+  Future<void> setServiceNumberValidation(String value) async {
+    await _p.setString(ApiConstants.serviceNumberValidationKey, value);
+    AppLogger.logInfo(_tag, 'serviceNumberValidation saved');
+  }
+
+  String? get serviceNumberTransaction =>
+      _p.getString(ApiConstants.serviceNumberTransactionKey) ??
+      (ApiConstants.defaultTransactionServiceNumber.isNotEmpty
+          ? ApiConstants.defaultTransactionServiceNumber
+          : null);
+
+  Future<void> setServiceNumberTransaction(String value) async {
+    await _p.setString(ApiConstants.serviceNumberTransactionKey, value);
+    AppLogger.logInfo(_tag, 'serviceNumberTransaction saved');
+  }
+
+  // ──────────────────────────────────────────────
   // Clear Methods
   // ──────────────────────────────────────────────
 
@@ -203,6 +247,10 @@ class SessionManager {
     await _p.remove(AppConstants.userEmailKey);
     await _p.remove(AppConstants.userFirstNameKey);
     await _p.remove(AppConstants.userLastNameKey);
+    await _p.remove(AppConstants.authTokenKey);
+    await _p.remove(ApiConstants.channelNumberKey);
+    await _p.remove(ApiConstants.serviceNumberValidationKey);
+    await _p.remove(ApiConstants.serviceNumberTransactionKey);
     AppLogger.logWarning(_tag, 'session cleared — all data wiped');
   }
 
@@ -215,8 +263,6 @@ class SessionManager {
   // ──────────────────────────────────────────────
 
   bool hasValidSession() {
-    return isOnboarded &&
-        agentNumber != null &&
-        terminalId != null;
+    return isOnboarded;
   }
 }

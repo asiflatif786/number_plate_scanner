@@ -14,6 +14,7 @@ class AppConstants {
   static const String userEmailKey = 'user_email';
   static const String userFirstNameKey = 'user_first_name';
   static const String userLastNameKey = 'user_last_name';
+  static const String authTokenKey = 'auth_token';
 
   // User Roles
   static const String roleAdmin = 'Admin';

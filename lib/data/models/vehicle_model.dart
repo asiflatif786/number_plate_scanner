@@ -8,6 +8,9 @@ class VehicleModel {
   final String vehicleMake;
   final String vehicleModel;
   final String stateOfOrigin;
+  final String? enumeratingState;
+  final String? enumeratingLga;
+  final String? issuingState;
   final String? phoneNumber;
   final String transactionType;
   final PriceModel price;
@@ -20,6 +23,9 @@ class VehicleModel {
     required this.vehicleMake,
     required this.vehicleModel,
     required this.stateOfOrigin,
+    this.enumeratingState,
+    this.enumeratingLga,
+    this.issuingState,
     this.phoneNumber,
     this.transactionType = 'single',
     required this.price,
@@ -35,6 +41,9 @@ class VehicleModel {
       vehicleMake: json['vehicle_make'] as String? ?? 'N/A',
       vehicleModel: json['vehicle_model'] as String? ?? 'N/A',
       stateOfOrigin: json['state_of_origin'] as String? ?? json['issuing_state'] as String? ?? 'N/A',
+      enumeratingState: json['enumerating_state'] as String?,
+      enumeratingLga: json['enumerating_lga'] as String?,
+      issuingState: json['issuing_state'] as String?,
       phoneNumber: json['phone_number'] as String?,
       transactionType: json['transaction_type'] as String? ?? priceData['type'] as String? ?? 'single',
       price: PriceModel.fromJson(priceData),
@@ -49,6 +58,9 @@ class VehicleModel {
         'vehicle_make': vehicleMake,
         'vehicle_model': vehicleModel,
         'state_of_origin': stateOfOrigin,
+        'enumerating_state': enumeratingState,
+        'enumerating_lga': enumeratingLga,
+        'issuing_state': issuingState,
         'phone_number': phoneNumber,
         'transaction_type': transactionType,
         'price': price.toJson(),

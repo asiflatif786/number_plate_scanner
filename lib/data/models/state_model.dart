@@ -6,8 +6,15 @@ class StateModel {
 
   factory StateModel.fromJson(Map<String, dynamic> json) {
     return StateModel(
-      stateId: json['state_id'] as String? ?? '',
-      stateName: json['state_name'] as String? ?? '',
+      stateId: json['state_id']?.toString() ??
+          json['id']?.toString() ??
+          json['state_name']?.toString() ??
+          json['name']?.toString() ??
+          '',
+      stateName: json['state_name']?.toString() ??
+          json['name']?.toString() ??
+          json['state']?.toString() ??
+          '',
     );
   }
 

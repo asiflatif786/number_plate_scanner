@@ -10,7 +10,7 @@ android {
     namespace = "com.example.vehicle"
     // Updated to 36 as required by new plugin versions (camera, lifecycle, google_sign_in)
     compileSdk = 36
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

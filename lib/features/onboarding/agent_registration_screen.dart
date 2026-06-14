@@ -209,6 +209,11 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
           ),
           const SizedBox(height: 14),
           _textField(
+            label: 'Middle Name (Optional)',
+            controller: vm.middleNameController,
+          ),
+          const SizedBox(height: 14),
+          _textField(
             label: 'Last Name *',
             controller: vm.lastNameController,
           ),

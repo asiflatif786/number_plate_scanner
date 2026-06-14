@@ -3,124 +3,179 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_response.dart';
 import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
-import '../models/transaction_draft_model.dart';
 import '../models/transaction_model.dart';
-import '../models/verify_result_model.dart';
 
 class TransactionRepository {
-  static const String _tag = 'TransactionRepo';
+  static const String _tag = 'TxRepo';
 
-  // After approve/decline completes, payment_processing_viewmodel.dart
-  // calls TransactionLogStore().saveTransaction(transaction) — this is the
-  // only write point into the local transaction log.
+  int totalPages = 1;
+  int totalTransactions = 0;
 
-  Future<ApiResponse<Map<String, dynamic>>> createTransaction(
-    TransactionDraftModel draft,
-    String paymentMethod, {
-    String payerName = '',
-    String payerPhone = '',
+  Future<ApiResponse<TransactionModel>> createTransaction(
+    Map<String, dynamic> payload,
+  ) async {
+    AppLogger.logInfo(
+        _tag, 'Creating transaction: ${payload['transaction_reference']}');
+
+    // POST to /api_data with action: 'create-transaction'
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionCreateTransaction,
+      fields: payload,
+    );
+
+    if (response.success && response.data != null) {
+      final transaction = TransactionModel.fromJson(response.data!);
+      AppLogger.logInfo(_tag, 'Created: ${transaction.transactionReference}');
+      return ApiResponse.success(transaction, response.message);
+    }
+
+    AppLogger.logWarning(_tag, 'Creation failed: ${response.failure?.message}');
+    return ApiResponse.failure(response.failure!);
+  }
+
+  Future<ApiResponse<bool>> approveTransaction({
+    required String transactionReference,
+    required String channelNumber,
   }) async {
-    final session = await SessionManager.instance;
-    final terminalId = session.terminalId;
+    AppLogger.logInfo(_tag, 'Approving: $transactionReference');
 
+    // POST to /api_data with action: 'approve-transaction'
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionApproveTransaction,
+      fields: {
+        'transaction_reference': transactionReference,
+      },
+    );
+
+    if (response.success) {
+      AppLogger.logInfo(_tag, 'Approved: $transactionReference');
+      return ApiResponse.success(true, response.message);
+    }
+
+    AppLogger.logWarning(_tag, 'Approval failed: ${response.failure?.message}');
+    return ApiResponse.failure(response.failure!);
+  }
+
+  Future<ApiResponse<bool>> declineTransaction({
+    required String transactionReference,
+    required String channelNumber,
+  }) async {
+    AppLogger.logInfo(_tag, 'Declining: $transactionReference');
+
+    // POST to /api_data with action: 'decline-transaction'
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionDeclineTransaction,
+      fields: {
+        'transaction_reference': transactionReference,
+      },
+    );
+
+    if (response.success) {
+      AppLogger.logInfo(_tag, 'Declined: $transactionReference');
+      return ApiResponse.success(true, response.message);
+    }
+
+    AppLogger.logWarning(_tag, 'Decline failed: ${response.failure?.message}');
+    return ApiResponse.failure(response.failure!);
+  }
+
+  Future<ApiResponse<TransactionModel>> verifyTransaction({
+    required String transactionReference,
+    required String channelNumber,
+  }) async {
+    AppLogger.logInfo(_tag, 'Verifying: $transactionReference');
+
+    // POST to /api_data with action: 'verify-transaction'
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionVerifyTransaction,
+      fields: {
+        'transaction_reference': transactionReference,
+      },
+    );
+
+    if (response.success && response.data != null) {
+      final transaction = TransactionModel.fromJson(response.data!);
+      return ApiResponse.success(transaction, response.message);
+    }
+
+    return ApiResponse.failure(response.failure!);
+  }
+
+  Future<ApiResponse<List<TransactionModel>>> listTransactions({
+    required String channelNumber,
+    int page = 1,
+    String? statusFilter,
+  }) async {
     AppLogger.logInfo(_tag,
-        'Creating transaction: ${draft.vehicle.vehicleLicense} ($paymentMethod)');
+        'Listing transactions (page $page, status: ${statusFilter ?? 'all'})');
 
-    final payload = {
-      'action': ApiConstants.actionCreateTransaction,
-      'payer_name': payerName.isNotEmpty
-          ? payerName
-          : draft.vehicle.customerName,
-      'payer_phone': payerPhone.isNotEmpty
-          ? payerPhone
-          : (draft.vehicle.phoneNumber ?? ''),
-      'payer_email': draft.payerEmail,
-      'amount': draft.vehicle.price.amount.toStringAsFixed(2),
-      'fee': draft.vehicle.price.serviceFee.toStringAsFixed(2),
-      'payment_method': paymentMethod,
-      'terminal_id': terminalId ?? '',
-      'vehicle_license': draft.vehicle.vehicleLicense,
-      'vehicle_type': draft.vehicle.vehicleType,
-      'transaction_type': draft.vehicle.transactionType,
-      'origin_state': draft.originState.toUpperCase(),
-      'origin_lga': draft.originLga.toUpperCase(),
-      if (draft.isCompleteTrip)
-        'destination_state': draft.destinationState.toUpperCase(),
-      if (draft.isCompleteTrip)
-        'destination_lga': draft.destinationLga.toUpperCase(),
-    };
-
-    final response = await ApiClient.instance.post(payload);
+    // POST to /api_data with action: 'list-transactions'
+    final response = await ApiClient.instance.tmsPost(
+      'list-transactions',
+      fields: {
+        'channel_number': channelNumber,
+        'page': page.toString(),
+        if (statusFilter != null) 'status': statusFilter,
+      },
+    );
 
     if (response.success && response.data != null) {
-      return ApiResponse.success(response.data!, response.message);
+      totalPages = response.data!['total_pages'] as int? ?? 1;
+      totalTransactions = response.data!['total'] as int? ?? 0;
+      final raw = response.data!['data_list'] as List<dynamic>? ?? [];
+      final transactions = raw
+          .map((e) => TransactionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      AppLogger.logInfo(_tag,
+          'Loaded ${transactions.length} transactions (page $page/$totalPages)');
+      return ApiResponse.success(transactions, response.message);
     }
 
     return ApiResponse.failure(response.failure!);
   }
 
-  Future<ApiResponse<bool>> approveTransaction(
-    String transactionReference,
-  ) async {
-    AppLogger.logInfo(_tag, 'Approving transaction: $transactionReference');
+  Future<ApiResponse<bool>> invalidateTransaction({
+    required String transactionReference,
+    required String channelNumber,
+  }) async {
+    AppLogger.logInfo(_tag, 'Invalidating: $transactionReference');
 
-    final payload = {
-      'action': ApiConstants.actionApproveTransaction,
-      'transaction_reference': transactionReference,
-    };
-
-    final response = await ApiClient.instance.post(payload);
+    final response = await ApiClient.instance.tmsPost(
+      'invalidate-transaction',
+      fields: {
+        'transaction_reference': transactionReference,
+      },
+    );
 
     if (response.success) {
-      AppLogger.logInfo(_tag, 'Transaction approved: $transactionReference');
+      AppLogger.logInfo(_tag, 'Invalidated: $transactionReference');
       return ApiResponse.success(true, response.message);
     }
 
-    AppLogger.logError(_tag,
-        'Approval failed: $transactionReference — ${response.failure?.message}');
+    AppLogger.logWarning(
+        _tag, 'Invalidation failed: ${response.failure?.message}');
     return ApiResponse.failure(response.failure!);
   }
 
-  Future<ApiResponse<bool>> declineTransaction(
-    String transactionReference,
-  ) async {
-    AppLogger.logInfo(_tag, 'Declining transaction: $transactionReference');
+  Future<ApiResponse<bool>> abandonTransaction({
+    required String transactionReference,
+    required String channelNumber,
+  }) async {
+    AppLogger.logInfo(_tag, 'Abandoning: $transactionReference');
 
-    final payload = {
-      'action': ApiConstants.actionDeclineTransaction,
-      'transaction_reference': transactionReference,
-    };
-
-    final response = await ApiClient.instance.post(payload);
+    final response = await ApiClient.instance.tmsPost(
+      'abandon-transaction',
+      fields: {
+        'transaction_reference': transactionReference,
+      },
+    );
 
     if (response.success) {
-      AppLogger.logInfo(_tag, 'Transaction declined: $transactionReference');
+      AppLogger.logInfo(_tag, 'Abandoned: $transactionReference');
       return ApiResponse.success(true, response.message);
     }
 
-    AppLogger.logError(_tag,
-        'Decline failed: $transactionReference — ${response.failure?.message}');
-    return ApiResponse.failure(response.failure!);
-  }
-
-  Future<ApiResponse<VerifyResultModel>> verifyTransaction(
-    String transactionReference,
-  ) async {
-    AppLogger.logInfo(_tag, 'Verifying transaction: $transactionReference');
-
-    final payload = {
-      'action': ApiConstants.actionVerifyTransaction,
-      'transaction_reference': transactionReference,
-    };
-
-    final response = await ApiClient.instance.post(payload);
-
-    if (response.success && response.data != null) {
-      final result =
-          VerifyResultModel.fromJson(response.data!);
-      return ApiResponse.success(result, response.message);
-    }
-
+    AppLogger.logWarning(_tag, 'Abandon failed: ${response.failure?.message}');
     return ApiResponse.failure(response.failure!);
   }
 }

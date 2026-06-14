@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/widgets/app_card.dart';
 import 'vehicle_not_found_viewmodel.dart';
 
 class VehicleNotFoundScreen extends StatelessWidget {
@@ -25,155 +26,146 @@ class _VehicleNotFoundBody extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vehicle Not Found'),
-        foregroundColor: const Color(0xFF212121),
       ),
       body: Consumer<VehicleNotFoundViewModel>(
         builder: (context, vm, _) {
           return Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.search_off,
-                      size: 80, color: Color(0xFFE53935)),
-                  const SizedBox(height: 20),
-                  const Text('Vehicle Not Found',
-                      style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF212121))),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'No registered vehicle was found for the license plate:',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.red,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red.shade400, width: 1.5),
                     ),
-                    child: Text(
-                      vm.licensePlate,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'monospace',
-                        letterSpacing: 3,
-                        color: Color(0xFF212121),
-                      ),
+                    child: Column(
+                      children: [
+                        const CircleAvatar(
+                          backgroundColor: Colors.white,
+                          radius: 24,
+                          child: Icon(Icons.close, color: Colors.red, size: 28),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Vehicle Not Found',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Plate ${vm.licensePlate} is not registered in the Cyber1 database',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            vm.licensePlate,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'monospace',
+                              letterSpacing: 3,
+                              color: Color(0xFF212121),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 24),
-                  _buildPossibleReasons(),
-                  const SizedBox(height: 28),
-                  _buildSearchAgainButton(context, vm),
-                  const SizedBox(height: 12),
-                  _buildDashboardButton(context, vm),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'If this vehicle should be registered, contact Cyber1 support',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'What would you like to do?',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF212121),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF8E1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFFE082)),
+                          ),
+                          child: const Text(
+                            'This plate was not found in TMS. Please confirm the plate number with the customer or try another search.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF795548),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        GestureDetector(
+                          onTap: () => vm.searchAgain(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.search,
+                                    color: Colors.grey, size: 28),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Search Again',
+                                          style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF212121))),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                          'Try a different license plate number',
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600])),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.arrow_forward_ios,
+                                    color: Colors.grey[400], size: 16),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
                 ],
               ),
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildPossibleReasons() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFDE7),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Possible Reasons',
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFF9A825))),
-          const SizedBox(height: 10),
-          _buildBullet(
-              'The vehicle is not registered in the Cyber1 TMS system'),
-          _buildBullet(
-              'The license plate may have been entered incorrectly'),
-          _buildBullet(
-              'The vehicle registration may have expired'),
-          _buildBullet(
-              'Contact your supervisor if you believe this is an error'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBullet(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('  \u2022  ',
-              style: TextStyle(fontSize: 13, color: Color(0xFF616161))),
-          Expanded(
-            child: Text(text,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF616161))),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchAgainButton(
-      BuildContext context, VehicleNotFoundViewModel vm) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton.icon(
-        onPressed: () => vm.retrySearch(context),
-        icon: const Icon(Icons.refresh),
-        label: const Text('Search Again',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A237E),
-          foregroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDashboardButton(
-      BuildContext context, VehicleNotFoundViewModel vm) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: OutlinedButton.icon(
-        onPressed: () => vm.goToDashboard(context),
-        icon: const Icon(Icons.home),
-        label: const Text('Back to Dashboard',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xFF1A237E),
-          side: const BorderSide(color: Color(0xFF1A237E)),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
       ),
     );
   }

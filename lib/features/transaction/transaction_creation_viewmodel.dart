@@ -1,61 +1,131 @@
 import 'package:flutter/material.dart';
 
 import '../../app/routes.dart';
-import '../../core/utils/logger.dart';
-import '../../data/models/transaction_draft_model.dart';
-import '../../data/models/transaction_model.dart';
-import '../../data/repositories/transaction_repository.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/session/session_manager.dart';
+import '../../core/utils/logger.dart';
+import '../../data/models/vehicle_model.dart';
+import '../../data/repositories/location_repository.dart';
+import '../../data/repositories/transaction_repository.dart';
 
 class TransactionCreationViewModel extends ChangeNotifier {
   static const String _tag = 'TxCreateVM';
 
-  final TransactionDraftModel draft;
-  final TransactionRepository _repository = TransactionRepository();
-  final TextEditingController payerNameController;
-  final TextEditingController payerPhoneController;
+  final VehicleModel vehicle;
+  final LocationRepository _locationRepository = LocationRepository();
+  final TransactionRepository _transactionRepository = TransactionRepository();
 
-  TransactionCreationViewModel({required this.draft})
-      : payerNameController = TextEditingController(
-            text: draft.vehicle.customerName != 'N/A'
-                ? draft.vehicle.customerName
-                : ''),
-        payerPhoneController = TextEditingController(
-            text: draft.vehicle.phoneNumber ?? '') {
-    AppLogger.logDebug(_tag, 'Init: ${draft.vehicle.vehicleLicense}');
+  bool isLoading = false;
+  String? errorMessage;
+  String selectedPaymentMethod = 'card';
+  String? selectedOriginState;
+  String? selectedOriginLga;
+  String? selectedDestinationState;
+  String? selectedDestinationLga;
+  List<String> states = [];
+  List<String> originLgas = [];
+  List<String> destinationLgas = [];
+  final Map<String, String> _stateNameToId = {};
+
+  final TextEditingController payerNameController = TextEditingController();
+  final TextEditingController payerPhoneController = TextEditingController();
+  final TextEditingController payerEmailController = TextEditingController();
+
+  bool get isCompleteTrip => vehicle.transactionType == 'complete';
+
+  double get baseAmount => vehicle.price.amount;
+  double get adminFee => baseAmount * AppConstants.adminFeePercent;
+  double get processingFee => AppConstants.flatTransactionFee;
+  double get vat => (adminFee + processingFee) * AppConstants.vatPercent;
+  double get totalFee => adminFee + processingFee + vat;
+  double get totalPayable => baseAmount + totalFee;
+
+  TransactionCreationViewModel({required this.vehicle}) {
+    payerNameController.text =
+        vehicle.customerName != 'N/A' ? vehicle.customerName : '';
+    payerPhoneController.text = vehicle.phoneNumber ?? '';
+    loadStates();
   }
 
-  String selectedPaymentMethod = 'card';
-  bool isSubmitting = false;
-  String? errorMessage;
+  String _formatAmount(double value) {
+    return value.toStringAsFixed(2);
+  }
 
-  static const List<Map<String, dynamic>> paymentMethods = [
-    {
-      'value': 'card',
-      'label': 'Card Payment',
-      'icon': Icons.credit_card,
-      'color': Colors.blue,
-      'subtitle': 'Tap or swipe card at terminal',
-    },
-    {
-      'value': 'wallet',
-      'label': 'Wallet',
-      'icon': Icons.account_balance_wallet,
-      'color': Colors.purple,
-      'subtitle': "Deduct from customer's wallet balance",
-    },
-    {
-      'value': 'transfer',
-      'label': 'Bank Transfer',
-      'icon': Icons.swap_horiz,
-      'color': Colors.green,
-      'subtitle': 'Customer pays via bank transfer',
-    },
-  ];
+  String get formattedBaseAmount => _formatAmount(baseAmount);
+  String get formattedAdminFee => _formatAmount(adminFee);
+  String get formattedProcessingFee => _formatAmount(processingFee);
+  String get formattedVat => _formatAmount(vat);
+  String get formattedTotalFee => _formatAmount(totalFee);
+  String get formattedTotalPayable => _formatAmount(totalPayable);
+
+  Future<void> loadStates() async {
+    isLoading = true;
+    notifyListeners();
+
+    final result = await _locationRepository.getStates();
+    if (result.success && result.data != null) {
+      _stateNameToId.clear();
+      for (final s in result.data!) {
+        _stateNameToId[s.stateName] = s.stateId;
+      }
+      states = _stateNameToId.keys.toList();
+    } else {
+      AppLogger.logWarning(
+          _tag, 'Failed to load states: ${result.failure?.message}');
+    }
+
+    isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> onOriginStateChanged(String state) async {
+    selectedOriginState = state;
+    selectedOriginLga = null;
+    originLgas = [];
+    notifyListeners();
+
+    if (state.isEmpty) return;
+
+    final stateId = _stateNameToId[state];
+    if (stateId == null) return;
+
+    final result = await _locationRepository.getLgas(stateId);
+    if (result.success && result.data != null) {
+      originLgas = result.data!.map((l) => l.lgaName).toList();
+    }
+    notifyListeners();
+  }
+
+  Future<void> onDestinationStateChanged(String state) async {
+    selectedDestinationState = state;
+    selectedDestinationLga = null;
+    destinationLgas = [];
+    notifyListeners();
+
+    if (state.isEmpty) return;
+
+    final stateId = _stateNameToId[state];
+    if (stateId == null) return;
+
+    final result = await _locationRepository.getLgas(stateId);
+    if (result.success && result.data != null) {
+      destinationLgas = result.data!.map((l) => l.lgaName).toList();
+    }
+    notifyListeners();
+  }
 
   void onPaymentMethodChanged(String method) {
-    AppLogger.logDebug(_tag, 'Payment method: $method');
     selectedPaymentMethod = method;
+    notifyListeners();
+  }
+
+  void onOriginLgaChanged(String? lga) {
+    selectedOriginLga = lga;
+    notifyListeners();
+  }
+
+  void onDestinationLgaChanged(String? lga) {
+    selectedDestinationLga = lga;
     notifyListeners();
   }
 
@@ -64,59 +134,141 @@ class TransactionCreationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  String generateTransactionReference() {
+    return 'TXN-${DateTime.now().millisecondsSinceEpoch.toString()}';
+  }
+
   Future<void> submit(BuildContext context) async {
-    isSubmitting = true;
+    isLoading = true;
     errorMessage = null;
     notifyListeners();
 
-    AppLogger.logInfo(_tag, 'Submitting: ${draft.vehicle.vehicleLicense}, method=$selectedPaymentMethod');
-
-    final session = await SessionManager.instance;
-    final agentNumber = session.agentNumber;
-    final terminalId = session.terminalId;
-
-    if (agentNumber == null || agentNumber.isEmpty) {
-      AppLogger.logWarning(_tag, 'Session error – missing agent number');
-      errorMessage =
-          'Session error. Agent number missing. Please restart.';
-      isSubmitting = false;
+    if (payerNameController.text.trim().isEmpty) {
+      errorMessage = 'Payer name is required';
+      isLoading = false;
       notifyListeners();
       return;
     }
 
-    final result = await _repository.createTransaction(
-      draft,
-      selectedPaymentMethod,
-      payerName: payerNameController.text.isNotEmpty
-          ? payerNameController.text
-          : draft.vehicle.vehicleLicense,
-      payerPhone: payerPhoneController.text,
-    );
+    if (payerPhoneController.text.trim().length != 11) {
+      errorMessage = 'Phone number must be 11 digits';
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    if (selectedOriginState == null) {
+      errorMessage = 'Please select origin state';
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    if (selectedOriginLga == null) {
+      errorMessage = 'Please select origin LGA';
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    if (isCompleteTrip && selectedDestinationState == null) {
+      errorMessage = 'Please select destination state';
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    if (isCompleteTrip && selectedDestinationLga == null) {
+      errorMessage = 'Please select destination LGA';
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    AppLogger.logInfo(_tag,
+        'Submitting: ${vehicle.vehicleLicense}, method=$selectedPaymentMethod');
+
+    final session = await SessionManager.instance;
+    final terminalId = session.terminalId;
+    final channelNumber = session.channelNumber;
+    final serviceNumber = session.serviceNumberTransaction;
+
+    if (terminalId == null || terminalId.isEmpty) {
+      errorMessage = 'Session error. Terminal ID missing. Please restart.';
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    final ref = generateTransactionReference();
+    final now = DateTime.now();
+    final transactionDate =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+
+    final payerEmail = payerEmailController.text.isNotEmpty
+        ? payerEmailController.text
+        : 'noemail@cyber1tms.com';
+
+    final metadata = <String, dynamic>{
+      'terminal_id': terminalId,
+      'contact': payerPhoneController.text.trim(),
+      'vehicle_type': vehicle.vehicleType,
+      'transaction_type': vehicle.transactionType,
+      'transaction_date': transactionDate,
+      'amount': _formatAmount(baseAmount),
+      'vehicle_license': vehicle.vehicleLicense,
+      'transaction_reference': ref,
+      'origin_state': selectedOriginState,
+      'origin_lga': selectedOriginLga,
+      'destination_state': isCompleteTrip ? selectedDestinationState : null,
+      'destination_lga': isCompleteTrip ? selectedDestinationLga : null,
+      'payload': null,
+    };
+
+    final payload = <String, dynamic>{
+      'transaction_reference': ref,
+      'payer_name': payerNameController.text.trim(),
+      'payer_phone': payerPhoneController.text.trim(),
+      'payer_email': payerEmail,
+      'amount': _formatAmount(baseAmount),
+      'fee': _formatAmount(totalFee),
+      'payment_method': selectedPaymentMethod,
+      'terminal_id': terminalId,
+      'vehicle_license': vehicle.vehicleLicense,
+      'vehicle_type': vehicle.vehicleType,
+      'transaction_type': vehicle.transactionType,
+      'origin_state': selectedOriginState,
+      'origin_lga': selectedOriginLga,
+      'destination_state': isCompleteTrip ? selectedDestinationState : null,
+      'destination_lga': isCompleteTrip ? selectedDestinationLga : null,
+      'transaction_date': transactionDate,
+      if (channelNumber != null && channelNumber.isNotEmpty)
+        'channel_number': channelNumber,
+      if (serviceNumber != null && serviceNumber.isNotEmpty)
+        'service_number': serviceNumber,
+      'metadata': metadata,
+    };
+
+    AppLogger.logInfo(_tag, 'Payload ready: $ref');
+
+    final result = await _transactionRepository.createTransaction(payload);
 
     if (result.success && result.data != null) {
-      AppLogger.logInfo(_tag, 'Created: ${result.data!['transaction_reference']}');
-
-      final pendingTransaction =
-          TransactionModel.fromDraftAndResponse(
-        draft,
-        selectedPaymentMethod,
-        result.data!,
-        agentNumber,
-        terminalId ?? '',
-      );
-
-      isSubmitting = false;
+      AppLogger.logInfo(_tag, 'Created: ${result.data!.transactionReference}');
+      isLoading = false;
       notifyListeners();
 
+      if (!context.mounted) return;
       Navigator.pushReplacementNamed(
         context,
-        AppRoutes.paymentProcessing,
-        arguments: pendingTransaction,
+        AppRoutes.transactionSuccess,
+        arguments: result.data!,
       );
     } else {
       AppLogger.logWarning(_tag, 'Creation failed: ${result.failure?.message}');
-      errorMessage = _mapFailureMessage(result.failure!.message);
-      isSubmitting = false;
+      errorMessage = result.failure?.message ?? 'Transaction creation failed';
+      isLoading = false;
       notifyListeners();
     }
   }
@@ -125,27 +277,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
   void dispose() {
     payerNameController.dispose();
     payerPhoneController.dispose();
+    payerEmailController.dispose();
     super.dispose();
-  }
-
-  String _mapFailureMessage(String message) {
-    if (message.toLowerCase().contains('network') ||
-        message.toLowerCase().contains('internet')) {
-      return 'No internet connection. Check your network';
-    }
-    if (message.toLowerCase().contains('auth') ||
-        message.toLowerCase().contains('key')) {
-      return 'API authentication error. Contact your administrator';
-    }
-    if (message.toLowerCase().contains('already exists')) {
-      return 'A transaction already exists for this vehicle';
-    }
-    if (message.toLowerCase().contains('terminal')) {
-      return 'Terminal not recognized. Contact your administrator';
-    }
-    if (message.toLowerCase().contains('agent not found')) {
-      return 'Agent account not found. Please re-login';
-    }
-    return 'Transaction creation failed. Please try again';
   }
 }

@@ -4,7 +4,7 @@ import '../../app/routes.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/errors/failure.dart';
 import '../../core/utils/logger.dart';
-import '../repositories/vehicle_repository.dart';
+import '../../data/repositories/vehicle_repository.dart';
 
 class VehicleSearchViewModel extends ChangeNotifier {
   static const String _tag = 'VehSearchVM';
@@ -58,7 +58,7 @@ class VehicleSearchViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _repository.validateCustomer(
+      final result = await _repository.validateVehicle(
         vehicleLicense: plate,
         transactionType: selectedTransactionType,
       );

@@ -14,9 +14,8 @@ class AdminDashboardViewModel extends ChangeNotifier {
 
   Future<void> loadSession() async {
     final session = await SessionManager.instance;
-    adminName = session.agentFullName.isNotEmpty
-        ? session.agentFullName
-        : 'Admin';
+    adminName =
+        session.agentFullName.isNotEmpty ? session.agentFullName : 'Admin';
     companyNumber = session.companyNumber ?? 'N/A';
     currentDate = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
     notifyListeners();

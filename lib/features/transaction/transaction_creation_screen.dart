@@ -1,94 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/session/session_manager.dart';
-import '../../data/models/transaction_draft_model.dart';
+import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../core/widgets/detail_row.dart';
+import '../../core/widgets/section_header.dart';
+import '../../data/models/vehicle_model.dart';
 import 'transaction_creation_viewmodel.dart';
 
-class TransactionCreationScreen extends StatefulWidget {
+class TransactionCreationScreen extends StatelessWidget {
   const TransactionCreationScreen({super.key});
 
   @override
-  State<TransactionCreationScreen> createState() =>
-      _TransactionCreationScreenState();
-}
-
-class _TransactionCreationScreenState
-    extends State<TransactionCreationScreen> {
-  String? _agentNumber;
-  String? _terminalId;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSession();
-  }
-
-  Future<void> _loadSession() async {
-    final session = await SessionManager.instance;
-    setState(() {
-      _agentNumber = session.agentNumber;
-      _terminalId = session.terminalId;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final draft =
-        ModalRoute.of(context)!.settings.arguments as TransactionDraftModel;
+    final vehicle = ModalRoute.of(context)!.settings.arguments as VehicleModel;
 
     return ChangeNotifierProvider(
-      create: (_) => TransactionCreationViewModel(draft: draft),
-      child: _TransactionCreationBody(
-        agentNumber: _agentNumber,
-        terminalId: _terminalId,
-      ),
+      create: (_) => TransactionCreationViewModel(vehicle: vehicle),
+      child: const _TransactionCreationBody(),
     );
   }
 }
 
 class _TransactionCreationBody extends StatelessWidget {
-  final String? agentNumber;
-  final String? terminalId;
-
-  const _TransactionCreationBody({
-    required this.agentNumber,
-    required this.terminalId,
-  });
+  const _TransactionCreationBody();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Confirm Transaction'),
+        title: const Text('Create Transaction'),
+        backgroundColor: Colors.green.shade700,
+        foregroundColor: Colors.white,
       ),
       body: Consumer<TransactionCreationViewModel>(
         builder: (context, vm, _) {
-          final vehicle = vm.draft.vehicle;
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildCustomerInfoFields(vm),
+                _buildSummaryCard(vm),
                 const SizedBox(height: 12),
-                _buildCustomerVehicleCard(vehicle, vm.draft),
+                _buildPayerInfoCard(vm),
                 const SizedBox(height: 12),
-                _buildRouteCard(vm.draft),
+                _buildOriginCard(vm),
+                if (vm.isCompleteTrip) ...[
+                  const SizedBox(height: 12),
+                  _buildDestinationCard(vm),
+                ],
                 const SizedBox(height: 12),
-                _buildFeeBreakdownCard(vehicle),
-                const SizedBox(height: 16),
                 _buildPaymentMethodSection(vm),
                 const SizedBox(height: 12),
-                _buildAgentInfoCard(),
+                _buildFeeSummaryCard(vm),
                 if (vm.errorMessage != null) ...[
                   const SizedBox(height: 16),
                   _buildErrorBanner(vm),
                 ],
                 const SizedBox(height: 20),
                 _buildSubmitButton(vm, context),
-                const SizedBox(height: 8),
-                _buildBottomCaption(),
+                const SizedBox(height: 16),
               ],
             ),
           );
@@ -97,377 +68,163 @@ class _TransactionCreationBody extends StatelessWidget {
     );
   }
 
-  Widget _buildCustomerInfoFields(TransactionCreationViewModel vm) {
-    return Card(
+  Widget _buildSummaryCard(TransactionCreationViewModel vm) {
+    final vehicle = vm.vehicle;
+    return AppCard(
       elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.edit, size: 18, color: Color(0xFF1A237E)),
-                SizedBox(width: 6),
-                Text('Customer Details',
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF212121))),
-              ],
-            ),
-            const Divider(),
-            TextField(
-              controller: vm.payerNameController,
-              decoration: InputDecoration(
-                labelText: 'Payer Name *',
-                hintText: 'Enter customer full name',
-                isDense: true,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              textCapitalization: TextCapitalization.words,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: vm.payerPhoneController,
-              decoration: InputDecoration(
-                labelText: 'Phone Number *',
-                hintText: 'Enter customer phone number',
-                isDense: true,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              keyboardType: TextInputType.phone,
-            ),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(title: 'Transaction Summary'),
+          const Divider(),
+          DetailRow(
+              label: 'License Plate',
+              value: vehicle.vehicleLicense,
+              isMonospace: true),
+          const SizedBox(height: 6),
+          DetailRow(label: 'Vehicle Type', value: vehicle.vehicleType),
+          const SizedBox(height: 6),
+          _buildTripTypeChip(vehicle.transactionType),
+          const SizedBox(height: 8),
+          DetailRow(label: 'Base Amount', value: '₦${vm.formattedBaseAmount}'),
+        ],
       ),
     );
   }
 
-  Widget _buildCustomerVehicleCard(vehicle, TransactionDraftModel draft) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.person, size: 18, color: Color(0xFF1A237E)),
-                const SizedBox(width: 6),
-                const Text('Customer & Vehicle',
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF212121))),
-              ],
-            ),
-            const Divider(),
-            _buildRow('Customer Name', vehicle.customerName),
-            const SizedBox(height: 6),
-            _buildRow('License Plate', vehicle.vehicleLicense,
-                isMonospace: true),
-            const SizedBox(height: 6),
-            _buildRow(
-                'Vehicle',
-                '${vehicle.vehicleMake} ${vehicle.vehicleModel} (${vehicle.vehicleColor})'),
-            const SizedBox(height: 6),
-            _buildTripTypeChip(vehicle.transactionType),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRouteCard(TransactionDraftModel draft) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: const Border(
-            left: BorderSide(color: Color(0xFF1A237E), width: 4),
+  Widget _buildPayerInfoCard(TransactionCreationViewModel vm) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(title: 'Payer Information'),
+          const Divider(),
+          AppTextField(
+            controller: vm.payerNameController,
+            label: 'Payer Full Name *',
+            hint: 'Enter payer full name',
+            textCapitalization: TextCapitalization.words,
           ),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.route, size: 18, color: Color(0xFF1A237E)),
-                const SizedBox(width: 6),
-                const Text('Trip Route',
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF212121))),
-              ],
-            ),
-            const Divider(),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('FROM',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                              letterSpacing: 1)),
-                      const SizedBox(height: 4),
-                      Text(draft.originLga,
-                          style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF212121))),
-                      Text(draft.originState,
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.grey)),
-                    ],
-                  ),
-                ),
-                Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1A237E).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Icon(Icons.arrow_forward,
-                          size: 20, color: Color(0xFF1A237E)),
-                    ),
-                  ],
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text('TO',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                              letterSpacing: 1)),
-                      const SizedBox(height: 4),
-                      Text(draft.destinationLga,
-                          style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF212121))),
-                      Text(draft.destinationState,
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.grey)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          const SizedBox(height: 12),
+          AppTextField(
+            controller: vm.payerPhoneController,
+            label: 'Payer Phone *',
+            hint: 'Enter 11-digit phone number',
+            keyboardType: TextInputType.phone,
+            maxLength: 11,
+          ),
+          const SizedBox(height: 12),
+          AppTextField(
+            controller: vm.payerEmailController,
+            label: 'Payer Email',
+            hint: 'customer@example.com (optional)',
+            keyboardType: TextInputType.emailAddress,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildFeeBreakdownCard(vehicle) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.receipt, size: 18, color: Color(0xFF1A237E)),
-                const SizedBox(width: 6),
-                const Text('Fee Breakdown',
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF212121))),
-              ],
+  Widget _buildOriginCard(TransactionCreationViewModel vm) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(title: 'Trip Origin'),
+          const Divider(),
+          DropdownButtonFormField<String>(
+            value: vm.selectedOriginState,
+            decoration: InputDecoration(
+              labelText: 'Origin State *',
+              isDense: true,
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            const Divider(),
-            _buildFeeRow('Base Amount', vehicle.price.formattedAmount),
-            const SizedBox(height: 6),
-            _buildFeeRow('Service Fee', vehicle.price.formattedServiceFee),
-            const Divider(thickness: 1.5),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A237E).withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text('Total Payable',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF212121))),
-                  ),
-                  Text(
-                    vehicle.price.formattedTotal,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A237E),
-                    ),
-                  ),
-                ],
-              ),
+            items: vm.states
+                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) vm.onOriginStateChanged(v);
+            },
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: vm.selectedOriginLga,
+            decoration: InputDecoration(
+              labelText: 'Origin LGA *',
+              isDense: true,
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             ),
-          ],
-        ),
+            items: vm.originLgas
+                .map((l) => DropdownMenuItem(value: l, child: Text(l)))
+                .toList(),
+            onChanged:
+                vm.selectedOriginState == null ? null : vm.onOriginLgaChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDestinationCard(TransactionCreationViewModel vm) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(title: 'Trip Destination'),
+          const Divider(),
+          DropdownButtonFormField<String>(
+            value: vm.selectedDestinationState,
+            decoration: InputDecoration(
+              labelText: 'Destination State *',
+              isDense: true,
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            items: vm.states
+                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) vm.onDestinationStateChanged(v);
+            },
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: vm.selectedDestinationLga,
+            decoration: InputDecoration(
+              labelText: 'Destination LGA *',
+              isDense: true,
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            items: vm.destinationLgas
+                .map((l) => DropdownMenuItem(value: l, child: Text(l)))
+                .toList(),
+            onChanged: vm.selectedDestinationState == null
+                ? null
+                : vm.onDestinationLgaChanged,
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildPaymentMethodSection(TransactionCreationViewModel vm) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.payment, size: 18, color: Color(0xFF1A237E)),
-            const SizedBox(width: 6),
-            const Text('Payment Method',
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF212121))),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ...TransactionCreationViewModel.paymentMethods.map((method) {
-          final value = method['value'] as String;
-          final label = method['label'] as String;
-          final icon = method['icon'] as IconData;
-          final color = method['color'] as Color;
-          final subtitle = method['subtitle'] as String;
-          final isSelected = vm.selectedPaymentMethod == value;
-
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: InkWell(
-              onTap: () => vm.onPaymentMethodChanged(value),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color:
-                      isSelected ? color.withValues(alpha: 0.05) : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected ? color : Colors.grey.shade300,
-                    width: isSelected ? 2 : 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: color.withValues(alpha: 0.15),
-                      child: Icon(icon, size: 18, color: color),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(label,
-                              style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF212121))),
-                          Text(subtitle,
-                              style: const TextStyle(
-                                  fontSize: 11, color: Colors.grey)),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isSelected ? color : Colors.transparent,
-                        border: Border.all(
-                          color: isSelected ? color : Colors.grey.shade400,
-                          width: 2,
-                        ),
-                      ),
-                      child: isSelected
-                          ? const Icon(Icons.check,
-                              size: 14, color: Colors.white)
-                          : null,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-
-  Widget _buildAgentInfoCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(10),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Transaction will be processed on:',
-              style: TextStyle(fontSize: 11, color: Colors.grey)),
-          const SizedBox(height: 8),
+          const SectionHeader(title: 'Payment Method'),
+          const Divider(),
           Row(
             children: [
-              const SizedBox(
-                  width: 100,
-                  child: Text('Agent Number',
-                      style: TextStyle(fontSize: 11, color: Colors.grey))),
-              Text(
-                agentNumber ?? 'N/A',
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF212121)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const SizedBox(
-                  width: 100,
-                  child: Text('Terminal ID',
-                      style: TextStyle(fontSize: 11, color: Colors.grey))),
-              Text(
-                terminalId ?? 'N/A',
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF212121)),
-              ),
+              _buildPaymentChip(vm, 'card', 'Card', Icons.credit_card),
+              const SizedBox(width: 8),
+              _buildPaymentChip(
+                  vm, 'wallet', 'Wallet', Icons.account_balance_wallet),
+              const SizedBox(width: 8),
+              _buildPaymentChip(vm, 'transfer', 'Transfer', Icons.swap_horiz),
             ],
           ),
         ],
@@ -475,37 +232,117 @@ class _TransactionCreationBody extends StatelessWidget {
     );
   }
 
-  Widget _buildErrorBanner(TransactionCreationViewModel vm) {
-    return Dismissible(
-      key: const ValueKey('txn_error_banner'),
-      direction: DismissDirection.endToStart,
-      onDismissed: (_) => vm.errorMessage = null,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.red.shade50,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.red.shade200),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.error_outline, size: 20, color: Colors.red.shade700),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                vm.errorMessage!,
-                style: TextStyle(fontSize: 13, color: Colors.red.shade800),
+  Widget _buildPaymentChip(TransactionCreationViewModel vm, String value,
+      String label, IconData icon) {
+    final isSelected = vm.selectedPaymentMethod == value;
+    return Expanded(
+      child: InkWell(
+        onTap: () => vm.onPaymentMethodChanged(value),
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? Colors.green.withValues(alpha: 0.1)
+                : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? Colors.green : Colors.grey.shade300,
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(icon,
+                  size: 22, color: isSelected ? Colors.green : Colors.grey),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Colors.green : Colors.grey,
+                ),
               ),
-            ),
-            InkWell(
-              onTap: () {
-                vm.clearError();
-              },
-              child: Icon(Icons.close, size: 18, color: Colors.red.shade400),
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFeeSummaryCard(TransactionCreationViewModel vm) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(title: 'Fee Summary'),
+          const Divider(),
+          DetailRow(label: 'Base Amount', value: '₦${vm.formattedBaseAmount}'),
+          const SizedBox(height: 6),
+          DetailRow(label: 'Admin Fee (2%)', value: '₦${vm.formattedAdminFee}'),
+          const SizedBox(height: 6),
+          DetailRow(
+              label: 'Processing Fee', value: '₦${vm.formattedProcessingFee}'),
+          const SizedBox(height: 6),
+          DetailRow(label: 'VAT (7.5%)', value: '₦${vm.formattedVat}'),
+          const Divider(thickness: 1.5),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A237E).withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text('Total Payable',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF212121))),
+                ),
+                Text(
+                  '₦${vm.formattedTotalPayable}',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A237E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(TransactionCreationViewModel vm) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, size: 20, color: Colors.red.shade700),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              vm.errorMessage!,
+              style: TextStyle(fontSize: 13, color: Colors.red.shade800),
+            ),
+          ),
+          InkWell(
+            onTap: vm.clearError,
+            child: Icon(Icons.close, size: 18, color: Colors.red.shade400),
+          ),
+        ],
       ),
     );
   }
@@ -515,82 +352,11 @@ class _TransactionCreationBody extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 50,
-      child: ElevatedButton.icon(
-        onPressed:
-            vm.isSubmitting ? null : () => vm.submit(context),
-        icon: vm.isSubmitting
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white))
-            : const Icon(Icons.check_circle),
-        label: Text(
-          vm.isSubmitting ? 'Creating...' : 'Create Transaction',
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A237E),
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: const Color(0xFF1A237E).withValues(alpha: 0.4),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+      child: AppButton(
+        onPressed: vm.isLoading ? null : () => vm.submit(context),
+        isLoading: vm.isLoading,
+        label: 'Confirm & Create Transaction',
       ),
-    );
-  }
-
-  Widget _buildBottomCaption() {
-    return const Center(
-      child: Text(
-        'Step 3 of 3 \u2014 Review and confirm',
-        style: TextStyle(fontSize: 11, color: Colors.grey),
-      ),
-    );
-  }
-
-  // ── Helpers ──
-
-  Widget _buildRow(String label, String value, {bool isMonospace = false}) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 110,
-          child: Text(label,
-              style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF212121),
-              fontFamily: isMonospace ? 'monospace' : null,
-              letterSpacing: isMonospace ? 1 : null,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeeRow(String label, String value) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(label,
-              style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF212121)),
-        ),
-      ],
     );
   }
 

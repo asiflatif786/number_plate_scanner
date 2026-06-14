@@ -5,14 +5,7 @@ class VehicleNotFoundViewModel extends ChangeNotifier {
 
   VehicleNotFoundViewModel({required this.licensePlate});
 
-  void retrySearch(BuildContext context) {
+  void searchAgain(BuildContext context) {
     Navigator.pop(context);
-  }
-
-  void goToDashboard(BuildContext context) {
-    Navigator.popUntil(
-      context,
-      ModalRoute.withName('/agent-dashboard'),
-    );
   }
 }

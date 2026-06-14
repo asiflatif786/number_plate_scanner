@@ -9,6 +9,10 @@ import '../../../../core/utils/responsive_helper.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/custom_dialog.dart';
 import '../../../../core/widgets/loading_overlay.dart';
+import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/section_header.dart';
+import '../../../../core/widgets/app_text_field.dart';
 import '../../domain/entities/corporate_entity.dart';
 import '../viewmodels/corporate_viewmodel.dart';
 
@@ -153,20 +157,6 @@ class _CorporateRegistrationScreenState
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1A237E),
-        ),
-      ),
-    );
-  }
-
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -175,29 +165,13 @@ class _CorporateRegistrationScreenState
     String? hintText,
     int maxLines = 1,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        controller: controller,
-        validator: validator,
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hintText,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-            borderSide: const BorderSide(color: Color(0xFF1A237E), width: 2),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
-        ),
-      ),
+    return AppTextField(
+      label: label,
+      hint: hintText,
+      controller: controller,
+      validator: validator,
+      keyboardType: keyboardType ?? TextInputType.text,
+      maxLines: maxLines,
     );
   }
 
@@ -354,17 +328,11 @@ class _CorporateRegistrationScreenState
   }
 
   Widget _buildCompanySection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Company Information'),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(title: 'Company Information', fontSize: 16),
             _buildTextField(
               controller: _nameController,
               label: 'Company Name',
@@ -404,22 +372,15 @@ class _CorporateRegistrationScreenState
             ),
           ],
         ),
-      ),
     );
   }
 
   Widget _buildAddressSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Address Details'),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(title: 'Address Details', fontSize: 16),
             _buildTextField(
               controller: _addressController,
               label: 'Registered Address',
@@ -458,29 +419,19 @@ class _CorporateRegistrationScreenState
             ),
           ],
         ),
-      ),
     );
   }
 
   Widget _buildDocumentsSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Documents (Optional)'),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 16),
-              child: Text(
-                'Upload supporting documents in PDF or image format',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(
+            title: 'Documents (Optional)',
+            subtitle: 'Upload supporting documents in PDF or image format',
+            fontSize: 16,
+          ),
             _buildUploadField(
               label: 'CAC',
               fileName: _cacFileName,
@@ -531,29 +482,15 @@ class _CorporateRegistrationScreenState
             ),
           ],
         ),
-      ),
     );
   }
 
   Widget _buildSubmitButton(CorporateViewModel viewmodel) {
-    return SizedBox(
-      width: double.infinity,
+    return AppButton(
+      label: 'Register Company',
+      onPressed: viewmodel.isLoading ? null : _onSubmit,
+      isLoading: viewmodel.isLoading,
       height: ResponsiveHelper.buttonHeight(context),
-      child: ElevatedButton(
-        onPressed: viewmodel.isLoading ? null : _onSubmit,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A237E),
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: const Color(0xFF1A237E).withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-          ),
-        ),
-        child: const Text(
-          'Register Company',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ),
     );
   }
 }

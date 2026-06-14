@@ -8,6 +8,10 @@ import '../../../../core/widgets/custom_dialog.dart';
 import '../../../../core/widgets/loading_overlay.dart';
 import '../viewmodels/transaction_viewmodel.dart';
 import 'transaction_success_screen.dart';
+import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/section_header.dart';
 
 class TransactionScreen extends StatefulWidget {
   const TransactionScreen({super.key});
@@ -156,90 +160,55 @@ class _TransactionScreenState extends State<TransactionScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1A237E),
-        ),
-      ),
-    );
-  }
-
   Widget _buildPayerSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Payer Information'),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _firstNameController,
-                    decoration: _inputDecoration('First Name'),
-                    textCapitalization: TextCapitalization.words,
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Required' : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _lastNameController,
-                    decoration: _inputDecoration('Last Name'),
-                    textCapitalization: TextCapitalization.words,
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Required' : null,
-                  ),
-                ),
-              ],
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(title: 'Payer Information', fontSize: 16),
+          ResponsiveFieldRow(
+            context: context,
+            firstField: AppTextField(
+              label: 'First Name',
+              controller: _firstNameController,
+              textCapitalization: TextCapitalization.words,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _phoneController,
-              decoration: _inputDecoration('Phone Number'),
-              keyboardType: TextInputType.phone,
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Required';
-                if (v.trim().length < 11) return 'Min 11 digits';
-                return null;
-              },
+            secondField: AppTextField(
+              label: 'Last Name',
+              controller: _lastNameController,
+              textCapitalization: TextCapitalization.words,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _emailController,
-              decoration: _inputDecoration('Email (optional)'),
-              keyboardType: TextInputType.emailAddress,
-            ),
-          ],
-        ),
+          ),
+          AppTextField(
+            label: 'Phone Number',
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Required';
+              if (v.trim().length < 11) return 'Min 11 digits';
+              return null;
+            },
+          ),
+          AppTextField(
+            label: 'Email (optional)',
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildTripDetailsSection(TransactionViewModel viewmodel) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Trip Details'),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(title: 'Trip Details', fontSize: 16),
             _buildDetailRow(
                 Icons.directions_car, 'License Plate', viewmodel.vehicleLicense ?? ''),
             const SizedBox(height: 8),
@@ -290,7 +259,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -327,17 +295,11 @@ class _TransactionScreenState extends State<TransactionScreen> {
       {'key': 'pos', 'label': 'POS', 'icon': Icons.point_of_sale},
     ];
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Payment Method'),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(title: 'Payment Method', fontSize: 16),
             Row(
               children: methods.map((m) {
                 final key = m['key'] as String;
@@ -395,26 +357,19 @@ class _TransactionScreenState extends State<TransactionScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 
   Widget _buildFeeSummarySection(TransactionViewModel viewmodel) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GestureDetector(
-              onTap: () => setState(() => _feesExpanded = !_feesExpanded),
-              child: Row(
-                children: [
-                  _buildSectionTitle('Fee Summary'),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () => setState(() => _feesExpanded = !_feesExpanded),
+            child: Row(
+              children: [
+                SectionHeader(title: 'Fee Summary', fontSize: 16),
                   const Spacer(),
                   Icon(
                     _feesExpanded
@@ -471,7 +426,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -504,65 +458,26 @@ class _TransactionScreenState extends State<TransactionScreen> {
   Widget _buildActionButtons(TransactionViewModel viewmodel) {
     return Column(
       children: [
-        SizedBox(
-          width: double.infinity,
+        AppButton(
+          label: 'Proceed with Payment',
+          onPressed: viewmodel.isSubmitting ? null : _onProceedPayment,
+          isLoading: viewmodel.isSubmitting,
+          icon: Icons.payment,
+          color: const Color(0xFF2E7D32),
           height: ResponsiveHelper.buttonHeight(context),
-          child: ElevatedButton.icon(
-            onPressed: viewmodel.isSubmitting ? null : _onProceedPayment,
-            icon: const Icon(Icons.payment, color: Colors.white),
-            label: const Text(
-              'Proceed with Payment',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2E7D32),
-              foregroundColor: Colors.white,
-              disabledBackgroundColor:
-                  const Color(0xFF2E7D32).withValues(alpha: 0.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-              ),
-            ),
-          ),
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
+        AppButton(
+          label: 'Cancel Transaction',
+          onPressed: viewmodel.isSubmitting ? null : _onCancel,
+          icon: Icons.cancel_outlined,
+          isOutlined: true,
+          textColor: const Color(0xFFC62828),
+          color: const Color(0xFFC62828),
           height: 48,
-          child: OutlinedButton.icon(
-            onPressed: viewmodel.isSubmitting ? null : _onCancel,
-            icon: const Icon(Icons.cancel_outlined, color: Color(0xFFC62828)),
-            label: const Text(
-              'Cancel Transaction',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFFC62828),
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Color(0xFFC62828)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-              ),
-            ),
-          ),
         ),
       ],
     );
   }
 
-  InputDecoration _inputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-        borderSide: const BorderSide(color: Color(0xFF1A237E), width: 2),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    );
-  }
 }

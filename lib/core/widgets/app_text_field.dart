@@ -16,6 +16,7 @@ class AppTextField extends StatefulWidget {
   final Widget? suffixIcon;
   final void Function(String)? onChanged;
   final void Function(String)? onSubmitted;
+  final TextInputAction? textInputAction;
   final TextCapitalization textCapitalization;
   final String? initialValue;
   final bool enabled;
@@ -37,6 +38,7 @@ class AppTextField extends StatefulWidget {
     this.suffixIcon,
     this.onChanged,
     this.onSubmitted,
+    this.textInputAction,
     this.textCapitalization = TextCapitalization.none,
     this.initialValue,
     this.enabled = true,
@@ -89,6 +91,7 @@ class _AppTextFieldState extends State<AppTextField> {
         focusNode: _focusNode,
         onChanged: widget.onChanged,
         onFieldSubmitted: widget.onSubmitted,
+        textInputAction: widget.textInputAction,
         textCapitalization: widget.textCapitalization,
         initialValue: widget.initialValue,
         enabled: widget.enabled,

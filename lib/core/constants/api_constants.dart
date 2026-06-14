@@ -1,11 +1,65 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl =
-      'https://tms-local-api.justerrand.ie/api/api_data';
-  static const String apiKey = 'tms_local_1776144090';
+  static const String _envUrl = String.fromEnvironment('LARAVEL_BASE_URL');
+  static const String laravelBaseUrl = _envUrl == ''
+      ? 'https://tms-local-api.justerrand.ie/api/v1'
+      : _envUrl;
+
+  static const String defaultApiKey = String.fromEnvironment('TMS_API_KEY');
+  static const String defaultChannelNumber =
+      String.fromEnvironment('TMS_CHANNEL_NUMBER');
+  static const String defaultValidationServiceNumber =
+      String.fromEnvironment('TMS_VALIDATION_SERVICE_NUMBER');
+  static const String defaultTransactionServiceNumber =
+      String.fromEnvironment('TMS_TRANSACTION_SERVICE_NUMBER');
 
   static const Duration timeout = Duration(seconds: 30);
+
+  /// The single TMS endpoint — all actions are POSTed here with key+action in body.
+  static const String tmsEndpoint = '';
+
+
+  // Official Laravel proxy endpoints used by the Flutter app.
+  static const String validateVehicle = '/validation/validate-customer';
+  static const String createTransaction = '/transaction/create-transaction';
+  static const String approveTransaction = '/transaction/approve-transaction';
+  static const String declineTransaction = '/transaction/decline-transaction';
+  static const String registerVehicle = '/vehicle/register';
+  static const String createCompany = '/corporate/create-company';
+  static const String addAgent = '/agent/add-agent';
+  static const String createTerminal = '/terminal/create-terminal-profile';
+  static const String listTransactions = '/transaction/list-transactions';
+  static const String verifyTransaction = '/transaction/verify-transaction';
+  static const String abandonTransaction = '/transaction/abandon-transaction';
+  static const String invalidateTransaction =
+      '/transaction/invalidate-transaction';
+  static const String getStates = '/state/get-states';
+  static const String getLgas = '/state/get-lgas';
+  static const String login = '/auth/login';
+
+  // Agent management
+  static const String listAgents = '/agent/list-agents';
+  static const String getAgent = '/agent/get-agent';
+  static const String getAgentStatus = '/agent/get-agent-status';
+  static const String getAgentKycStatus = '/agent/get-kyc-status';
+  static const String assignAgentToCompany = '/agent/assign-agent-to-company';
+
+  // Corporate management
+  static const String getCompanyKycStatus = '/corporate/get-company-kyc-status';
+  static const String getCompanyStatus = '/corporate/get-company-status';
+
+  // Session-based values (read from SessionManager at runtime)
+  static const String channelNumberKey = 'channel_number';
+  static const String serviceNumberValidationKey = 'service_number_validation';
+  static const String serviceNumberTransactionKey =
+      'service_number_transaction';
+
+  // Legacy constant kept for inactive files.
+  static const String baseUrl = laravelBaseUrl;
+  static const String apiKey = defaultApiKey;
+  static const String serviceNumber = defaultValidationServiceNumber;
+  static const String channelNumber = defaultChannelNumber;
 
   static const String actionCreateCompany = 'create-company';
   static const String actionAddAgent = 'add-agent';
@@ -22,40 +76,20 @@ class ApiConstants {
   static const String actionGetLgas = 'get-lgas';
   static const String actionLogin = 'login';
 
-  // Legacy mappings for older repositories
-  static const String addAgent = actionAddAgent;
-  static const String getAgentDetails = actionGetAgentDetails;
-  static const String getAgentStatus = actionGetAgentStatus;
-  static const String assignAgentToCompany = actionAssignAgentToCompany;
+  static const String validateCustomer = validateVehicle;
+  static const String getCompany = '/corporate/get-company';
+  static const String getTerminalProfile = '/terminal/get-terminalprofile';
+  static const String terminalStatus = '/terminal/terminal-status';
+  static const String assignTerminal = '/terminal/assign-terminal';
+  static const String enableDisableTerminal =
+      '/terminal/enable-disable-terminal';
 
-  static const String createCompany = actionCreateCompany;
-  static const String getCompany = 'get-company';
-  static const String getCompanyStatus = 'get-company-status';
-  static const String getCompanyKycStatus = 'get-company-kyc-status';
-
-  static const String createTerminal = actionCreateTerminal;
-  static const String getTerminalProfile = 'get-terminal-profile';
-  static const String terminalStatus = 'get-terminal-status';
-  static const String assignTerminal = 'assign-terminal';
-  static const String enableDisableTerminal = 'enable-disable-terminal';
-
-  static const String createTransaction = actionCreateTransaction;
-  static const String approveTransaction = actionApproveTransaction;
-  static const String declineTransaction = actionDeclineTransaction;
-  static const String verifyTransaction = actionVerifyTransaction;
-  static const String abandonTransaction = 'abandon-transaction';
-  static const String listTransactions = 'list-transactions';
-
-  static const String validateCustomer = actionValidateCustomer;
-  static const String registerVehicle = 'register-vehicle';
-
-  static const String channelNumber = '1';
-  static const String serviceNumber = '1';
-
+  // Payment methods
   static const String paymentMethodCard = 'card';
   static const String paymentMethodWallet = 'wallet';
   static const String paymentMethodTransfer = 'transfer';
 
+  // Transaction types
   static const String transactionTypeSingle = 'single';
   static const String transactionTypeComplete = 'complete';
 

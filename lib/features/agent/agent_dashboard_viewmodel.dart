@@ -18,9 +18,8 @@ class AgentDashboardViewModel extends ChangeNotifier {
 
   Future<void> loadSession() async {
     final session = await SessionManager.instance;
-    agentFullName = session.agentFullName.isNotEmpty
-        ? session.agentFullName
-        : 'Agent';
+    agentFullName =
+        session.agentFullName.isNotEmpty ? session.agentFullName : 'Agent';
     agentNumber = session.agentNumber ?? 'N/A';
     terminalId = session.terminalId ?? 'N/A';
     companyNumber = session.companyNumber ?? 'N/A';
@@ -68,10 +67,6 @@ class AgentDashboardViewModel extends ChangeNotifier {
 
   void navigateToVehicleSearch(BuildContext context) {
     Navigator.pushNamed(context, AppRoutes.vehicleSearch);
-  }
-
-  void navigateToTransactionHistory(BuildContext context) {
-    Navigator.pushNamed(context, AppRoutes.transactionHistory);
   }
 
   void navigateToScanner(BuildContext context) {

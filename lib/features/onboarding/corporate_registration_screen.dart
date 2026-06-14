@@ -46,8 +46,19 @@ class _CorporateRegistrationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final isFromAdmin = args?['isFromAdmin'] as bool? ?? false;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
+      appBar: isFromAdmin
+          ? AppBar(
+              backgroundColor: const Color(0xFF1A237E),
+              foregroundColor: Colors.white,
+              title: const Text('Add Company'),
+              elevation: 0,
+            )
+          : null,
       body: SafeArea(
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
@@ -55,7 +66,7 @@ class _CorporateRegistrationScreenState
             builder: (context, vm, _) {
               return Column(
                 children: [
-                  _buildProgressBar(),
+                  if (!isFromAdmin) _buildProgressBar(),
                   Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -65,7 +76,7 @@ class _CorporateRegistrationScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 16),
-                            _buildHeader(),
+                            _buildHeader(isFromAdmin),
                             const SizedBox(height: 20),
                             _buildCompanyInfoCard(vm),
                             const SizedBox(height: 16),
@@ -77,9 +88,9 @@ class _CorporateRegistrationScreenState
                             const SizedBox(height: 12),
                             _buildErrorBanner(vm),
                             const SizedBox(height: 16),
-                            _buildSubmitButton(vm),
+                            _buildSubmitButton(vm, isFromAdmin),
                             const SizedBox(height: 8),
-                            _buildStepIndicator(),
+                            if (!isFromAdmin) _buildStepIndicator(),
                             const SizedBox(height: 24),
                           ],
                         ),
@@ -161,22 +172,24 @@ class _CorporateRegistrationScreenState
     );
   }
 
-  Widget _buildHeader() {
-    return const Column(
+  Widget _buildHeader(bool isFromAdmin) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Corporate Registration',
-          style: TextStyle(
+          isFromAdmin ? 'Create Corporate Profile' : 'Corporate Registration',
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Color(0xFF1A237E),
           ),
         ),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Text(
-          'Register your company to get started',
-          style: TextStyle(fontSize: 14, color: Color(0xFF757575)),
+          isFromAdmin
+              ? 'Enter company details to register them on the platform'
+              : 'Register your company to get started',
+          style: const TextStyle(fontSize: 14, color: Color(0xFF757575)),
         ),
       ],
     );
@@ -406,14 +419,14 @@ class _CorporateRegistrationScreenState
     );
   }
 
-  Widget _buildSubmitButton(CorporateRegistrationViewModel vm) {
+  Widget _buildSubmitButton(CorporateRegistrationViewModel vm, bool isFromAdmin) {
     return SizedBox(
       width: double.infinity,
       height: 50,
       child: ElevatedButton(
         onPressed: vm.isLoading || vm.isLoadingStates
             ? null
-            : () => vm.submit(context),
+            : () => vm.submit(context, isFromAdmin: isFromAdmin),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF1A237E),
           foregroundColor: Colors.white,
@@ -429,9 +442,9 @@ class _CorporateRegistrationScreenState
                   color: Colors.white,
                 ),
               )
-            : const Text(
-                'Continue to Agent Registration',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            : Text(
+                isFromAdmin ? 'Create Company' : 'Continue to Agent Registration',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
       ),
     );

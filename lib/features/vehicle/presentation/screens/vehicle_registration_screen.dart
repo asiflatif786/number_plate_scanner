@@ -8,6 +8,9 @@ import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/custom_dialog.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/loading_overlay.dart';
+import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/section_header.dart';
 import '../../domain/entities/vehicle_registration_entity.dart';
 import '../viewmodels/vehicle_registration_viewmodel.dart';
 import '../widgets/animated_form_section.dart';
@@ -263,30 +266,6 @@ class _VehicleRegistrationScreenState
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1A237E),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionSubtitle(String subtitle) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        subtitle,
-        style: const TextStyle(fontSize: 12, color: Colors.grey),
-      ),
-    );
-  }
-
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -361,17 +340,11 @@ class _VehicleRegistrationScreenState
 
   Widget _buildVehicleInfoSection(
       VehicleRegistrationViewModel viewmodel) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Vehicle Information'),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(title: 'Vehicle Information', fontSize: 16),
             _buildTextField(
               controller:
                   TextEditingController(text: widget.licensePlate),
@@ -471,23 +444,16 @@ class _VehicleRegistrationScreenState
             ),
           ],
         ),
-      ),
     );
   }
 
   Widget _buildRegistrationDetailsSection(
       VehicleRegistrationViewModel viewmodel) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Registration Details'),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(title: 'Registration Details', fontSize: 16),
             _buildStateDropdown(
               value: viewmodel.selectedIssuingState,
               label: 'Issuing State',
@@ -550,23 +516,19 @@ class _VehicleRegistrationScreenState
             ),
           ],
         ),
-      ),
     );
   }
 
   Widget _buildOwnerInfoSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Owner Information'),
-            _buildSectionSubtitle('Details of the registered vehicle owner'),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(
+            title: 'Owner Information',
+            subtitle: 'Details of the registered vehicle owner',
+            fontSize: 16,
+          ),
             _buildTextField(
               controller: _ownerNameController,
               label: 'Owner Full Name',
@@ -614,7 +576,6 @@ class _VehicleRegistrationScreenState
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -644,26 +605,12 @@ class _VehicleRegistrationScreenState
   }
 
   Widget _buildSubmitButton(VehicleRegistrationViewModel viewmodel) {
-    return SizedBox(
-      width: double.infinity,
+    return AppButton(
+      label: 'Register Vehicle',
+      onPressed: viewmodel.isLoading ? null : _onSubmit,
+      isLoading: viewmodel.isLoading,
+      icon: Icons.app_registration,
       height: ResponsiveHelper.buttonHeight(context),
-      child: ElevatedButton.icon(
-        onPressed: viewmodel.isLoading ? null : _onSubmit,
-        icon: const Icon(Icons.app_registration, color: Colors.white),
-        label: const Text(
-          'Register Vehicle',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A237E),
-          foregroundColor: Colors.white,
-          disabledBackgroundColor:
-              const Color(0xFF1A237E).withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-          ),
-        ),
-      ),
     );
   }
 }

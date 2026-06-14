@@ -139,33 +139,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               crossAxisCount: 2,
               mainAxisSpacing: 14,
               crossAxisSpacing: 14,
-              childAspectRatio: 1.1,
+              childAspectRatio: 1.0,
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
               children: [
                 _menuCard(
                   icon: Icons.person_add,
                   label: 'Add Agent',
-                  onTap: () => Navigator.pushNamed(
-                      context, AppRoutes.agentRegistration),
-                ),
-                _menuCard(
-                  icon: Icons.people,
-                  label: 'View Agents',
-                  onTap: () => Navigator.pushNamed(
-                      context, AppRoutes.viewAgents),
-                ),
-                _menuCard(
-                  icon: Icons.receipt_long,
-                  label: 'Transactions',
-                  onTap: () => Navigator.pushNamed(
-                      context, AppRoutes.transactionHistory),
+                  subtitle: 'Register a new agent',
+                  onTap: () =>
+                      Navigator.pushNamed(context, AppRoutes.agentRegistration),
                 ),
                 _menuCard(
                   icon: Icons.search,
                   label: 'Search Vehicle',
+                  subtitle: 'Find vehicle details',
+                  onTap: () =>
+                      Navigator.pushNamed(context, AppRoutes.vehicleSearch),
+                ),
+                _menuCard(
+                  icon: Icons.business,
+                  label: 'Add Company',
+                  subtitle: 'Register a new corporate',
                   onTap: () => Navigator.pushNamed(
-                      context, AppRoutes.vehicleSearch),
+                    context,
+                    AppRoutes.corporateRegistration,
+                    arguments: {'isFromAdmin': true},
+                  ),
                 ),
               ],
             ),
@@ -178,6 +178,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _menuCard({
     required IconData icon,
     required String label,
+    required String subtitle,
     required VoidCallback onTap,
   }) {
     return Material(
@@ -188,17 +189,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 40, color: const Color(0xFF1A237E)),
-            const SizedBox(height: 8),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF424242))),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 32, color: const Color(0xFF1A237E)),
+              const SizedBox(height: 6),
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF424242))),
+              const SizedBox(height: 2),
+              Text(subtitle,
+                  style:
+                      const TextStyle(fontSize: 10, color: Color(0xFF9E9E9E)),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ],
+          ),
         ),
       ),
     );

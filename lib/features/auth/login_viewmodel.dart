@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 
 import '../../app/routes.dart';
 import '../../core/errors/failure.dart';
@@ -106,17 +105,20 @@ class LoginViewModel extends ChangeNotifier {
           agentNumber: user.agentNumber,
           companyNumber: user.companyNumber,
         );
+        if (user.authToken != null) {
+          await session.setAuthToken(user.authToken!);
+        }
 
         AppLogger.logInfo(_tag, 'Login successful — role: ${user.role}');
 
         if (!context.mounted) return;
 
-        Fluttertoast.showToast(
-          msg: 'Welcome, ${user.firstName}!',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: const Color(0xFF2E7D32),
-          textColor: Colors.white,
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Welcome, ${user.firstName}!'),
+            backgroundColor: const Color(0xFF2E7D32),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
 
         if (user.isAdmin) {

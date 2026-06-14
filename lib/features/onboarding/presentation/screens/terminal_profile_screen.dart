@@ -5,6 +5,9 @@ import '../../../../core/utils/responsive_helper.dart';
 import '../../../../core/widgets/custom_dialog.dart';
 import '../../../../core/widgets/loading_overlay.dart';
 import '../../../../core/widgets/onboarding_progress_indicator.dart';
+import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/section_header.dart';
 import '../../domain/entities/terminal_entity.dart';
 import '../viewmodels/terminal_viewmodel.dart';
 
@@ -211,41 +214,26 @@ class _TerminalProfileScreenState extends State<TerminalProfileScreen> {
 
   Widget _buildTerminalSection(BuildContext context) {
     final viewmodel = context.watch<TerminalViewModel>();
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Terminal Information',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A237E),
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Enter the details printed on your POS device',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 20),
-              _buildSerialNumberField(),
-              const SizedBox(height: 16),
-              _buildTerminalIdField(),
-              const SizedBox(height: 20),
-              _buildInfoBox(),
-              const SizedBox(height: 24),
-              _buildSubmitButton(viewmodel),
-            ],
-          ),
+    return AppCard(
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SectionHeader(
+              title: 'Terminal Information',
+              subtitle: 'Enter the details printed on your POS device',
+              fontSize: 16,
+            ),
+            const SizedBox(height: 20),
+            _buildSerialNumberField(),
+            const SizedBox(height: 16),
+            _buildTerminalIdField(),
+            const SizedBox(height: 20),
+            _buildInfoBox(),
+            const SizedBox(height: 24),
+            _buildSubmitButton(viewmodel),
+          ],
         ),
       ),
     );
@@ -338,25 +326,12 @@ class _TerminalProfileScreenState extends State<TerminalProfileScreen> {
   }
 
   Widget _buildSubmitButton(TerminalViewModel viewmodel) {
-    return SizedBox(
-      width: double.infinity,
+    return AppButton(
+      label: 'Profile Terminal',
+      onPressed: viewmodel.isLoading ? null : _onSubmit,
+      isLoading: viewmodel.isLoading,
       height: AppConstants.defaultButtonHeight,
-      child: ElevatedButton(
-        onPressed: viewmodel.isLoading ? null : _onSubmit,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A237E),
-          foregroundColor: Colors.white,
-          disabledBackgroundColor:
-              const Color(0xFF1A237E).withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-          ),
-        ),
-        child: const Text(
-          'Profile Terminal',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ),
+      fontSize: 16,
     );
   }
 }

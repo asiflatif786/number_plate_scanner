@@ -49,8 +49,7 @@ class TransactionModel {
           .format(totalAmount);
 
   String get formattedAmount =>
-      NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2)
-          .format(amount);
+      NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2).format(amount);
 
   String get formattedServiceFee =>
       NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2)
@@ -84,27 +83,55 @@ class TransactionModel {
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
     final details = json['transaction_details'] as Map<String, dynamic>? ?? {};
-    AppLogger.logDebug(_tag, 'fromJson: ref=${json['transaction_reference']} status=${json['status']}');
+    AppLogger.logDebug(_tag,
+        'fromJson: ref=${json['transaction_reference']} status=${json['status']}');
     return TransactionModel(
-      transactionReference:
-          json['transaction_reference'] as String? ?? '',
+      transactionReference: json['transaction_reference'] as String? ?? '',
       transactionId: json['transaction_id'] as String?,
       status: (json['status'] as String? ?? 'pending').toLowerCase(),
       totalAmount: _parseDouble(
-          details['total'] ?? json['total_amount']),
-      customerName: json['customer_name'] as String? ?? 'N/A',
-      vehicleLicense: json['vehicle_license'] as String? ?? 'N/A',
+          details['total'] ?? json['total'] ?? json['total_amount']),
+      customerName: json['customer_name'] as String? ??
+          json['payer_name'] as String? ??
+          'N/A',
+      vehicleLicense: json['vehicle_license'] as String? ??
+          (json['metadata'] is Map<String, dynamic>
+              ? json['metadata']['vehicle_license'] as String?
+              : null) ??
+          'N/A',
       amount: _parseDouble(json['amount']),
-      serviceFee: _parseDouble(json['service_fee']),
+      serviceFee: _parseDouble(json['service_fee'] ?? json['fee']),
       paymentMethod: json['payment_method'] as String? ?? 'card',
-      transactionType: json['transaction_type'] as String? ?? 'single',
-      originState: json['origin_state'] as String? ?? 'N/A',
-      originLga: json['origin_lga'] as String? ?? 'N/A',
-      destinationState: json['destination_state'] as String? ?? 'N/A',
-      destinationLga: json['destination_lga'] as String? ?? 'N/A',
+      transactionType: json['transaction_type'] as String? ??
+          (json['metadata'] is Map<String, dynamic>
+              ? json['metadata']['transaction_type'] as String?
+              : null) ??
+          'single',
+      originState: json['origin_state'] as String? ??
+          (json['metadata'] is Map<String, dynamic>
+              ? json['metadata']['origin_state'] as String?
+              : null) ??
+          'N/A',
+      originLga: json['origin_lga'] as String? ??
+          (json['metadata'] is Map<String, dynamic>
+              ? json['metadata']['origin_lga'] as String?
+              : null) ??
+          'N/A',
+      destinationState: json['destination_state'] as String? ??
+          (json['metadata'] is Map<String, dynamic>
+              ? json['metadata']['destination_state'] as String?
+              : null) ??
+          'N/A',
+      destinationLga: json['destination_lga'] as String? ??
+          (json['metadata'] is Map<String, dynamic>
+              ? json['metadata']['destination_lga'] as String?
+              : null) ??
+          'N/A',
       agentNumber: json['agent_number'] as String? ?? '',
       terminalId: json['terminal_id'] as String? ?? '',
-      createdAt: json['created_at'] as String? ?? '',
+      createdAt: json['created_at'] as String? ??
+          json['transaction_date'] as String? ??
+          '',
     );
   }
 
@@ -123,7 +150,8 @@ class TransactionModel {
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
 
     final ref = responseData['transaction_reference'] as String? ?? '';
-    AppLogger.logInfo(_tag, 'fromDraftAndResponse: ref=$ref plate=${draft.vehicle.vehicleLicense}');
+    AppLogger.logInfo(_tag,
+        'fromDraftAndResponse: ref=$ref plate=${draft.vehicle.vehicleLicense}');
 
     return TransactionModel(
       transactionReference: ref,

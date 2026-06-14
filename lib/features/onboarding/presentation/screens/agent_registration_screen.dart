@@ -11,6 +11,9 @@ import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/custom_dialog.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/loading_overlay.dart';
+import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/section_header.dart';
 import '../../domain/entities/agent_entity.dart';
 import '../viewmodels/agent_viewmodel.dart';
 
@@ -301,17 +304,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1A237E),
-        ),
-      ),
-    );
+    return SectionHeader(title: title, fontSize: 16);
   }
 
   Widget _buildTextField({
@@ -324,31 +317,15 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     bool obscureText = false,
     Widget? suffixIcon,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        controller: controller,
-        validator: validator,
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        obscureText: obscureText,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hintText,
-          suffixIcon: suffixIcon,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-            borderSide: const BorderSide(color: Color(0xFF1A237E), width: 2),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
-        ),
-      ),
+    return AppTextField(
+      label: label,
+      hint: hintText,
+      controller: controller,
+      validator: validator,
+      keyboardType: keyboardType ?? TextInputType.text,
+      maxLines: maxLines,
+      obscureText: obscureText,
+      suffixIcon: suffixIcon,
     );
   }
 
@@ -386,16 +363,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   }
 
   Widget _buildSectionCard(Widget child) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: child,
-      ),
-    );
+    return AppCard(child: child);
   }
 
   Widget _buildPersonalInfoSection(AgentViewModel viewmodel) {
@@ -761,25 +729,11 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   }
 
   Widget _buildSubmitButton(AgentViewModel viewmodel) {
-    return SizedBox(
-      width: double.infinity,
+    return AppButton(
+      label: 'Register Agent',
+      onPressed: viewmodel.isLoading ? null : _onSubmit,
+      isLoading: viewmodel.isLoading,
       height: ResponsiveHelper.buttonHeight(context),
-      child: ElevatedButton(
-        onPressed: viewmodel.isLoading ? null : _onSubmit,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A237E),
-          foregroundColor: Colors.white,
-          disabledBackgroundColor:
-              const Color(0xFF1A237E).withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-          ),
-        ),
-        child: const Text(
-          'Register Agent',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ),
     );
   }
 }

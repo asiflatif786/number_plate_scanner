@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../app/routes.dart';
+import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
-import '../../data/local/transaction_log_store.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/repositories/transaction_repository.dart';
 
@@ -10,150 +9,170 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   static const String _tag = 'TxHistVM';
 
   final TransactionRepository _repository = TransactionRepository();
-  final TransactionLogStore _logStore = TransactionLogStore();
 
-  List<TransactionModel> allTransactions = [];
-  List<TransactionModel> filteredTransactions = [];
-  bool isLoading = false;
-  String? errorMessage;
+  List<TransactionModel> _transactions = [];
+  bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _isRefreshing = false;
+  String? _errorMessage;
+  int _currentPage = 1;
+  String? _selectedStatusFilter;
+  String _searchQuery = '';
+  String? _verifyingReference;
 
-  String? selectedStatus;
-  DateTime? startDate;
-  DateTime? endDate;
-  String searchQuery = '';
+  List<TransactionModel> get transactions => _transactions;
+  bool get isLoading => _isLoading;
+  bool get isLoadingMore => _isLoadingMore;
+  bool get isRefreshing => _isRefreshing;
+  String? get errorMessage => _errorMessage;
+  int get currentPage => _currentPage;
+  String? get selectedStatusFilter => _selectedStatusFilter;
+  String get searchQuery => _searchQuery;
+  String? get verifyingReference => _verifyingReference;
+  bool get hasMorePages => _currentPage < _repository.totalPages;
+  int get totalTransactions => _repository.totalTransactions;
 
-  Future<void> loadInitial() async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+  List<TransactionModel> get filteredTransactions {
+    if (_searchQuery.isEmpty) return _transactions;
+    final q = _searchQuery.toLowerCase();
+    return _transactions.where((t) {
+      return t.transactionReference.toLowerCase().contains(q) ||
+          t.customerName.toLowerCase().contains(q) ||
+          t.vehicleLicense.toLowerCase().contains(q);
+    }).toList();
+  }
 
-    try {
-      allTransactions = await _logStore.getAll();
-      AppLogger.logInfo(_tag, 'Loaded ${allTransactions.length} from local log');
-      _applyFilters();
-    } catch (e) {
-      AppLogger.logWarning(_tag, 'Load error: $e');
-      errorMessage = 'Failed to load transaction history';
-      allTransactions = [];
-      filteredTransactions = [];
+  Future<void> loadTransactions({bool refresh = false}) async {
+    final session = await SessionManager.instance;
+    final channelNumber = session.channelNumber;
+    if (channelNumber == null) {
+      _errorMessage = 'Channel number not configured. Please contact admin.';
+      _isLoading = false;
+      _isRefreshing = false;
+      notifyListeners();
+      return;
     }
 
-    isLoading = false;
+    if (refresh) {
+      _transactions = [];
+      _currentPage = 1;
+      _isRefreshing = true;
+    } else if (_currentPage == 1) {
+      _isLoading = true;
+    } else {
+      _isLoadingMore = true;
+    }
+    _errorMessage = null;
+    notifyListeners();
+
+    final result = await _repository.listTransactions(
+      channelNumber: channelNumber,
+      page: _currentPage,
+      statusFilter: _selectedStatusFilter,
+    );
+
+    if (result.success) {
+      if (refresh || _currentPage == 1) {
+        _transactions = result.data ?? [];
+      } else {
+        _transactions.addAll(result.data ?? []);
+      }
+      _currentPage++;
+    } else {
+      _errorMessage = result.failure?.message ?? 'Failed to load transactions';
+      AppLogger.logWarning(_tag, _errorMessage!);
+    }
+
+    _isLoading = false;
+    _isLoadingMore = false;
+    _isRefreshing = false;
     notifyListeners();
   }
 
-  Future<void> refresh() async {
-    AppLogger.logDebug(_tag, 'Refresh');
-    await loadInitial();
+  Future<void> loadMore() async {
+    if (!hasMorePages || _isLoadingMore) return;
+    await loadTransactions();
   }
 
-  void _applyFilters() {
-    var result = List<TransactionModel>.from(allTransactions);
-
-    if (selectedStatus != null) {
-      result = result.where((t) => t.status == selectedStatus).toList();
-    }
-
-    if (startDate != null) {
-      result = result.where((t) {
-        final dt = DateTime.tryParse(t.createdAt);
-        return dt != null && !dt.isBefore(startDate!);
-      }).toList();
-    }
-
-    if (endDate != null) {
-      final endEndOfDay = DateTime(endDate!.year, endDate!.month, endDate!.day, 23, 59, 59);
-      result = result.where((t) {
-        final dt = DateTime.tryParse(t.createdAt);
-        return dt != null && !dt.isAfter(endEndOfDay);
-      }).toList();
-    }
-
-    if (searchQuery.isNotEmpty) {
-      final q = searchQuery.toLowerCase();
-      result = result.where((t) {
-        return t.vehicleLicense.toLowerCase().contains(q) ||
-            t.customerName.toLowerCase().contains(q);
-      }).toList();
-    }
-
-    AppLogger.logDebug(_tag, 'Filters: status=$selectedStatus, search="$searchQuery" → ${result.length} results');
-    filteredTransactions = result;
-    notifyListeners();
+  Future<void> onRefresh() async {
+    await loadTransactions(refresh: true);
   }
 
   void onStatusFilterChanged(String? status) {
-    AppLogger.logDebug(_tag, 'Status filter: $status');
-    selectedStatus = status;
-    _applyFilters();
-  }
-
-  void onDateRangeChanged(DateTime? start, DateTime? end) {
-    AppLogger.logDebug(_tag, 'Date range: ${start?.toIso8601String()} ~ ${end?.toIso8601String()}');
-    startDate = start;
-    endDate = end;
-    _applyFilters();
+    _selectedStatusFilter = status;
+    loadTransactions(refresh: true);
   }
 
   void onSearchChanged(String query) {
-    searchQuery = query;
-    _applyFilters();
+    _searchQuery = query;
+    notifyListeners();
   }
 
-  void clearFilters() {
-    AppLogger.logDebug(_tag, 'Clear filters');
-    selectedStatus = null;
-    startDate = null;
-    endDate = null;
-    searchQuery = '';
-    _applyFilters();
-  }
+  Future<void> verifyTransaction(String transactionReference) async {
+    final session = await SessionManager.instance;
+    final channelNumber = session.channelNumber;
+    if (channelNumber == null) return;
 
-  void onTransactionTapped(
-      BuildContext context, TransactionModel transaction) {
-    AppLogger.logDebug(_tag, '→ detail: ${transaction.transactionReference}');
-    Navigator.pushNamed(
-      context,
-      AppRoutes.transactionDetail,
-      arguments: transaction,
+    _verifyingReference = transactionReference;
+    notifyListeners();
+
+    final result = await _repository.verifyTransaction(
+      transactionReference: transactionReference,
+      channelNumber: channelNumber,
     );
-  }
-
-  Future<void> verifyStatus(
-      BuildContext context, TransactionModel transaction) async {
-    AppLogger.logInfo(_tag, 'Verify: ${transaction.transactionReference}');
-    final result = await _repository
-        .verifyTransaction(transaction.transactionReference);
-
-    if (!context.mounted) return;
 
     if (result.success && result.data != null) {
-      final v = result.data!;
-      AppLogger.logInfo(_tag, 'Verify result: ${v.status} (was ${transaction.status})');
-      if (v.status != transaction.status) {
-        await _logStore.updateStatus(
-            transaction.transactionReference, v.status);
-        AppLogger.logDebug(_tag, 'Status updated in log');
-        await loadInitial();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('Status updated: ${v.status.toUpperCase()}')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Status unchanged: ${v.status.toUpperCase()}')),
-        );
+      final updated = result.data!;
+      final index =
+          _transactions.indexWhere((t) => t.transactionReference == transactionReference);
+      if (index != -1) {
+        _transactions[index] = _transactions[index].copyWith(status: updated.status);
       }
+    }
+
+    _verifyingReference = null;
+    notifyListeners();
+  }
+
+  Future<void> abandonTransaction(String transactionReference, BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Abandon Transaction'),
+        content: const Text(
+          'Are you sure you want to abandon this transaction? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Abandon'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final session = await SessionManager.instance;
+    final channelNumber = session.channelNumber;
+    if (channelNumber == null) return;
+
+    final result = await _repository.abandonTransaction(
+      transactionReference: transactionReference,
+      channelNumber: channelNumber,
+    );
+
+    if (result.success) {
+      _transactions.removeWhere((t) => t.transactionReference == transactionReference);
+      notifyListeners();
     } else {
-      AppLogger.logWarning(_tag, 'Verify failed');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                'Could not verify status. Check connection.')),
-      );
+      _errorMessage = result.failure?.message ?? 'Failed to abandon transaction';
+      notifyListeners();
     }
   }
 }

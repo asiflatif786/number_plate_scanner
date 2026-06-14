@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
-import '../../data/local/transaction_log_store.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/repositories/transaction_repository.dart';
 
@@ -9,7 +9,6 @@ class TransactionDetailViewModel extends ChangeNotifier {
   static const String _tag = 'TxDetVM';
 
   final TransactionRepository _repository = TransactionRepository();
-  final TransactionLogStore _logStore = TransactionLogStore();
 
   TransactionModel transaction;
   bool isVerifying = false;
@@ -25,19 +24,28 @@ class TransactionDetailViewModel extends ChangeNotifier {
     verifyMessage = null;
     notifyListeners();
 
-    final result =
-        await _repository.verifyTransaction(transaction.transactionReference);
+    final session = await SessionManager.instance;
+    final channelNumber = session.channelNumber;
+    if (channelNumber == null) {
+      verifyMessage = 'Channel number not configured.';
+      isVerifying = false;
+      notifyListeners();
+      return;
+    }
+
+    final result = await _repository.verifyTransaction(
+      transactionReference: transaction.transactionReference,
+      channelNumber: channelNumber,
+    );
 
     if (result.success && result.data != null) {
-      final v = result.data!;
-      AppLogger.logInfo(_tag, 'Result: ${v.status} (was ${transaction.status})');
-      if (v.status != transaction.status) {
-        await _logStore.updateStatus(
-            transaction.transactionReference, v.status);
-        transaction = transaction.copyWith(status: v.status);
-        verifyMessage = 'Status updated to ${v.status.toUpperCase()}';
+      final updated = result.data!;
+      AppLogger.logInfo(_tag, 'Result: ${updated.status} (was ${transaction.status})');
+      if (updated.status != transaction.status) {
+        transaction = transaction.copyWith(status: updated.status);
+        verifyMessage = 'Status updated to ${updated.status.toUpperCase()}';
       } else {
-        verifyMessage = 'Status confirmed: ${v.status.toUpperCase()}';
+        verifyMessage = 'Status confirmed: ${updated.status.toUpperCase()}';
       }
     } else {
       AppLogger.logWarning(_tag, 'Verify failed');

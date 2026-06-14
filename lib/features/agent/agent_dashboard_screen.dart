@@ -178,15 +178,6 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                   onTap: () => vm.navigateToVehicleSearch(context),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _actionCard(
-                  icon: Icons.receipt_long,
-                  label: 'History',
-                  color: const Color(0xFFF57C00),
-                  onTap: () => vm.navigateToTransactionHistory(context),
-                ),
-              ),
             ],
           ),
         ],
@@ -346,8 +337,8 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Status',
-                        style: TextStyle(
-                            fontSize: 13, color: Color(0xFF9E9E9E))),
+                        style:
+                            TextStyle(fontSize: 13, color: Color(0xFF9E9E9E))),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),

@@ -1,183 +1,299 @@
 import 'package:flutter/material.dart';
 
-import '../../app/routes.dart';
 import '../../core/utils/logger.dart';
-import '../../data/models/lga_model.dart';
-import '../../data/models/state_model.dart';
-import '../../data/models/transaction_draft_model.dart';
-import '../../data/models/vehicle_model.dart';
+import '../../data/models/vehicle_registration_model.dart';
 import '../../data/repositories/location_repository.dart';
+import '../../data/repositories/vehicle_repository.dart';
 
 class VehicleRegistrationViewModel extends ChangeNotifier {
   static const String _tag = 'VehRegVM';
 
-  final VehicleModel vehicle;
-  final LocationRepository _repository = LocationRepository();
+  final String licensePlate;
+  final LocationRepository _locationRepo = LocationRepository();
+  final VehicleRepository _vehicleRepo = VehicleRepository();
 
-  VehicleRegistrationViewModel({required this.vehicle}) {
-    AppLogger.logDebug(_tag, 'Init for ${vehicle.vehicleLicense}');
+  bool isLoading = false;
+  String? errorMessage;
+
+  String? selectedVehicleType;
+  String? selectedOwnerState;
+  String? selectedOwnerLga;
+  String? selectedIssuingState;
+  String? selectedIssuingLga;
+  String? selectedEnumeratingState;
+  String? selectedEnumeratingLga;
+
+  void setVehicleType(String? value) {
+    selectedVehicleType = value;
+    notifyListeners();
+  }
+
+  void setOwnerLga(String? value) {
+    selectedOwnerLga = value;
+    notifyListeners();
+  }
+
+  void setIssuingLga(String? value) {
+    selectedIssuingLga = value;
+    notifyListeners();
+  }
+
+  void setEnumeratingLga(String? value) {
+    selectedEnumeratingLga = value;
+    notifyListeners();
+  }
+
+  List<String> states = [];
+  List<String> ownerLgas = [];
+  List<String> issuingLgas = [];
+  List<String> enumeratingLgas = [];
+
+  final TextEditingController licensePlateController;
+  final TextEditingController ownerNameController = TextEditingController();
+  final TextEditingController ownerPhoneController = TextEditingController();
+  final TextEditingController ownerAddressController = TextEditingController();
+  final TextEditingController chassisNumberController = TextEditingController();
+  final TextEditingController engineNumberController = TextEditingController();
+  final TextEditingController yearOfManufactureController = TextEditingController();
+
+  final Map<String, String> _stateNameToId = {};
+
+  VehicleRegistrationViewModel({required this.licensePlate})
+      : licensePlateController = TextEditingController(text: licensePlate) {
+    AppLogger.logDebug(_tag, 'Init for $licensePlate');
     loadStates();
   }
 
-  List<StateModel> states = [];
-  bool isLoadingStates = false;
-
-  List<LgaModel> originLgas = [];
-  bool isLoadingOriginLgas = false;
-
-  List<LgaModel> destinationLgas = [];
-  bool isLoadingDestinationLgas = false;
-
-  StateModel? selectedOriginState;
-  LgaModel? selectedOriginLga;
-  StateModel? selectedDestinationState;
-  LgaModel? selectedDestinationLga;
-
-  bool isSubmitting = false;
-  String? errorMessage;
+  @override
+  void dispose() {
+    licensePlateController.dispose();
+    ownerNameController.dispose();
+    ownerPhoneController.dispose();
+    ownerAddressController.dispose();
+    chassisNumberController.dispose();
+    engineNumberController.dispose();
+    yearOfManufactureController.dispose();
+    super.dispose();
+  }
 
   Future<void> loadStates() async {
-    isLoadingStates = true;
+    isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     AppLogger.logInfo(_tag, 'Loading states...');
-    final result = await _repository.getStates();
+    final result = await _locationRepo.getStates();
     if (result.success) {
-      states = result.data ?? [];
+      _stateNameToId.clear();
+      for (final s in result.data ?? []) {
+        _stateNameToId[s.stateName] = s.stateId;
+      }
+      states = _stateNameToId.keys.toList();
       AppLogger.logInfo(_tag, 'Loaded ${states.length} states');
     } else {
       AppLogger.logWarning(_tag, 'Failed to load states: ${result.failure?.message}');
       errorMessage = _mapFailureMessage(result.failure!.runtimeType.toString());
     }
-    isLoadingStates = false;
+    isLoading = false;
     notifyListeners();
   }
 
-  void onOriginStateChanged(StateModel? state) {
-    selectedOriginState = state;
-    selectedOriginLga = null;
-    originLgas = [];
+  void onOwnerStateChanged(String? state) {
+    selectedOwnerState = state;
+    selectedOwnerLga = null;
+    ownerLgas = [];
     notifyListeners();
     if (state != null) {
-      AppLogger.logDebug(_tag, 'Origin state: ${state.stateName}');
-      _loadOriginLgas(state.stateId);
+      AppLogger.logDebug(_tag, 'Owner state: $state');
+      loadLgas(state, 'owner');
     }
+  }
+
+  void onIssuingStateChanged(String? state) {
+    selectedIssuingState = state;
+    selectedIssuingLga = null;
+    issuingLgas = [];
+    notifyListeners();
+    if (state != null) {
+      AppLogger.logDebug(_tag, 'Issuing state: $state');
+      loadLgas(state, 'issuing');
+    }
+  }
+
+  void onEnumeratingStateChanged(String? state) {
+    selectedEnumeratingState = state;
+    selectedEnumeratingLga = null;
+    enumeratingLgas = [];
+    notifyListeners();
+    if (state != null) {
+      AppLogger.logDebug(_tag, 'Enumerating state: $state');
+      loadLgas(state, 'enumerating');
+    }
+  }
+
+  Future<void> loadLgas(String state, String type) async {
+    final stateId = _stateNameToId[state];
+    if (stateId == null) {
+      AppLogger.logWarning(_tag, 'State ID not found for: $state');
+      return;
+    }
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    AppLogger.logInfo(_tag, 'Loading $type LGAs for $state');
+    final result = await _locationRepo.getLgas(stateId);
+    if (result.success) {
+      final lgas = (result.data ?? []).map((l) => l.lgaName).toList();
+      switch (type) {
+        case 'owner':
+          ownerLgas = lgas;
+          break;
+        case 'issuing':
+          issuingLgas = lgas;
+          break;
+        case 'enumerating':
+          enumeratingLgas = lgas;
+          break;
+      }
+      AppLogger.logInfo(_tag, 'Loaded ${lgas.length} $type LGAs');
+    } else {
+      AppLogger.logWarning(_tag, 'Failed $type LGAs: ${result.failure?.message}');
+      errorMessage = _mapFailureMessage(result.failure!.runtimeType.toString());
+    }
+    isLoading = false;
+    notifyListeners();
+  }
+
+  void submit(BuildContext context) {
+    final name = ownerNameController.text.trim();
+    final phone = ownerPhoneController.text.trim();
+    final address = ownerAddressController.text.trim();
+    final chassis = chassisNumberController.text.trim();
+    final engine = engineNumberController.text.trim();
+    final year = yearOfManufactureController.text.trim();
+
+    if (selectedVehicleType == null) {
+      errorMessage = 'Please select the vehicle type';
+      notifyListeners();
+      return;
+    }
+    if (chassis.isEmpty) {
+      errorMessage = 'Please enter the chassis number';
+      notifyListeners();
+      return;
+    }
+    if (engine.isEmpty) {
+      errorMessage = 'Please enter the engine number';
+      notifyListeners();
+      return;
+    }
+    if (year.isEmpty || year.length != 4) {
+      errorMessage = 'Please enter a valid 4-digit year of manufacture';
+      notifyListeners();
+      return;
+    }
+    if (name.isEmpty) {
+      errorMessage = "Please enter the owner's full name";
+      notifyListeners();
+      return;
+    }
+    if (phone.isEmpty || phone.length != 11) {
+      errorMessage = 'Please enter a valid 11-digit phone number';
+      notifyListeners();
+      return;
+    }
+    if (address.isEmpty) {
+      errorMessage = "Please enter the owner's address";
+      notifyListeners();
+      return;
+    }
+    if (selectedOwnerState == null) {
+      errorMessage = "Please select the owner's state";
+      notifyListeners();
+      return;
+    }
+    if (selectedOwnerLga == null) {
+      errorMessage = "Please select the owner's LGA";
+      notifyListeners();
+      return;
+    }
+    if (selectedIssuingState == null) {
+      errorMessage = 'Please select the issuing state';
+      notifyListeners();
+      return;
+    }
+    if (selectedIssuingLga == null) {
+      errorMessage = 'Please select the issuing LGA';
+      notifyListeners();
+      return;
+    }
+    if (selectedEnumeratingState == null) {
+      errorMessage = 'Please select the enumerating state';
+      notifyListeners();
+      return;
+    }
+    if (selectedEnumeratingLga == null) {
+      errorMessage = 'Please select the enumerating LGA';
+      notifyListeners();
+      return;
+    }
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    final payload = VehicleRegistrationModel(
+      licensePlate: licensePlate,
+      vehicleType: selectedVehicleType!,
+      chassisNumber: chassis,
+      engineNumber: engine,
+      yearOfManufacture: year,
+      ownerName: name,
+      ownerPhone: phone,
+      ownerAddress: address,
+      ownerState: selectedOwnerState!,
+      ownerLga: selectedOwnerLga!,
+      issuingState: selectedIssuingState!,
+      issuingLga: selectedIssuingLga!,
+      enumeratingState: selectedEnumeratingState!,
+      enumeratingLga: selectedEnumeratingLga!,
+    ).toJson();
+
+    AppLogger.logInfo(_tag, 'Submitting registration for $licensePlate');
+
+    _vehicleRepo.registerVehicle(payload).then((result) {
+      isLoading = false;
+      notifyListeners();
+
+      if (result.success) {
+        AppLogger.logInfo(_tag, 'Vehicle registered successfully');
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertDialog(
+            title: const Text('Success'),
+            content: const Text('Vehicle registered successfully'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        ).then((_) => Navigator.of(context).pop());
+      } else {
+        AppLogger.logWarning(_tag, 'Registration failed: ${result.failure?.message}');
+        errorMessage = _mapFailureMessage(result.failure!.runtimeType.toString());
+        notifyListeners();
+      }
+    });
   }
 
   void clearError() {
     errorMessage = null;
     notifyListeners();
-  }
-
-  Future<void> _loadOriginLgas(String stateId) async {
-    isLoadingOriginLgas = true;
-    errorMessage = null;
-    notifyListeners();
-
-    AppLogger.logInfo(_tag, 'Loading origin LGAs for state $stateId');
-    final result = await _repository.getLgas(stateId);
-    if (result.success) {
-      originLgas = result.data ?? [];
-      AppLogger.logInfo(_tag, 'Loaded ${originLgas.length} origin LGAs');
-    } else {
-      AppLogger.logWarning(_tag, 'Failed origin LGAs: ${result.failure?.message}');
-      errorMessage = _mapFailureMessage(result.failure!.runtimeType.toString());
-    }
-    isLoadingOriginLgas = false;
-    notifyListeners();
-  }
-
-  void onOriginLgaChanged(LgaModel? lga) {
-    selectedOriginLga = lga;
-    if (lga != null) AppLogger.logDebug(_tag, 'Origin LGA: ${lga.lgaName}');
-    notifyListeners();
-  }
-
-  void onDestinationStateChanged(StateModel? state) {
-    selectedDestinationState = state;
-    selectedDestinationLga = null;
-    destinationLgas = [];
-    notifyListeners();
-    if (state != null) {
-      AppLogger.logDebug(_tag, 'Dest state: ${state.stateName}');
-      _loadDestinationLgas(state.stateId);
-    }
-  }
-
-  Future<void> _loadDestinationLgas(String stateId) async {
-    isLoadingDestinationLgas = true;
-    errorMessage = null;
-    notifyListeners();
-
-    AppLogger.logInfo(_tag, 'Loading dest LGAs for state $stateId');
-    final result = await _repository.getLgas(stateId);
-    if (result.success) {
-      destinationLgas = result.data ?? [];
-      AppLogger.logInfo(_tag, 'Loaded ${destinationLgas.length} dest LGAs');
-    } else {
-      AppLogger.logWarning(_tag, 'Failed dest LGAs: ${result.failure?.message}');
-      errorMessage = _mapFailureMessage(result.failure!.runtimeType.toString());
-    }
-    isLoadingDestinationLgas = false;
-    notifyListeners();
-  }
-
-  void onDestinationLgaChanged(LgaModel? lga) {
-    selectedDestinationLga = lga;
-    if (lga != null) AppLogger.logDebug(_tag, 'Dest LGA: ${lga.lgaName}');
-    notifyListeners();
-  }
-
-  void submit(BuildContext context) {
-    if (selectedOriginState == null) {
-      errorMessage = 'Please select the origin state';
-      notifyListeners();
-      return;
-    }
-    if (selectedOriginLga == null) {
-      errorMessage = 'Please select the origin LGA';
-      notifyListeners();
-      return;
-    }
-    if (selectedDestinationState == null) {
-      errorMessage = 'Please select the destination state';
-      notifyListeners();
-      return;
-    }
-    if (selectedDestinationLga == null) {
-      errorMessage = 'Please select the destination LGA';
-      notifyListeners();
-      return;
-    }
-
-    isSubmitting = true;
-    errorMessage = null;
-    notifyListeners();
-
-    final draft = TransactionDraftModel(
-      vehicle: vehicle,
-      originState: selectedOriginState!.stateName,
-      originStateId: selectedOriginState!.stateId,
-      originLga: selectedOriginLga!.lgaName,
-      originLgaId: selectedOriginLga!.lgaId,
-      destinationState: selectedDestinationState!.stateName,
-      destinationStateId: selectedDestinationState!.stateId,
-      destinationLga: selectedDestinationLga!.lgaName,
-      destinationLgaId: selectedDestinationLga!.lgaId,
-      payerEmail: 'customer@tms.ng',
-    );
-
-    AppLogger.logInfo(_tag, 'Submitting draft: ${vehicle.vehicleLicense} → '
-        '${selectedOriginState!.stateName}/${selectedOriginLga!.lgaName} '
-        '→ ${selectedDestinationState!.stateName}/${selectedDestinationLga!.lgaName}');
-
-    Navigator.pushNamed(context, AppRoutes.transactionCreation, arguments: draft)
-        .then((_) {
-      AppLogger.logDebug(_tag, 'Returned from creation screen');
-      isSubmitting = false;
-      notifyListeners();
-    });
   }
 
   String _mapFailureMessage(String type) {
@@ -187,6 +303,6 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
     if (type == 'AuthFailure') {
       return 'API authentication error. Contact your administrator';
     }
-    return 'Failed to load data. Please try again';
+    return 'Failed to register vehicle. Please try again';
   }
 }

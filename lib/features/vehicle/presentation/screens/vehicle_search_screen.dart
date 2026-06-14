@@ -11,6 +11,12 @@ import '../../../transaction/presentation/viewmodels/transaction_viewmodel.dart'
 import '../viewmodels/vehicle_search_viewmodel.dart';
 import '../widgets/vehicle_found_card.dart';
 import '../widgets/vehicle_not_found_card.dart';
+import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/section_header.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
+import '../../../../core/widgets/error_state_widget.dart';
 
 class VehicleSearchScreen extends StatefulWidget {
   final String? initialLicensePlate;
@@ -209,57 +215,33 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
   }
 
   Widget _buildSearchSection(VehicleSearchViewModel viewmodel) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Search Vehicle',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A237E),
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Enter license plate to look up vehicle details',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            SectionHeader(
+              title: 'Search Vehicle',
+              subtitle: 'Enter license plate to look up vehicle details',
+              fontSize: 16,
             ),
             const SizedBox(height: 16),
-            TextField(
+            AppTextField(
+              label: 'License Plate',
+              hint: 'Enter license plate (e.g. BAL31XA)',
               controller: _searchController,
               textCapitalization: TextCapitalization.characters,
-              decoration: InputDecoration(
-                hintText: 'Enter license plate (e.g. BAL31XA)',
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF1A237E)),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          viewmodel.clearSearch();
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: Color(0xFF1A237E), width: 2),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
-              ),
+              prefixIcon: const Icon(Icons.search, color: Color(0xFF1A237E)),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        viewmodel.clearSearch();
+                      },
+                    )
+                  : null,
               onSubmitted: (_) => _performSearch(viewmodel),
             ),
             const SizedBox(height: 16),
@@ -335,25 +317,12 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
 
   Widget _buildSearchButton(VehicleSearchViewModel viewmodel) {
     final isEmpty = _searchController.text.trim().isEmpty;
-    return SizedBox(
-      width: double.infinity,
+    return AppButton(
+      label: 'Search Vehicle',
+      onPressed: (isEmpty || viewmodel.isLoading) ? null : () => _performSearch(viewmodel),
+      isLoading: viewmodel.isLoading,
+      icon: Icons.search,
       height: 48,
-      child: ElevatedButton.icon(
-        onPressed:
-                (isEmpty || viewmodel.isLoading) ? null : () => _performSearch(viewmodel),
-        icon: const Icon(Icons.search, color: Colors.white),
-        label: const Text('Search Vehicle',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A237E),
-          foregroundColor: Colors.white,
-          disabledBackgroundColor:
-              const Color(0xFF1A237E).withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
     );
   }
 
@@ -436,24 +405,10 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
   }
 
   Widget _buildInitialState() {
-    return const Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.directions_car, size: 80, color: Color(0xFFBDBDBD)),
-          SizedBox(height: 16),
-          Text(
-            'Search for a vehicle',
-            style: TextStyle(fontSize: 16, color: Color(0xFF757575)),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Enter a license plate number above to get started',
-            style: TextStyle(fontSize: 13, color: Color(0xFF9E9E9E)),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+    return const EmptyStateWidget(
+      icon: Icons.directions_car,
+      title: 'Search for a vehicle',
+      message: 'Enter a license plate number above to get started',
     );
   }
 
@@ -474,38 +429,14 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
   }
 
   Widget _buildErrorState(VehicleSearchViewModel viewmodel) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, size: 60, color: Color(0xFFC62828)),
-          const SizedBox(height: 12),
-          const Text(
-            'Search Failed',
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF212121)),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              viewmodel.errorMessage ?? '',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF616161)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: () {
-              viewmodel.clearSearch();
-              _searchController.clear();
-            },
-            child: const Text('Try Again'),
-          ),
-        ],
-      ),
+    return ErrorStateWidget(
+      message: viewmodel.errorMessage ?? 'An error occurred',
+      retryLabel: 'Try Again',
+      icon: Icons.error_outline,
+      onRetry: () {
+        viewmodel.clearSearch();
+        _searchController.clear();
+      },
     );
   }
 }

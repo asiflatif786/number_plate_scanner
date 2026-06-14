@@ -18,7 +18,7 @@ class VehicleRepository {
     };
 
     AppLogger.logInfo(_tag, 'Validating: $vehicleLicense ($transactionType)');
-    final response = await ApiClient.instance.post(payload);
+    final response = await ApiClient.instance.post(payload as String);
 
     if (response.success && response.data != null) {
       final vehicle = VehicleModel.fromJson(response.data!);

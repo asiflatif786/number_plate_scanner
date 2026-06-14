@@ -6,6 +6,7 @@ class UserModel {
   final String role;
   final String? agentNumber;
   final String? companyNumber;
+  final String? authToken;
 
   const UserModel({
     required this.id,
@@ -15,6 +16,7 @@ class UserModel {
     required this.role,
     this.agentNumber,
     this.companyNumber,
+    this.authToken,
   });
 
   String get fullName => '$firstName $lastName';
@@ -30,6 +32,7 @@ class UserModel {
       role: json['role'] as String? ?? '',
       agentNumber: json['agent_number'] as String?,
       companyNumber: json['company_number'] as String?,
+      authToken: json['token'] as String?,
     );
   }
 
@@ -41,6 +44,7 @@ class UserModel {
         'role': role,
         'agent_number': agentNumber,
         'company_number': companyNumber,
+        'token': authToken,
       };
 
   UserModel copyWith({
@@ -51,6 +55,7 @@ class UserModel {
     String? role,
     String? agentNumber,
     String? companyNumber,
+    String? authToken,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -60,6 +65,7 @@ class UserModel {
       role: role ?? this.role,
       agentNumber: agentNumber ?? this.agentNumber,
       companyNumber: companyNumber ?? this.companyNumber,
+      authToken: authToken ?? this.authToken,
     );
   }
 }

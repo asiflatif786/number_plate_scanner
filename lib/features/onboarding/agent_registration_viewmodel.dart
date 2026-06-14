@@ -39,6 +39,7 @@ class AgentRegistrationViewModel extends ChangeNotifier {
   bool isLoadingStates = false;
   bool isLoadingLgas = false;
   bool isLoadingLgasOfOrigin = false;
+  final Map<String, String> _stateNameToId = {};
 
   bool isPasswordVisible = false;
   bool isConfirmPasswordVisible = false;
@@ -51,6 +52,7 @@ class AgentRegistrationViewModel extends ChangeNotifier {
   String? passportPhotoFileName;
 
   final firstNameController = TextEditingController();
+  final middleNameController = TextEditingController();
   final lastNameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -90,7 +92,11 @@ class AgentRegistrationViewModel extends ChangeNotifier {
     try {
       final result = await _repository.getStates();
       if (result.success) {
-        states = result.data ?? [];
+        _stateNameToId.clear();
+        for (final s in result.data ?? []) {
+          _stateNameToId[s.stateName] = s.stateId;
+        }
+        states = _stateNameToId.keys.toList();
       } else if (result.failure != null) {
         errorMessage = result.failure!.message;
       }
@@ -108,7 +114,8 @@ class AgentRegistrationViewModel extends ChangeNotifier {
     selectedLga = null;
     lgas = [];
     notifyListeners();
-    _loadLgas(state);
+    final stateId = _stateNameToId[state];
+    if (stateId != null) _loadLgas(stateId);
   }
 
   void onOriginStateChanged(String? state) {
@@ -117,15 +124,16 @@ class AgentRegistrationViewModel extends ChangeNotifier {
     selectedLgaOfOrigin = null;
     lgasOfOrigin = [];
     notifyListeners();
-    _loadLgasOfOrigin(state);
+    final stateId = _stateNameToId[state];
+    if (stateId != null) _loadLgasOfOrigin(stateId);
   }
 
-  Future<void> _loadLgas(String stateName) async {
+  Future<void> _loadLgas(String stateId) async {
     isLoadingLgas = true;
     notifyListeners();
 
     try {
-      final result = await _repository.getLgas(stateName);
+      final result = await _repository.getLgas(stateId);
       if (result.success) {
         lgas = result.data ?? [];
       }
@@ -137,12 +145,12 @@ class AgentRegistrationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _loadLgasOfOrigin(String stateName) async {
+  Future<void> _loadLgasOfOrigin(String stateId) async {
     isLoadingLgasOfOrigin = true;
     notifyListeners();
 
     try {
-      final result = await _repository.getLgas(stateName);
+      final result = await _repository.getLgas(stateId);
       if (result.success) {
         lgasOfOrigin = result.data ?? [];
       }
@@ -440,6 +448,7 @@ class AgentRegistrationViewModel extends ChangeNotifier {
       final payload = {
         'title': selectedTitle,
         'first_name': firstName,
+        'middle_name': middleNameController.text.trim(),
         'last_name': lastName,
         'email': email,
         'password': password,
@@ -505,6 +514,7 @@ class AgentRegistrationViewModel extends ChangeNotifier {
   @override
   void dispose() {
     firstNameController.dispose();
+    middleNameController.dispose();
     lastNameController.dispose();
     emailController.dispose();
     passwordController.dispose();

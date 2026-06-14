@@ -11,9 +11,16 @@ class LgaModel {
 
   factory LgaModel.fromJson(Map<String, dynamic> json) {
     return LgaModel(
-      lgaId: json['lga_id'] as String? ?? '',
-      lgaName: json['lga_name'] as String? ?? '',
-      stateId: json['state_id'] as String? ?? '',
+      lgaId: json['lga_id']?.toString() ??
+          json['id']?.toString() ??
+          json['lga_name']?.toString() ??
+          json['name']?.toString() ??
+          '',
+      lgaName: json['lga_name']?.toString() ??
+          json['name']?.toString() ??
+          json['lga']?.toString() ??
+          '',
+      stateId: json['state_id']?.toString() ?? '',
     );
   }
 

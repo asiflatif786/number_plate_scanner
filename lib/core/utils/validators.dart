@@ -56,4 +56,28 @@ class Validators {
     }
     return null;
   }
+
+  static String? validatePassword(String value) {
+    if (value.isEmpty) return 'Password is required';
+    if (value.length < 6) return 'Password must be at least 6 characters';
+    return null;
+  }
+
+  static String? validatePasswordMatch(String password, String confirm) {
+    if (confirm.isEmpty) return 'Please confirm your password';
+    if (password != confirm) return 'Passwords do not match';
+    return null;
+  }
+
+  static String? validatePlate(String value) {
+    if (value.trim().isEmpty) return 'License plate is required';
+    if (value.trim().length < 5) return 'License plate must be at least 5 characters';
+    return null;
+  }
+
+  static String? validateMinLength(String value, int min, String fieldName) {
+    if (value.trim().isEmpty) return '$fieldName is required';
+    if (value.trim().length < min) return '$fieldName must be at least $min characters';
+    return null;
+  }
 }

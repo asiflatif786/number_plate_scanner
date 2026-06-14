@@ -12,7 +12,35 @@ class CorporateRegistrationViewModel extends ChangeNotifier {
   final OnboardingRepository _repository;
 
   CorporateRegistrationViewModel({OnboardingRepository? repository})
-      : _repository = repository ?? OnboardingRepository();
+      : _repository = repository ?? OnboardingRepository() {
+    phoneController.addListener(_normalizePhonePrefix);
+  }
+
+  static const List<String> _validPrefixes = ['080', '081', '090', '091'];
+
+  void _normalizePhonePrefix() {
+    final text = phoneController.text;
+    if (text.isEmpty) return;
+    var digits = text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // Convert +234/234 international format to local 0 prefix
+    if (digits.startsWith('234')) {
+      digits = '0${digits.substring(3)}';
+    }
+
+    final hasValidPrefix = _validPrefixes.any((p) => digits.startsWith(p));
+    if (digits.length <= 3 && !hasValidPrefix) {
+      phoneController.value = TextEditingValue(
+        text: '080',
+        selection: TextSelection.collapsed(offset: 3),
+      );
+    } else if (digits.length > 4 && !hasValidPrefix) {
+      phoneController.value = TextEditingValue(
+        text: '080$digits',
+        selection: TextSelection.collapsed(offset: ('080$digits').length),
+      );
+    }
+  }
 
   final nameController = TextEditingController();
   final rcNumberController = TextEditingController();
@@ -29,6 +57,7 @@ class CorporateRegistrationViewModel extends ChangeNotifier {
   String? selectedLga;
   List<String> states = [];
   List<String> lgas = [];
+  final Map<String, String> _stateNameToId = {};
   bool isLoadingStates = false;
   bool isLoadingLgas = false;
 
@@ -40,7 +69,11 @@ class CorporateRegistrationViewModel extends ChangeNotifier {
     try {
       final result = await _repository.getStates();
       if (result.success) {
-        states = result.data ?? [];
+        _stateNameToId.clear();
+        for (final s in result.data ?? []) {
+          _stateNameToId[s.stateName] = s.stateId;
+        }
+        states = _stateNameToId.keys.toList();
         AppLogger.logInfo(_tag, 'Loaded ${states.length} states');
       } else if (result.failure != null) {
         errorMessage = _friendlyMessage(result.failure!);
@@ -66,18 +99,19 @@ class CorporateRegistrationViewModel extends ChangeNotifier {
     selectedLga = null;
     lgas = [];
     notifyListeners();
-    loadLgas(state);
+    final stateId = _stateNameToId[state];
+    if (stateId != null) loadLgas(stateId);
   }
 
-  Future<void> loadLgas(String stateName) async {
+  Future<void> loadLgas(String stateId) async {
     isLoadingLgas = true;
     notifyListeners();
 
     try {
-      final result = await _repository.getLgas(stateName);
+      final result = await _repository.getLgas(stateId);
       if (result.success) {
         lgas = result.data ?? [];
-        AppLogger.logInfo(_tag, 'Loaded ${lgas.length} LGAs for $stateName');
+        AppLogger.logInfo(_tag, 'Loaded ${lgas.length} LGAs');
       } else if (result.failure != null) {
         errorMessage = 'Failed to load LGAs: ${_friendlyMessage(result.failure!)}';
         AppLogger.logWarning(_tag, 'Failed to load LGAs: ${result.failure!.message}');
@@ -126,7 +160,7 @@ class CorporateRegistrationViewModel extends ChangeNotifier {
     return 'Something went wrong. Please try again.';
   }
 
-  Future<void> submit(BuildContext context) async {
+  Future<void> submit(BuildContext context, {bool isFromAdmin = false}) async {
     final name = nameController.text.trim();
     final rcNumber = rcNumberController.text.trim();
     final email = emailController.text.trim();
@@ -218,7 +252,18 @@ class CorporateRegistrationViewModel extends ChangeNotifier {
         );
 
         if (!context.mounted) return;
-        Navigator.pushReplacementNamed(context, AppRoutes.agentRegistration);
+        
+        if (isFromAdmin) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Company "${company.companyNumber}" created successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context);
+        } else {
+          Navigator.pushReplacementNamed(context, AppRoutes.agentRegistration);
+        }
       } else if (result.failure != null) {
         errorMessage = _friendlyMessage(result.failure!);
         AppLogger.logWarning(_tag, 'Create company failed: ${result.failure!.message}');

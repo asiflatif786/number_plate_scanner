@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import 'add_agent_screen.dart';
+import 'core/widgets/section_header.dart';
 
 class AdminDashboard extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -63,12 +64,9 @@ class AdminDashboard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Management Services',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: SectionHeader(title: 'Management Services'),
           ),
           const SizedBox(height: 15),
           Expanded(
