@@ -11,14 +11,14 @@ class VehicleRepository {
     required String vehicleLicense,
     required String transactionType,
   }) async {
-    final payload = {
-      'action': ApiConstants.actionValidateCustomer,
-      'vehicle_license': vehicleLicense,
-      'transaction_type': transactionType,
-    };
-
     AppLogger.logInfo(_tag, 'Validating: $vehicleLicense ($transactionType)');
-    final response = await ApiClient.instance.post(payload as String);
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionValidateCustomer,
+      fields: {
+        'vehicle_license': vehicleLicense,
+        'transaction_type': transactionType,
+      },
+    );
 
     if (response.success && response.data != null) {
       final vehicle = VehicleModel.fromJson(response.data!);

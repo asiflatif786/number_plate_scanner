@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../features/auth/login_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/agent/agent_dashboard_screen.dart';
+import '../features/agent/notification_screen.dart';
 import '../features/admin/admin_dashboard_screen.dart';
 import '../features/onboarding/corporate_registration_screen.dart';
 import '../features/onboarding/agent_registration_screen.dart';
 import '../features/onboarding/terminal_profiling_screen.dart';
 import '../features/onboarding/onboarding_complete_screen.dart';
+import '../features/onboarding/company_verify_screen.dart';
+import '../features/onboarding/company_verify_viewmodel.dart';
 import '../features/vehicle/vehicle_search_screen.dart';
 import '../features/vehicle/vehicle_found_screen.dart';
 import '../features/vehicle/vehicle_not_found_screen.dart';
-import 'package:provider/provider.dart';
 import '../features/vehicle/scanner_view.dart';
-import '../features/vehicle/scanner_viewmodel.dart';
 import '../features/transaction/transaction_creation_screen.dart';
 import '../features/transaction/transaction_success_screen.dart';
 
@@ -28,11 +30,13 @@ class AppRoutes {
   static const String onboardingComplete = '/onboarding-complete';
   static const String adminDashboard = '/admin-dashboard';
   static const String agentDashboard = '/agent-dashboard';
+  static const String companyVerify = '/company-verify';
   static const String vehicleSearch = '/vehicle-search';
   static const String vehicleFound = '/vehicle-found';
   static const String vehicleNotFound = '/vehicle-not-found';
   static const String transactionCreation = '/transaction-creation';
   static const String transactionSuccess = '/transaction-success';
+  static const String notifications = '/notifications';
   static const String scanner = '/scanner';
 
   static Map<String, WidgetBuilder> routes = {
@@ -44,14 +48,16 @@ class AppRoutes {
     onboardingComplete: (context) => const OnboardingCompleteScreen(),
     adminDashboard: (context) => const AdminDashboardScreen(),
     agentDashboard: (context) => const AgentDashboardScreen(),
+    companyVerify: (context) => ChangeNotifierProvider(
+      create: (_) => CompanyVerifyViewModel(),
+      child: const CompanyVerifyScreen(),
+    ),
     vehicleSearch: (context) => const VehicleSearchScreen(),
     vehicleFound: (context) => const VehicleFoundScreen(),
     vehicleNotFound: (context) => const VehicleNotFoundScreen(),
     transactionCreation: (context) => const TransactionCreationScreen(),
     transactionSuccess: (context) => const TransactionSuccessScreen(),
-    scanner: (context) => ChangeNotifierProvider(
-      create: (_) => ScannerViewModel(),
-      child: const ScannerView(),
-    ),
+    notifications: (context) => const NotificationScreen(),
+    scanner: (context) => const ScannerView(),
   };
 }

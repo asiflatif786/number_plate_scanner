@@ -75,6 +75,7 @@ class ApiConstants {
   static const String actionGetStates = 'get-states';
   static const String actionGetLgas = 'get-lgas';
   static const String actionLogin = 'login';
+  static const String actionGetCompany = 'get-company';
 
   static const String validateCustomer = validateVehicle;
   static const String getCompany = '/corporate/get-company';

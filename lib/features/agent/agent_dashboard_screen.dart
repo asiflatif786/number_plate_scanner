@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../app/routes.dart';
 import 'agent_dashboard_viewmodel.dart';
 
 class AgentDashboardScreen extends StatefulWidget {
@@ -52,9 +53,10 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       title: const Text('Cyber1 TMS',
           style: TextStyle(fontWeight: FontWeight.bold)),
       actions: [
-        const IconButton(
-          icon: Icon(Icons.notifications_outlined, color: Colors.white),
-          onPressed: null,
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+          onPressed: () =>
+              Navigator.pushNamed(context, AppRoutes.notifications),
         ),
         Consumer<AgentDashboardViewModel>(
           builder: (context, vm, _) => IconButton(

@@ -32,10 +32,6 @@ class _ScannerViewState extends State<ScannerView>
         curve: Curves.easeInOut,
       ),
     );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ScannerViewModel>().initialize();
-    });
   }
 
   @override
@@ -50,6 +46,35 @@ class _ScannerViewState extends State<ScannerView>
       DeviceOrientation.portraitUp,
     ]);
 
+    return ChangeNotifierProvider(
+      create: (_) => ScannerViewModel(),
+      child: _ScannerBody(
+        scanLineAnimation: _scanLineAnimation,
+      ),
+    );
+  }
+}
+
+class _ScannerBody extends StatefulWidget {
+  final Animation<double> scanLineAnimation;
+
+  const _ScannerBody({required this.scanLineAnimation});
+
+  @override
+  State<_ScannerBody> createState() => _ScannerBodyState();
+}
+
+class _ScannerBodyState extends State<_ScannerBody> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ScannerViewModel>().initialize();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return PopScope(
       canPop: true,
       child: Scaffold(
@@ -88,12 +113,12 @@ class _ScannerViewState extends State<ScannerView>
   Widget _buildOverlay(ScannerViewModel vm) {
     if (!vm.isInitialized) return const SizedBox.shrink();
     return AnimatedBuilder(
-      animation: _scanLineAnimation,
+      animation: widget.scanLineAnimation,
       builder: (context, child) {
         return CustomPaint(
           size: Size.infinite,
           painter: _ScannerOverlayPainter(
-            scanLineProgress: vm.extractedPlate != null ? 0.5 : _scanLineAnimation.value,
+            scanLineProgress: vm.extractedPlate != null ? 0.5 : widget.scanLineAnimation.value,
             showScanLine: vm.extractedPlate == null,
           ),
         );

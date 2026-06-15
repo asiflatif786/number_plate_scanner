@@ -57,6 +57,32 @@ class OnboardingRepository {
     return ApiResponse.failure(response.failure!);
   }
 
+  Future<ApiResponse<CompanyModel>> verifyCompany(String rcNumber) async {
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGetCompany,
+      fields: {'company_number': rcNumber},
+    );
+
+    if (response.success && response.data != null) {
+      final company = CompanyModel(
+        companyNumber: response.data!['company_number']?.toString() ?? '',
+        name: response.data!['name']?.toString() ?? '',
+        rcNumber: response.data!['rc_number']?.toString() ?? '',
+        email: response.data!['email']?.toString() ?? '',
+        phoneNumber: response.data!['phone_number']?.toString() ?? '',
+        address: response.data!['address']?.toString() ?? '',
+        contactAddress: response.data!['contact_address']?.toString() ?? '',
+        tin: response.data!['tin']?.toString() ?? '',
+        city: response.data!['city']?.toString() ?? '',
+        state: response.data!['state']?.toString() ?? '',
+        lga: response.data!['lga']?.toString() ?? '',
+      );
+      return ApiResponse.success(company, response.message);
+    }
+
+    return ApiResponse.failure(response.failure!);
+  }
+
   Future<ApiResponse<AgentModel>> addAgent(
     Map<String, dynamic> formData,
   ) async {

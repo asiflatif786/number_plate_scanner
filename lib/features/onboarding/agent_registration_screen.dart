@@ -34,8 +34,22 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final companyNumber = args?['company_number'] as String?;
+    final companyName = args?['company_name'] as String?;
+    final companyVerified = companyNumber != null && companyNumber.isNotEmpty;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
+      appBar: companyVerified
+          ? AppBar(
+              backgroundColor: const Color(0xFF1A237E),
+              foregroundColor: Colors.white,
+              title: const Text('Add Agent'),
+              elevation: 0,
+            )
+          : null,
       body: SafeArea(
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
@@ -43,7 +57,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
             builder: (context, vm, _) {
               return Column(
                 children: [
-                  _buildProgressBar(),
+                  _buildProgressBar(companyVerified),
                   Expanded(
                     child: SingleChildScrollView(
                       controller: _scrollController,
@@ -54,7 +68,11 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 16),
-                            _buildHeader(),
+                            _buildHeader(companyVerified),
+                            if (companyVerified) ...[
+                              const SizedBox(height: 16),
+                              _buildVerifiedCompanyCard(companyNumber!, companyName),
+                            ],
                             const SizedBox(height: 20),
                             _buildPersonalInfoCard(vm),
                             const SizedBox(height: 16),
@@ -90,13 +108,17 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   // Progress Bar
   // ──────────────────────────────────────────────
 
-  Widget _buildProgressBar() {
+  Widget _buildProgressBar(bool companyVerified) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
       color: Colors.white,
       child: Row(
         children: [
-          _stepDot(label: 'Company', isComplete: true, isActive: false),
+          _stepDot(
+            label: 'Company',
+            isComplete: companyVerified,
+            isActive: false,
+          ),
           _stepConnector(),
           _stepDot(label: 'Agent', isComplete: false, isActive: true),
           _stepConnector(),
@@ -166,24 +188,66 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   // Header
   // ──────────────────────────────────────────────
 
-  Widget _buildHeader() {
-    return const Column(
+  Widget _buildHeader(bool companyVerified) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Agent Registration',
-          style: TextStyle(
+          companyVerified ? 'Agent Registration' : 'Corporate Registration',
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Color(0xFF1A237E),
           ),
         ),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Text(
-          'Personal and banking details',
-          style: TextStyle(fontSize: 14, color: Color(0xFF757575)),
+          companyVerified
+              ? 'Personal and banking details'
+              : 'Register your company to get started',
+          style: const TextStyle(fontSize: 14, color: Color(0xFF757575)),
         ),
       ],
+    );
+  }
+
+  Widget _buildVerifiedCompanyCard(String companyNumber, String? companyName) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, color: Color(0xFF2E7D32), size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Company Verified',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E7D32),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  companyName ?? companyNumber,
+                  style: const TextStyle(fontSize: 13, color: Color(0xFF424242)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

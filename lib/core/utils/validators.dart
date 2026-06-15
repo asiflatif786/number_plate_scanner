@@ -1,9 +1,8 @@
 class Validators {
   static String? validatePhone(String value) {
     if (value.isEmpty) return 'Phone number is required';
-    if (value.length != 11) return 'Phone number must be 11 digits';
-    if (!value.startsWith('0')) return 'Phone number must start with 0';
-    if (!RegExp(r'^\d{11}$').hasMatch(value)) return 'Phone number must contain only digits';
+    if (value.length < 7) return 'Phone number must be at least 7 digits';
+    if (!RegExp(r'^\+?[0-9]+$').hasMatch(value)) return 'Phone number must contain only valid characters';
     return null;
   }
 

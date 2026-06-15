@@ -258,7 +258,7 @@ class AgentRegistrationViewModel extends ChangeNotifier {
 
   String? _validatePhone(String value) {
     if (value.isEmpty) return 'Phone number is required';
-    if (value.length < 11) return 'Phone number must be 11 digits';
+    if (value.length < 7) return 'Phone number must be at least 7 digits';
     return null;
   }
 

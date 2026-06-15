@@ -148,7 +148,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   label: 'Add Agent',
                   subtitle: 'Register a new agent',
                   onTap: () =>
-                      Navigator.pushNamed(context, AppRoutes.agentRegistration),
+                      Navigator.pushNamed(context, AppRoutes.companyVerify),
                 ),
                 _menuCard(
                   icon: Icons.search,

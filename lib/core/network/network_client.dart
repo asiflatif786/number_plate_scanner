@@ -100,7 +100,8 @@ class NetworkClient {
     final statusCode = body['status_code'] as String? ?? '99';
     final message = body['message'] as String? ?? 'Unknown error';
 
-    AppLogger.debug(_tag, 'Response status_code: $statusCode, message: $message');
+    AppLogger.debug(
+        _tag, 'Response status_code: $statusCode, message: $message');
 
     switch (statusCode) {
       case '00':

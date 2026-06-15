@@ -12,35 +12,7 @@ class CorporateRegistrationViewModel extends ChangeNotifier {
   final OnboardingRepository _repository;
 
   CorporateRegistrationViewModel({OnboardingRepository? repository})
-      : _repository = repository ?? OnboardingRepository() {
-    phoneController.addListener(_normalizePhonePrefix);
-  }
-
-  static const List<String> _validPrefixes = ['080', '081', '090', '091'];
-
-  void _normalizePhonePrefix() {
-    final text = phoneController.text;
-    if (text.isEmpty) return;
-    var digits = text.replaceAll(RegExp(r'[^0-9]'), '');
-
-    // Convert +234/234 international format to local 0 prefix
-    if (digits.startsWith('234')) {
-      digits = '0${digits.substring(3)}';
-    }
-
-    final hasValidPrefix = _validPrefixes.any((p) => digits.startsWith(p));
-    if (digits.length <= 3 && !hasValidPrefix) {
-      phoneController.value = TextEditingValue(
-        text: '080',
-        selection: TextSelection.collapsed(offset: 3),
-      );
-    } else if (digits.length > 4 && !hasValidPrefix) {
-      phoneController.value = TextEditingValue(
-        text: '080$digits',
-        selection: TextSelection.collapsed(offset: ('080$digits').length),
-      );
-    }
-  }
+      : _repository = repository ?? OnboardingRepository();
 
   final nameController = TextEditingController();
   final rcNumberController = TextEditingController();
@@ -141,7 +113,7 @@ class CorporateRegistrationViewModel extends ChangeNotifier {
 
   String? _validatePhone(String value) {
     if (value.isEmpty) return 'Phone number is required';
-    if (value.length < 11) return 'Phone number must be at least 11 digits';
+    if (value.length < 7) return 'Phone number must be at least 7 digits';
     return null;
   }
 
