@@ -200,7 +200,7 @@ class _CorporateRegistrationScreenState
       title: 'Company Information',
       child: Column(
         children: [
-          _requiredField(
+          _inputField(
             label: 'Company Name',
             controller: vm.nameController,
             focusNode: _nameFocus,
@@ -208,23 +208,24 @@ class _CorporateRegistrationScreenState
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 14),
-          _requiredField(
-            label: 'CAC Registration Number',
+          _inputField(
+            label: 'RC Number',
             controller: vm.rcNumberController,
             focusNode: _rcFocus,
             nextFocus: _tinFocus,
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 14),
-          _requiredField(
-            label: 'Tax Identification Number',
+          _inputField(
+            label: 'Tax Identification Number TIN',
             controller: vm.tinController,
             focusNode: _tinFocus,
             nextFocus: _emailFocus,
+            isRequired: true,
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 14),
-          _requiredField(
+          _inputField(
             label: 'Email Address',
             controller: vm.emailController,
             focusNode: _emailFocus,
@@ -233,7 +234,7 @@ class _CorporateRegistrationScreenState
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 14),
-          _requiredField(
+          _inputField(
             label: 'Phone Number',
             controller: vm.phoneController,
             focusNode: _phoneFocus,
@@ -252,7 +253,7 @@ class _CorporateRegistrationScreenState
       title: 'Address Information',
       child: Column(
         children: [
-          _requiredField(
+          _inputField(
             label: 'Registered Address',
             controller: vm.addressController,
             focusNode: _addressFocus,
@@ -261,16 +262,17 @@ class _CorporateRegistrationScreenState
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 14),
-          _requiredField(
+          _inputField(
             label: 'Contact Address',
             controller: vm.contactAddressController,
             focusNode: _contactAddressFocus,
             nextFocus: _cityFocus,
             maxLines: 2,
+            isRequired: true,
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 14),
-          _requiredField(
+          _inputField(
             label: 'City',
             controller: vm.cityController,
             focusNode: _cityFocus,
@@ -496,7 +498,7 @@ class _CorporateRegistrationScreenState
     );
   }
 
-  Widget _requiredField({
+  Widget _inputField({
     required String label,
     required TextEditingController controller,
     FocusNode? focusNode,
@@ -505,11 +507,12 @@ class _CorporateRegistrationScreenState
     TextInputAction? textInputAction,
     int? maxLength,
     int maxLines = 1,
+    bool isRequired = true,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _labeledText('$label *'),
+        _labeledText('$label${isRequired ? ' *' : ''}'),
         const SizedBox(height: 4),
         TextFormField(
           controller: controller,

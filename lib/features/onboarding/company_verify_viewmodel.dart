@@ -30,6 +30,9 @@ class CompanyVerifyViewModel extends ChangeNotifier {
     if (failure is NetworkFailure) {
       return 'No internet connection. Check your network.';
     }
+    if (failure is NotFoundFailure) {
+      return 'No company found with this RC number.';
+    }
     if (failure is ServerFailure) {
       if (failure.message.toLowerCase().contains('not found')) {
         return 'No company found with this RC number.';

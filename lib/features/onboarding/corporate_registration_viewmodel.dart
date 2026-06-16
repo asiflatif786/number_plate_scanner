@@ -152,11 +152,9 @@ class CorporateRegistrationViewModel extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (tin.isEmpty) {
-      errorMessage = 'Tax Identification Number is required';
-      notifyListeners();
-      return;
-    }
+    
+    // TIN is now optional
+    
     final emailError = _validateEmail(email);
     if (emailError != null) {
       errorMessage = emailError;
@@ -198,7 +196,7 @@ class CorporateRegistrationViewModel extends ChangeNotifier {
       final payload = {
         'name': name,
         'rc_number': rcNumber,
-        'tin': tin,
+        'tin': tin.isEmpty ? null : tin,
         'email': email,
         'phone_number': phone,
         'address': address,

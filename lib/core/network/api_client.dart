@@ -253,6 +253,8 @@ class ApiClient {
 
   Failure _mapHttpError(int statusCode, String message) {
     switch (statusCode) {
+      case 404:
+        return NotFoundFailure(message);
       case 500:
         return const ServerFailure('Internal server error. Please try again.');
       case 503:
