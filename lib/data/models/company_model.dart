@@ -10,6 +10,7 @@ class CompanyModel {
   final String city;
   final String state;
   final String lga;
+  final String status;
 
   const CompanyModel({
     required this.companyNumber,
@@ -23,6 +24,7 @@ class CompanyModel {
     required this.city,
     required this.state,
     required this.lga,
+    this.status = 'active',
   });
 
   factory CompanyModel.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class CompanyModel {
       city: json['city'] as String? ?? '',
       state: json['state'] as String? ?? '',
       lga: json['lga'] as String? ?? '',
+      status: json['status'] as String? ?? 'active',
     );
   }
 
@@ -53,6 +56,7 @@ class CompanyModel {
         'city': city,
         'state': state,
         'lga': lga,
+        'status': status,
       };
 
   CompanyModel copyWith({
@@ -67,6 +71,7 @@ class CompanyModel {
     String? city,
     String? state,
     String? lga,
+    String? status,
   }) {
     return CompanyModel(
       companyNumber: companyNumber ?? this.companyNumber,
@@ -80,6 +85,7 @@ class CompanyModel {
       city: city ?? this.city,
       state: state ?? this.state,
       lga: lga ?? this.lga,
+      status: status ?? this.status,
     );
   }
 }

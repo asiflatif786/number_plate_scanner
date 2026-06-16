@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/models/company_model.dart';
 import '../features/auth/login_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/agent/agent_dashboard_screen.dart';
 import '../features/agent/notification_screen.dart';
 import '../features/admin/admin_dashboard_screen.dart';
+import '../features/admin/view_companies_screen.dart';
+import '../features/admin/view_companies_viewmodel.dart';
+import '../features/admin/company_detail_screen.dart';
 import '../features/onboarding/corporate_registration_screen.dart';
 import '../features/onboarding/agent_registration_screen.dart';
 import '../features/onboarding/terminal_profiling_screen.dart';
@@ -38,6 +42,8 @@ class AppRoutes {
   static const String transactionSuccess = '/transaction-success';
   static const String notifications = '/notifications';
   static const String scanner = '/scanner';
+  static const String viewCompanies = '/view-companies';
+  static const String companyDetail = '/company-detail';
 
   static Map<String, WidgetBuilder> routes = {
     splash: (context) => const SplashScreen(),
@@ -59,5 +65,13 @@ class AppRoutes {
     transactionSuccess: (context) => const TransactionSuccessScreen(),
     notifications: (context) => const NotificationScreen(),
     scanner: (context) => const ScannerView(),
+    viewCompanies: (context) => ChangeNotifierProvider(
+      create: (_) => ViewCompaniesViewModel(),
+      child: const ViewCompaniesScreen(),
+    ),
+    companyDetail: (context) {
+      final company = ModalRoute.of(context)!.settings.arguments as CompanyModel;
+      return CompanyDetailScreen(company: company);
+    },
   };
 }

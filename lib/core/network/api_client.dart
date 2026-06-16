@@ -219,7 +219,9 @@ class ApiClient {
   ) {
     final body = _parseBody(httpResponse);
     final message = body['message'] as String? ?? 'Unknown error';
-    final rawData = body['data'];
+    
+    // Support both 'data' and 'Data' keys
+    final rawData = body['data'] ?? body['Data'];
 
     // Support both old (status: true/false) and new (status_code: "00") formats
     final oldStatus = body['status'] as bool?;

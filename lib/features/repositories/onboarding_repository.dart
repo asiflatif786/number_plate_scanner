@@ -36,6 +36,22 @@ class OnboardingRepository {
     return ApiResponse.failure(response.failure!);
   }
 
+  Future<ApiResponse<List<CompanyModel>>> getAllCompanies() async {
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGetAllCompanies,
+    );
+
+    if (response.success && response.data != null) {
+      final raw = response.data!['data'] ?? response.data!['data_list'];
+      if (raw is List) {
+        final companies = raw.map((e) => CompanyModel.fromJson(e)).toList();
+        return ApiResponse.success(companies, response.message);
+      }
+    }
+
+    return ApiResponse.failure(response.failure!);
+  }
+
   Future<ApiResponse<List<StateModel>>> getStates() async {
     // POST to /api_data with action: 'get-states'
     final response = await ApiClient.instance.tmsPost(

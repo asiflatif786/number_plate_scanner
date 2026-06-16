@@ -32,7 +32,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             return Column(
               children: [
                 _buildWelcomeSection(vm),
-                Expanded(child: _buildGridMenu()),
+                Expanded(child: _buildGridMenu(vm)),
                 _buildFooter(),
               ],
             );
@@ -122,7 +122,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildGridMenu() {
+  Widget _buildGridMenu(AdminDashboardViewModel vm) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -167,6 +167,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     arguments: {'isFromAdmin': true},
                   ),
                 ),
+                _menuCard(
+                  icon: Icons.store,
+                  label: 'View Companies',
+                  subtitle: vm.isLoadingStats
+                      ? 'Loading...'
+                      : '${vm.totalCompanies} registered',
+                  onTap: () =>
+                      Navigator.pushNamed(context, AppRoutes.viewCompanies),
+                  badge: vm.totalCompanies > 0 ? '${vm.totalCompanies}' : null,
+                ),
               ],
             ),
           ),
@@ -180,6 +190,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required String label,
     required String subtitle,
     required VoidCallback onTap,
+    String? badge,
   }) {
     return Material(
       color: Colors.white,
@@ -189,27 +200,54 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 32, color: const Color(0xFF1A237E)),
-              const SizedBox(height: 6),
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF424242))),
-              const SizedBox(height: 2),
-              Text(subtitle,
-                  style:
-                      const TextStyle(fontSize: 10, color: Color(0xFF9E9E9E)),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis),
-            ],
-          ),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, size: 32, color: const Color(0xFF1A237E)),
+                    const SizedBox(height: 6),
+                    Text(label,
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF424242))),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        style: const TextStyle(
+                            fontSize: 10, color: Color(0xFF9E9E9E)),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+            ),
+            if (badge != null)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A237E),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    badge,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

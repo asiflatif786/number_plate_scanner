@@ -5,7 +5,8 @@ import '../../app/routes.dart';
 import 'company_verify_viewmodel.dart';
 
 class CompanyVerifyScreen extends StatefulWidget {
-  const CompanyVerifyScreen({super.key});
+  final String? initialRcNumber;
+  const CompanyVerifyScreen({super.key, this.initialRcNumber});
 
   @override
   State<CompanyVerifyScreen> createState() => _CompanyVerifyScreenState();
@@ -13,6 +14,30 @@ class CompanyVerifyScreen extends StatefulWidget {
 
 class _CompanyVerifyScreenState extends State<CompanyVerifyScreen> {
   final _rcFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final vm = context.read<CompanyVerifyViewModel>();
+      
+      // Check if RC number was passed via constructor or route arguments
+      String? rc = widget.initialRcNumber;
+      if (rc == null) {
+        final args = ModalRoute.of(context)?.settings.arguments;
+        if (args is Map<String, dynamic>) {
+          rc = args['rc_number'];
+        } else if (args is String) {
+          rc = args;
+        }
+      }
+
+      if (rc != null && rc.isNotEmpty) {
+        vm.rcNumberController.text = rc;
+        vm.verifyCompany(context);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -27,7 +52,7 @@ class _CompanyVerifyScreenState extends State<CompanyVerifyScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
-        title: const Text('Add Agent'),
+        title: const Text('Verify Company'),
         elevation: 0,
       ),
       body: SafeArea(

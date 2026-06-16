@@ -4,13 +4,17 @@ import 'package:intl/intl.dart';
 import '../../app/routes.dart';
 import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
+import '../repositories/onboarding_repository.dart';
 
 class AdminDashboardViewModel extends ChangeNotifier {
   static const String _tag = 'AdminDashVM';
+  final OnboardingRepository _repository = OnboardingRepository();
 
   String adminName = '';
   String companyNumber = '';
   String currentDate = '';
+  int totalCompanies = 0;
+  bool isLoadingStats = false;
 
   Future<void> loadSession() async {
     final session = await SessionManager.instance;
@@ -18,6 +22,25 @@ class AdminDashboardViewModel extends ChangeNotifier {
         session.agentFullName.isNotEmpty ? session.agentFullName : 'Admin';
     companyNumber = session.companyNumber ?? 'N/A';
     currentDate = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
+    notifyListeners();
+    
+    await loadStats();
+  }
+
+  Future<void> loadStats() async {
+    isLoadingStats = true;
+    notifyListeners();
+
+    try {
+      final result = await _repository.getAllCompanies();
+      if (result.success) {
+        totalCompanies = result.data?.length ?? 0;
+      }
+    } catch (e) {
+      AppLogger.logError(_tag, 'Error loading admin stats', e);
+    }
+
+    isLoadingStats = false;
     notifyListeners();
   }
 
