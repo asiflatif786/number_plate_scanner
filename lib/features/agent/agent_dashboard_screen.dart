@@ -29,15 +29,20 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         appBar: _buildAppBar(),
         body: Consumer<AgentDashboardViewModel>(
           builder: (context, vm, _) {
-            return SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildWelcomeBanner(vm),
-                  _buildQuickActions(vm),
-                  _buildTodayActivity(),
-                  _buildTerminalInfo(vm),
-                  _buildFooter(),
-                ],
+            return RefreshIndicator(
+              onRefresh: vm.refresh,
+              color: const Color(0xFF1A237E),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    _buildWelcomeBanner(vm),
+                    _buildQuickActions(vm),
+                    _buildTodayActivity(vm),
+                    _buildTerminalInfo(vm),
+                    _buildFooter(),
+                  ],
+                ),
               ),
             );
           },
@@ -228,17 +233,28 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     );
   }
 
-  Widget _buildTodayActivity() {
+  Widget _buildTodayActivity(AgentDashboardViewModel vm) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Today's Activity",
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF212121))),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Today's Activity",
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF212121))),
+              if (vm.isRefreshing)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
@@ -256,15 +272,16 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
             ),
             child: Row(
               children: [
-                _statItem('Transactions', '0', isFirst: true),
-                _statItem('Approved', '0'),
-                _statItem('Pending', '0', isLast: true),
+                _statItem('Total', vm.totalTransactions.toString(), isFirst: true),
+                _statItem('Approved', vm.approvedCount.toString()),
+                _statItem('Pending', vm.pendingCount.toString()),
+                _statItem('Declined', vm.declinedCount.toString(), isLast: true),
               ],
             ),
           ),
           const SizedBox(height: 6),
           const Text(
-            'Transaction counts update after each session',
+            'Pull down to refresh',
             style: TextStyle(fontSize: 11, color: Color(0xFFBDBDBD)),
           ),
         ],

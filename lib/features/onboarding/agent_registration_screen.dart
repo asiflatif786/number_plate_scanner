@@ -494,24 +494,27 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _uploadRow(
-            label: 'Utility Bill *',
+            label: 'Utility Bill (Optional)',
             fileName: vm.utilityBillFileName,
             isUploaded: vm.utilityBillBase64 != null,
             onTap: () => _showDocumentPicker(vm, 'utility_bill'),
+            onRemove: () => vm.removeDocument('utility_bill'),
           ),
           const SizedBox(height: 12),
           _uploadRow(
-            label: 'Identity Document *',
+            label: 'Identity Document (Optional)',
             fileName: vm.identityDocumentFileName,
             isUploaded: vm.identityDocumentBase64 != null,
             onTap: () => _showDocumentPicker(vm, 'identity_document'),
+            onRemove: () => vm.removeDocument('identity_document'),
           ),
           const SizedBox(height: 12),
           _uploadRow(
-            label: 'Passport Photo *',
+            label: 'Passport Photo (Optional)',
             fileName: vm.passportPhotoFileName,
             isUploaded: vm.passportPhotoBase64 != null,
             onTap: () => _showDocumentPicker(vm, 'passport_photo'),
+            onRemove: () => vm.removeDocument('passport_photo'),
           ),
         ],
       ),
@@ -523,6 +526,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     required String? fileName,
     required bool isUploaded,
     required VoidCallback onTap,
+    VoidCallback? onRemove,
   }) {
     return Row(
       children: [
@@ -558,19 +562,34 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
             ],
           ),
         ),
-        OutlinedButton.icon(
-          onPressed: onTap,
-          icon: const Icon(Icons.cloud_upload_outlined, size: 18),
-          label: const Text('Upload'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF1A237E),
-            side: const BorderSide(color: Color(0xFF1A237E)),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8)),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            textStyle: const TextStyle(fontSize: 13),
+        if (isUploaded && onRemove != null)
+          OutlinedButton.icon(
+            onPressed: onRemove,
+            icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFC62828)),
+            label: const Text('Remove',
+                style: TextStyle(color: Color(0xFFC62828))),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFFC62828)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              textStyle: const TextStyle(fontSize: 13),
+            ),
+          )
+        else
+          OutlinedButton.icon(
+            onPressed: onTap,
+            icon: const Icon(Icons.cloud_upload_outlined, size: 18),
+            label: const Text('Upload'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF1A237E),
+              side: const BorderSide(color: Color(0xFF1A237E)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              textStyle: const TextStyle(fontSize: 13),
+            ),
           ),
-        ),
       ],
     );
   }

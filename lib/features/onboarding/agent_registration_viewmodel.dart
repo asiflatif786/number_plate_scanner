@@ -199,21 +199,31 @@ class AgentRegistrationViewModel extends ChangeNotifier {
   Future<void> pickDocumentFromSource(
       String documentType, ImageSource source) async {
     try {
-      final XFile? image = await _picker.pickImage(
+      const int maxBytes = 300 * 1024; // 300KB target
+
+      XFile? image = await _picker.pickImage(
         source: source,
-        imageQuality: 70,
-        maxWidth: 1024,
-        maxHeight: 1024,
+        imageQuality: 30,
+        maxWidth: 600,
+        maxHeight: 600,
       );
 
       if (image == null) return;
 
-      final bytes = await image.readAsBytes();
+      var bytes = await image.readAsBytes();
 
-      if (bytes.length > 5 * 1024 * 1024) {
-        errorMessage = 'Image too large. Please choose a smaller image.';
-        notifyListeners();
-        return;
+      // If still too large, re-pick with lowest quality
+      if (bytes.length > maxBytes) {
+        final XFile? retry = await _picker.pickImage(
+          source: source,
+          imageQuality: 10,
+          maxWidth: 400,
+          maxHeight: 400,
+        );
+        if (retry != null) {
+          image = retry;
+          bytes = await image.readAsBytes();
+        }
       }
 
       final base64Str = base64Encode(bytes);
@@ -236,6 +246,23 @@ class AgentRegistrationViewModel extends ChangeNotifier {
       AppLogger.logError(_tag, 'pickDocument error', e);
       notifyListeners();
     }
+  }
+
+  // ─── Remove Document ───
+
+  void removeDocument(String documentType) {
+    switch (documentType) {
+      case 'utility_bill':
+        utilityBillBase64 = null;
+        utilityBillFileName = null;
+      case 'identity_document':
+        identityDocumentBase64 = null;
+        identityDocumentFileName = null;
+      case 'passport_photo':
+        passportPhotoBase64 = null;
+        passportPhotoFileName = null;
+    }
+    notifyListeners();
   }
 
   // ─── Error ───
@@ -417,19 +444,6 @@ class AgentRegistrationViewModel extends ChangeNotifier {
       errorMessage = 'Account name is required';
       notifyListeners(); return;
     }
-    if (utilityBillBase64 == null) {
-      errorMessage = 'Utility bill image is required';
-      notifyListeners(); return;
-    }
-    if (identityDocumentBase64 == null) {
-      errorMessage = 'Identity document image is required';
-      notifyListeners(); return;
-    }
-    if (passportPhotoBase64 == null) {
-      errorMessage = 'Passport photo is required';
-      notifyListeners(); return;
-    }
-
     // Get company number from session
     final session = await SessionManager.instance;
     final companyNumber = session.companyNumber;
@@ -473,9 +487,9 @@ class AgentRegistrationViewModel extends ChangeNotifier {
         'account_name': accountName,
         if (sortCode.isNotEmpty) 'sort_code': sortCode,
         'company_number': companyNumber,
-        'utility_bill': utilityBillBase64,
-        'identity_document': identityDocumentBase64,
-        'passport_photo': passportPhotoBase64,
+        if (utilityBillBase64 != null) 'utility_bill': utilityBillBase64,
+        if (identityDocumentBase64 != null) 'identity_document': identityDocumentBase64,
+        if (passportPhotoBase64 != null) 'passport_photo': passportPhotoBase64,
       };
 
       final result = await _repository.addAgent(payload);

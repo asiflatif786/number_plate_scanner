@@ -53,7 +53,7 @@ class ScannerViewModel extends ChangeNotifier {
 
       _cameraController = CameraController(
         _availableCameras!.first,
-        ResolutionPreset.medium,
+        ResolutionPreset.high,
         enableAudio: false,
       );
 
@@ -106,8 +106,12 @@ class ScannerViewModel extends ChangeNotifier {
         }
 
         detectedText = result.text;
+        AppLogger.logDebug(_tag, 'OCR raw text: "${result.text.trim()}"');
 
         final plate = _extractLicensePlate(result.text);
+        if (plate != null) {
+          AppLogger.logInfo(_tag, 'Plate detected: $plate');
+        }
         if (plate != null && extractedPlate == null) {
           extractedPlate = plate;
           isScanning = false;
@@ -149,6 +153,9 @@ class ScannerViewModel extends ChangeNotifier {
     } else {
       format = InputImageFormat.nv21;
     }
+
+    AppLogger.logDebug(_tag,
+        'Camera image: ${image.width}x${image.height}, format: $formatGroup, planes: ${image.planes.length}, bpr: ${image.planes.first.bytesPerRow}');
 
     final bytesBuilder = BytesBuilder();
     for (final plane in image.planes) {

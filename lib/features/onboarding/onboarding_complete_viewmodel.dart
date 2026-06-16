@@ -8,22 +8,22 @@ import '../../core/utils/logger.dart';
 class OnboardingCompleteViewModel extends ChangeNotifier {
   static const String _tag = 'OnboardCompleteVM';
 
-  String agentNumber = '';
-  String companyNumber = '';
-  String terminalId = '';
-  String agentEmail = '';
-  String agentFullName = '';
   bool isCopied = false;
+  SessionManager? _session;
+
+  String get agentNumber => _session?.agentNumber ?? 'N/A';
+  String get companyNumber => _session?.companyNumber ?? 'N/A';
+  String get terminalId => _session?.terminalId ?? 'N/A';
+  String get agentEmail => _session?.agentEmail ?? 'N/A';
+  String get agentFullName {
+    final name = _session?.agentFullName ?? '';
+    return name.isNotEmpty ? name : 'N/A';
+  }
 
   Future<void> loadCredentials() async {
-    final session = await SessionManager.instance;
-    agentNumber = session.agentNumber ?? 'N/A';
-    companyNumber = session.companyNumber ?? 'N/A';
-    terminalId = session.terminalId ?? 'N/A';
-    agentEmail = session.agentEmail ?? 'N/A';
-    agentFullName = session.agentFullName.isNotEmpty
-        ? session.agentFullName
-        : 'N/A';
+    _session = await SessionManager.instance;
+    AppLogger.logInfo(_tag,
+        'Loaded — name: $agentFullName, email: $agentEmail, agent: $agentNumber, company: $companyNumber, terminal: $terminalId');
     notifyListeners();
   }
 

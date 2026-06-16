@@ -13,6 +13,7 @@ class OnboardingCompleteScreen extends StatefulWidget {
 
 class _OnboardingCompleteScreenState extends State<OnboardingCompleteScreen>
     with SingleTickerProviderStateMixin {
+  bool _credentialsLoaded = false;
   late final AnimationController _controller;
   late final Animation<double> _checkmarkScale;
   late final Animation<double> _headingFade;
@@ -109,6 +110,10 @@ class _OnboardingCompleteScreenState extends State<OnboardingCompleteScreen>
   Widget _buildBody() {
     return Consumer<OnboardingCompleteViewModel>(
       builder: (context, vm, _) {
+        if (!_credentialsLoaded) {
+          _credentialsLoaded = true;
+          vm.loadCredentials();
+        }
         return SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
