@@ -38,6 +38,27 @@ class AgentRepository {
     return ApiResponse.failure(response.failure!);
   }
 
+  Future<ApiResponse<List<AgentModel>>> getAllAgents() async {
+    AppLogger.logInfo(_tag, 'Getting all agents via TMS POST');
+
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGetAllAgents,
+    );
+
+    if (response.success && response.data != null) {
+      final raw = response.data!['data_list'] as List<dynamic>? ?? [];
+      final agents = raw
+          .map((e) => AgentModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      totalAgents = agents.length;
+      totalPages = 1;
+      AppLogger.logInfo(_tag, 'Successfully retrieved ${agents.length} agents');
+      return ApiResponse.success(agents, response.message);
+    }
+
+    return ApiResponse.failure(response.failure!);
+  }
+
   Future<ApiResponse<AgentModel>> getAgent({
     required String agentNumber,
   }) async {

@@ -13,13 +13,12 @@ class CompanyVerifyScreen extends StatefulWidget {
 }
 
 class _CompanyVerifyScreenState extends State<CompanyVerifyScreen> {
-  final _rcFocus = FocusNode();
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = context.read<CompanyVerifyViewModel>();
+      vm.loadCompanies();
       
       // Check if RC number was passed via constructor or route arguments
       String? rc = widget.initialRcNumber;
@@ -33,16 +32,9 @@ class _CompanyVerifyScreenState extends State<CompanyVerifyScreen> {
       }
 
       if (rc != null && rc.isNotEmpty) {
-        vm.rcNumberController.text = rc;
-        vm.verifyCompany(context);
+        vm.setSelectedRcNumber(rc);
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _rcFocus.dispose();
-    super.dispose();
   }
 
   @override
@@ -70,7 +62,7 @@ class _CompanyVerifyScreenState extends State<CompanyVerifyScreen> {
                     const SizedBox(height: 24),
                     _buildHeader(),
                     const SizedBox(height: 20),
-                    _buildCompanyCard(vm),
+                    _buildCompanySelectionCard(vm),
                     const SizedBox(height: 16),
                     if (vm.verifiedCompany != null) _buildCompanyInfo(vm),
                     const SizedBox(height: 12),
@@ -169,14 +161,14 @@ class _CompanyVerifyScreenState extends State<CompanyVerifyScreen> {
         ),
         SizedBox(height: 4),
         Text(
-          'Enter the company RC number to verify before adding an agent',
+          'Select a company to verify before adding an agent',
           style: TextStyle(fontSize: 14, color: Color(0xFF757575)),
         ),
       ],
     );
   }
 
-  Widget _buildCompanyCard(CompanyVerifyViewModel vm) {
+  Widget _buildCompanySelectionCard(CompanyVerifyViewModel vm) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -195,7 +187,7 @@ class _CompanyVerifyScreenState extends State<CompanyVerifyScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Company RC Number',
+            'Select Company RC Number',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
@@ -203,19 +195,26 @@ class _CompanyVerifyScreenState extends State<CompanyVerifyScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          TextFormField(
-            controller: vm.rcNumberController,
-            focusNode: _rcFocus,
-            decoration: InputDecoration(
-              hintText: 'e.g. RC1234567',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              isDense: true,
-            ),
-            textInputAction: TextInputAction.done,
-            onFieldSubmitted: (_) => vm.verifyCompany(context),
-          ),
+          vm.isLoadingCompanies
+              ? const Center(child: CircularProgressIndicator())
+              : DropdownButtonFormField<String>(
+                  value: vm.selectedRcNumber,
+                  hint: const Text('Select RC Number'),
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    isDense: true,
+                  ),
+                  items: vm.companies.map((company) {
+                    return DropdownMenuItem<String>(
+                      value: company.rcNumber,
+                      child: Text('${company.name} (${company.rcNumber})'),
+                    );
+                  }).toList(),
+                  onChanged: (value) => vm.setSelectedRcNumber(value),
+                  isExpanded: true,
+                ),
         ],
       ),
     );
@@ -322,7 +321,7 @@ class _CompanyVerifyScreenState extends State<CompanyVerifyScreen> {
       width: double.infinity,
       height: 50,
       child: ElevatedButton(
-        onPressed: vm.isLoading
+        onPressed: (vm.isLoading || vm.isLoadingCompanies)
             ? null
             : () {
                 if (verified) {
@@ -334,8 +333,8 @@ class _CompanyVerifyScreenState extends State<CompanyVerifyScreen> {
                       'company_name': vm.verifiedCompany!.name,
                     },
                   );
-                } else {
-                  vm.verifyCompany(context);
+                } else if (vm.selectedRcNumber != null) {
+                   vm.verifyCompany(context);
                 }
               },
         style: ElevatedButton.styleFrom(

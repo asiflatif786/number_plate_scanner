@@ -44,6 +44,7 @@ class AppConstants {
   static const List<String> maritalStatusOptions = [
     'single',
     'married',
+    'engaged',
     'divorced',
     'widowed',
   ];

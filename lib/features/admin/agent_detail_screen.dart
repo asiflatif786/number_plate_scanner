@@ -11,7 +11,8 @@ import '../../data/models/agent_model.dart';
 import 'agent_detail_viewmodel.dart';
 
 class AgentDetailScreen extends StatefulWidget {
-  const AgentDetailScreen({super.key});
+  final AgentModel agent;
+  const AgentDetailScreen({super.key, required this.agent});
 
   @override
   State<AgentDetailScreen> createState() => _AgentDetailScreenState();
@@ -41,45 +42,40 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final agent = ModalRoute.of(context)!.settings.arguments as AgentModel;
-
-    return ChangeNotifierProvider(
-      create: (_) => AgentDetailViewModel(agent: agent),
-      child: Consumer<AgentDetailViewModel>(
-        builder: (context, vm, _) => Scaffold(
-          appBar: AppBar(
-            title: const Text('Agent Details'),
-            backgroundColor: const Color(0xFF1A237E),
-            foregroundColor: Colors.white,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
-                onPressed: () => vm.refreshAgent(),
-              ),
+    return Consumer<AgentDetailViewModel>(
+      builder: (context, vm, _) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Agent Details'),
+          backgroundColor: const Color(0xFF1A237E),
+          foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh',
+              onPressed: () => vm.refreshAgent(),
+            ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildAgentHeader(vm),
+            const SizedBox(height: 16),
+            _buildPersonalInfo(vm.agent),
+            const SizedBox(height: 12),
+            _buildAddressInfo(vm.agent),
+            const SizedBox(height: 12),
+            _buildIdentityVerification(vm.agent),
+            const SizedBox(height: 12),
+            _buildBankingDetails(vm.agent),
+            const SizedBox(height: 12),
+            _buildCompanyAssociation(vm.agent),
+            if (vm.kycComplete == false) ...[
+              const SizedBox(height: 12),
+              _buildKycWarning(vm),
             ],
-          ),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildAgentHeader(vm),
-              const SizedBox(height: 16),
-              _buildPersonalInfo(vm.agent),
-              const SizedBox(height: 12),
-              _buildAddressInfo(vm.agent),
-              const SizedBox(height: 12),
-              _buildIdentityVerification(vm.agent),
-              const SizedBox(height: 12),
-              _buildBankingDetails(vm.agent),
-              const SizedBox(height: 12),
-              _buildCompanyAssociation(vm.agent),
-              if (vm.kycComplete == false) ...[
-                const SizedBox(height: 12),
-                _buildKycWarning(vm),
-              ],
-              const SizedBox(height: 24),
-            ],
-          ),
+            const SizedBox(height: 24),
+          ],
         ),
       ),
     );
@@ -132,12 +128,12 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (vm.isLoadingStatus)
-                ShimmerField(height: 24, width: 80)
+                const ShimmerField(height: 24, width: 80)
               else
                 StatusChip(status: vm.agentStatus ?? 'Unknown'),
               const SizedBox(width: 12),
               if (vm.isLoadingStatus)
-                ShimmerField(height: 24, width: 100)
+                const ShimmerField(height: 24, width: 100)
               else
                 _buildKycChip(vm),
             ],
@@ -148,9 +144,6 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
   }
 
   Widget _buildKycChip(AgentDetailViewModel vm) {
-    if (vm.isLoadingStatus) {
-      return const ShimmerField(height: 24, width: 100);
-    }
     final complete = vm.kycComplete == true;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

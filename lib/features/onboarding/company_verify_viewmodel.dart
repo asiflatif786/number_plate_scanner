@@ -16,14 +16,53 @@ class CompanyVerifyViewModel extends ChangeNotifier {
   final rcNumberController = TextEditingController();
 
   bool isLoading = false;
+  bool isLoadingCompanies = false;
   String? errorMessage;
   CompanyModel? verifiedCompany;
+  List<CompanyModel> companies = [];
+  String? selectedRcNumber;
 
   void clearError() {
     if (errorMessage != null) {
       errorMessage = null;
       notifyListeners();
     }
+  }
+
+  Future<void> loadCompanies() async {
+    isLoadingCompanies = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _repository.getAllCompanies();
+      if (result.success) {
+        companies = result.data ?? [];
+        AppLogger.logInfo(_tag, 'Loaded ${companies.length} companies');
+      } else if (result.failure != null) {
+        errorMessage = _friendlyMessage(result.failure!);
+      }
+    } catch (e) {
+      errorMessage = 'Failed to load companies';
+      AppLogger.logError(_tag, 'loadCompanies error', e);
+    }
+
+    isLoadingCompanies = false;
+    notifyListeners();
+  }
+
+  void setSelectedRcNumber(String? rc) {
+    selectedRcNumber = rc;
+    if (rc != null) {
+      rcNumberController.text = rc;
+      // Automatically verify when selected
+      final company = companies.firstWhere((c) => c.rcNumber == rc);
+      verifiedCompany = company;
+    } else {
+      rcNumberController.clear();
+      verifiedCompany = null;
+    }
+    notifyListeners();
   }
 
   String _friendlyMessage(Failure failure) {
@@ -46,7 +85,7 @@ class CompanyVerifyViewModel extends ChangeNotifier {
     final rcNumber = rcNumberController.text.trim();
 
     if (rcNumber.isEmpty) {
-      errorMessage = 'Please enter a company RC number';
+      errorMessage = 'Please select a company RC number';
       notifyListeners();
       return;
     }

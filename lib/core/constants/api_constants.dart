@@ -77,6 +77,8 @@ class ApiConstants {
   static const String actionLogin = 'login';
   static const String actionGetCompany = 'get-company';
   static const String actionGetAllCompanies = 'get-all-companies';
+  static const String actionGetAllAgents = 'get-all-agents';
+  static const String actionViewTerminals = 'view-terminals';
 
   static const String validateCustomer = validateVehicle;
   static const String getCompany = '/corporate/get-company';
@@ -85,6 +87,7 @@ class ApiConstants {
   static const String assignTerminal = '/terminal/assign-terminal';
   static const String enableDisableTerminal =
       '/terminal/enable-disable-terminal';
+  static const String listTerminals = '/terminal/list-terminals';
 
   // Payment methods
   static const String paymentMethodCard = 'card';

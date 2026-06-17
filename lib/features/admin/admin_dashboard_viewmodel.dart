@@ -5,15 +5,21 @@ import '../../app/routes.dart';
 import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
 import '../repositories/onboarding_repository.dart';
+import '../../data/repositories/agent_repository.dart';
+import '../../data/repositories/terminal_repository.dart';
 
 class AdminDashboardViewModel extends ChangeNotifier {
   static const String _tag = 'AdminDashVM';
   final OnboardingRepository _repository = OnboardingRepository();
+  final AgentRepository _agentRepository = AgentRepository();
+  final TerminalRepository _terminalRepository = TerminalRepository();
 
   String adminName = '';
   String companyNumber = '';
   String currentDate = '';
   int totalCompanies = 0;
+  int totalAgents = 0;
+  int totalTerminals = 0;
   bool isLoadingStats = false;
 
   Future<void> loadSession() async {
@@ -32,9 +38,19 @@ class AdminDashboardViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _repository.getAllCompanies();
-      if (result.success) {
-        totalCompanies = result.data?.length ?? 0;
+      final companiesResult = await _repository.getAllCompanies();
+      if (companiesResult.success) {
+        totalCompanies = companiesResult.data?.length ?? 0;
+      }
+
+      final agentsResult = await _agentRepository.getAllAgents();
+      if (agentsResult.success) {
+        totalAgents = agentsResult.data?.length ?? 0;
+      }
+
+      final terminalsResult = await _terminalRepository.listTerminals();
+      if (terminalsResult.success) {
+        totalTerminals = terminalsResult.data?.length ?? 0;
       }
     } catch (e) {
       AppLogger.logError(_tag, 'Error loading admin stats', e);

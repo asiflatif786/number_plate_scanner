@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/models/agent_model.dart';
 import '../data/models/company_model.dart';
 import '../features/auth/login_screen.dart';
 import '../features/splash/splash_screen.dart';
@@ -10,6 +11,12 @@ import '../features/admin/admin_dashboard_screen.dart';
 import '../features/admin/view_companies_screen.dart';
 import '../features/admin/view_companies_viewmodel.dart';
 import '../features/admin/company_detail_screen.dart';
+import '../features/admin/view_agents_screen.dart';
+import '../features/admin/view_agents_viewmodel.dart';
+import '../features/admin/agent_detail_screen.dart';
+import '../features/admin/agent_detail_viewmodel.dart';
+import '../features/admin/view_terminals_screen.dart';
+import '../features/admin/view_terminals_viewmodel.dart';
 import '../features/onboarding/corporate_registration_screen.dart';
 import '../features/onboarding/agent_registration_screen.dart';
 import '../features/onboarding/terminal_profiling_screen.dart';
@@ -44,6 +51,9 @@ class AppRoutes {
   static const String scanner = '/scanner';
   static const String viewCompanies = '/view-companies';
   static const String companyDetail = '/company-detail';
+  static const String viewAgents = '/view-agents';
+  static const String agentDetail = '/agent-detail';
+  static const String viewTerminals = '/view-terminals';
 
   static Map<String, WidgetBuilder> routes = {
     splash: (context) => const SplashScreen(),
@@ -73,5 +83,20 @@ class AppRoutes {
       final company = ModalRoute.of(context)!.settings.arguments as CompanyModel;
       return CompanyDetailScreen(company: company);
     },
+    viewAgents: (context) => ChangeNotifierProvider(
+      create: (_) => ViewAgentsViewModel(),
+      child: const ViewAgentsScreen(),
+    ),
+    agentDetail: (context) {
+      final agent = ModalRoute.of(context)!.settings.arguments as AgentModel;
+      return ChangeNotifierProvider(
+        create: (_) => AgentDetailViewModel(agent: agent),
+        child: AgentDetailScreen(agent: agent),
+      );
+    },
+    viewTerminals: (context) => ChangeNotifierProvider(
+      create: (_) => ViewTerminalsViewModel(),
+      child: const ViewTerminalsScreen(),
+    ),
   };
 }

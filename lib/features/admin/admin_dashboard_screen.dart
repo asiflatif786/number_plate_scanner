@@ -32,7 +32,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             return Column(
               children: [
                 _buildWelcomeSection(vm),
-                Expanded(child: _buildGridMenu(vm)),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: _buildGridMenu(vm),
+                  ),
+                ),
                 _buildFooter(),
               ],
             );
@@ -123,65 +128,73 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildGridMenu(AdminDashboardViewModel vm) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Admin Actions',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF212121))),
-          const SizedBox(height: 14),
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: 2,
-              mainAxisSpacing: 14,
-              crossAxisSpacing: 14,
-              childAspectRatio: 1.0,
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              children: [
-                _menuCard(
-                  icon: Icons.person_add,
-                  label: 'Add Agent',
-                  subtitle: 'Register a new agent',
-                  onTap: () =>
-                      Navigator.pushNamed(context, AppRoutes.companyVerify),
-                ),
-                _menuCard(
-                  icon: Icons.search,
-                  label: 'Search Vehicle',
-                  subtitle: 'Find vehicle details',
-                  onTap: () =>
-                      Navigator.pushNamed(context, AppRoutes.vehicleSearch),
-                ),
-                _menuCard(
-                  icon: Icons.business,
-                  label: 'Add Company',
-                  subtitle: 'Register a new corporate',
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    AppRoutes.corporateRegistration,
-                    arguments: {'isFromAdmin': true},
-                  ),
-                ),
-                _menuCard(
-                  icon: Icons.store,
-                  label: 'View Companies',
-                  subtitle: vm.isLoadingStats
-                      ? 'Loading...'
-                      : '${vm.totalCompanies} registered',
-                  onTap: () =>
-                      Navigator.pushNamed(context, AppRoutes.viewCompanies),
-                  badge: vm.totalCompanies > 0 ? '${vm.totalCompanies}' : null,
-                ),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Admin Actions',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF212121))),
+        const SizedBox(height: 14),
+        GridView.count(
+          crossAxisCount: 2,
+          mainAxisSpacing: 14,
+          crossAxisSpacing: 14,
+          childAspectRatio: 1.0,
+          physics: const NeverScrollableScrollPhysics(),
+          shrinkWrap: true,
+          children: [
+            _menuCard(
+              icon: Icons.business,
+              label: 'Add Company',
+              subtitle: 'Register a new corporate',
+              onTap: () => Navigator.pushNamed(
+                context,
+                AppRoutes.corporateRegistration,
+                arguments: {'isFromAdmin': true},
+              ),
             ),
-          ),
-        ],
-      ),
+            _menuCard(
+              icon: Icons.store,
+              label: 'View Companies',
+              subtitle: vm.isLoadingStats
+                  ? 'Loading...'
+                  : '${vm.totalCompanies} registered',
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.viewCompanies),
+              badge: vm.totalCompanies > 0 ? '${vm.totalCompanies}' : null,
+            ),
+            _menuCard(
+              icon: Icons.person_add,
+              label: 'Add Agent',
+              subtitle: 'Register a new agent',
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.companyVerify),
+            ),
+            _menuCard(
+              icon: Icons.people,
+              label: 'View Agents',
+              subtitle: vm.isLoadingStats
+                  ? 'Loading...'
+                  : '${vm.totalAgents} registered',
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.viewAgents),
+              badge: vm.totalAgents > 0 ? '${vm.totalAgents}' : null,
+            ),
+            _menuCard(
+              icon: Icons.settings_input_component,
+              label: 'View Terminals',
+              subtitle: vm.isLoadingStats
+                  ? 'Loading...'
+                  : '${vm.totalTerminals} registered',
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.viewTerminals),
+              badge: vm.totalTerminals > 0 ? '${vm.totalTerminals}' : null,
+            ),
+          ],
+        ),
+      ],
     );
   }
 
