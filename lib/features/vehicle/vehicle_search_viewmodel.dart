@@ -28,7 +28,7 @@ class VehicleSearchViewModel extends ChangeNotifier {
   }
 
   void onScanResult(String scannedPlate) {
-    licensePlateController.text = scannedPlate.toUpperCase().trim();
+    licensePlateController.text = scannedPlate.toLowerCase().trim();
     notifyListeners();
   }
 
@@ -40,7 +40,7 @@ class VehicleSearchViewModel extends ChangeNotifier {
   }
 
   Future<void> search(BuildContext context) async {
-    final plate = licensePlateController.text.toUpperCase().trim();
+    final plate = licensePlateController.text.toLowerCase().trim();
 
     if (plate.isEmpty) {
       errorMessage = 'Please enter a license plate number';

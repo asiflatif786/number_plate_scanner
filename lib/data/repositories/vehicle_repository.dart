@@ -12,13 +12,14 @@ class VehicleRepository {
     required String vehicleLicense,
     required String transactionType,
   }) async {
-    AppLogger.logInfo(_tag, 'Validating: $vehicleLicense');
+    final normalizedPlate = vehicleLicense.toLowerCase().trim();
+    AppLogger.logInfo(_tag, 'Validating: $normalizedPlate');
 
     // POST to /api_data with action: 'validate-customer'
     final response = await ApiClient.instance.tmsPost(
       ApiConstants.actionValidateCustomer,
       fields: {
-        'vehicle_license': vehicleLicense,
+        'vehicle_license': normalizedPlate,
         'transaction_type': transactionType,
       },
     );
@@ -30,7 +31,7 @@ class VehicleRepository {
     }
 
     if (response.failure is NotFoundFailure) {
-      AppLogger.logInfo(_tag, 'Vehicle not found in TMS');
+      AppLogger.logInfo(_tag, 'Vehicle not found in TMS: $normalizedPlate');
     } else {
       AppLogger.logWarning(
           _tag, 'Validation failed: ${response.failure?.message}');
@@ -42,6 +43,11 @@ class VehicleRepository {
   Future<ApiResponse<bool>> registerVehicle(
     Map<String, dynamic> formData,
   ) async {
+    // Ensure license plate is lowercase if present in form data
+    if (formData.containsKey('license_plate')) {
+      formData['license_plate'] = formData['license_plate'].toString().toLowerCase().trim();
+    }
+    
     AppLogger.logInfo(_tag, 'Registering: ${formData['license_plate']}');
 
     final response = await ApiClient.instance.tmsPost(

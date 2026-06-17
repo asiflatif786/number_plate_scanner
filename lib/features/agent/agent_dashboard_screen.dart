@@ -168,15 +168,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(
-                child: _actionCard(
-                  icon: Icons.document_scanner,
-                  label: 'Scan Plate',
-                  color: const Color(0xFF2E7D32),
-                  onTap: () => vm.navigateToScanner(context),
-                ),
-              ),
-              const SizedBox(width: 12),
+
               Expanded(
                 child: _actionCard(
                   icon: Icons.search,

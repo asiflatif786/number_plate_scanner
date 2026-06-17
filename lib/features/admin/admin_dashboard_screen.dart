@@ -192,6 +192,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Navigator.pushNamed(context, AppRoutes.viewTerminals),
               badge: vm.totalTerminals > 0 ? '${vm.totalTerminals}' : null,
             ),
+            _menuCard(
+              icon: Icons.search,
+              label: 'Search Vehicle',
+              subtitle: 'Check vehicle status',
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.vehicleSearch),
+            ),
           ],
         ),
       ],

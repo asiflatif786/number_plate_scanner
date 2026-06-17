@@ -59,8 +59,8 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
   final Map<String, String> _stateNameToId = {};
 
   VehicleRegistrationViewModel({required this.licensePlate})
-      : licensePlateController = TextEditingController(text: licensePlate) {
-    AppLogger.logDebug(_tag, 'Init for $licensePlate');
+      : licensePlateController = TextEditingController(text: licensePlate.toLowerCase().trim()) {
+    AppLogger.logDebug(_tag, 'Init for ${licensePlate.toLowerCase()}');
     loadStates();
   }
 
@@ -245,7 +245,7 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
     notifyListeners();
 
     final payload = VehicleRegistrationModel(
-      licensePlate: licensePlate,
+      licensePlate: licensePlate.toLowerCase().trim(),
       vehicleType: selectedVehicleType!,
       chassisNumber: chassis,
       engineNumber: engine,
@@ -261,7 +261,7 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
       enumeratingLga: selectedEnumeratingLga!,
     ).toJson();
 
-    AppLogger.logInfo(_tag, 'Submitting registration for $licensePlate');
+    AppLogger.logInfo(_tag, 'Submitting registration for ${licensePlate.toLowerCase()}');
 
     _vehicleRepo.registerVehicle(payload).then((result) {
       isLoading = false;
