@@ -284,8 +284,6 @@ class _TransactionCreationBody extends StatelessWidget {
           const SizedBox(height: 6),
           DetailRow(
               label: 'Processing Fee', value: '₦${vm.formattedProcessingFee}'),
-          const SizedBox(height: 6),
-          DetailRow(label: 'VAT (7.5%)', value: '₦${vm.formattedVat}'),
           const Divider(thickness: 1.5),
           Container(
             width: double.infinity,

@@ -144,8 +144,6 @@ class _VehicleFoundBody extends StatelessWidget {
             _buildFeeRow('Admin Fee (2%)', vm.formattedAdminFee),
             const Divider(height: 1),
             _buildFeeRow('Processing Fee', vm.formattedFlatFee),
-            const Divider(height: 1),
-            _buildFeeRow('VAT (7.5%)', vm.formattedVatAmount),
             const Divider(thickness: 1.5, height: 20),
             _buildTotalPayableRow(vm.formattedTotalPayable),
           ],

@@ -36,8 +36,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
   double get baseAmount => vehicle.price.amount;
   double get adminFee => baseAmount * AppConstants.adminFeePercent;
   double get processingFee => AppConstants.flatTransactionFee;
-  double get vat => (adminFee + processingFee) * AppConstants.vatPercent;
-  double get totalFee => adminFee + processingFee + vat;
+  double get totalFee => adminFee + processingFee;
   double get totalPayable => baseAmount + totalFee;
 
   TransactionCreationViewModel({required this.vehicle}) {
@@ -54,7 +53,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
   String get formattedBaseAmount => _formatAmount(baseAmount);
   String get formattedAdminFee => _formatAmount(adminFee);
   String get formattedProcessingFee => _formatAmount(processingFee);
-  String get formattedVat => _formatAmount(vat);
   String get formattedTotalFee => _formatAmount(totalFee);
   String get formattedTotalPayable => _formatAmount(totalPayable);
 
