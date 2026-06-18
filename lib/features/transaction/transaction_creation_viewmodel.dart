@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../../app/routes.dart';
+import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
@@ -44,6 +48,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
         vehicle.customerName != 'N/A' ? vehicle.customerName : '';
     payerPhoneController.text = vehicle.phoneNumber ?? '';
     loadStates();
+    _fetchPayloadCategory();
   }
 
   String _formatAmount(double value) {
@@ -56,20 +61,72 @@ class TransactionCreationViewModel extends ChangeNotifier {
   String get formattedTotalFee => _formatAmount(totalFee);
   String get formattedTotalPayable => _formatAmount(totalPayable);
 
-  Future<void> loadStates() async {
+  List<Map<String, dynamic>> _payloadCategories = [];
+  Map<String, dynamic>? selectedPayloadCategory;
+
+  bool get hasPayloadCategories => _payloadCategories.isNotEmpty;
+  List<Map<String, dynamic>> get payloadCategories => _payloadCategories;
+
+  Future<void> _fetchPayloadCategory() async {
+    if (_payloadCategories.isNotEmpty) return;
+    AppLogger.logInfo(_tag, 'Fetching payload from JRB...');
+    try {
+      final response = await http
+          .get(Uri.parse(ApiConstants.jrbPayloadCategory))
+          .timeout(const Duration(seconds: 10));
+      AppLogger.logInfo(_tag, 'JRB status: ${response.statusCode}');
+      AppLogger.logDebug(_tag, 'JRB body: ${response.body}');
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        final List raw;
+        if (body is List) {
+          raw = body;
+        } else if (body is Map<String, dynamic> && body['data'] is List) {
+          raw = body['data'];
+        } else {
+          AppLogger.logWarning(_tag, 'Unexpected JRB response format');
+          return;
+        }
+        _payloadCategories = raw.map((e) => Map<String, dynamic>.from(e)).toList();
+        AppLogger.logInfo(_tag, 'Loaded ${_payloadCategories.length} categories');
+        notifyListeners();
+      } else {
+        AppLogger.logWarning(_tag, 'JRB returned ${response.statusCode}');
+      }
+    } catch (e) {
+      AppLogger.logWarning(_tag, 'Payload fetch failed: $e');
+    }
+  }
+
+  void selectPayloadCategory(Map<String, dynamic> category) {
+    selectedPayloadCategory = category;
+    notifyListeners();
+  }
+
+  Future<void> loadStates({int retries = 2}) async {
     isLoading = true;
     notifyListeners();
 
-    final result = await _locationRepository.getStates();
-    if (result.success && result.data != null) {
-      _stateNameToId.clear();
-      for (final s in result.data!) {
-        _stateNameToId[s.stateName] = s.stateId;
+    for (int attempt = 0; attempt <= retries; attempt++) {
+      if (attempt > 0) {
+        AppLogger.logInfo(_tag, 'Retrying load states (attempt $attempt)');
+        await Future.delayed(const Duration(seconds: 2));
       }
-      states = _stateNameToId.keys.toList();
-    } else {
-      AppLogger.logWarning(
-          _tag, 'Failed to load states: ${result.failure?.message}');
+
+      final result = await _locationRepository.getStates();
+      if (result.success && result.data != null) {
+        _stateNameToId.clear();
+        for (final s in result.data!) {
+          _stateNameToId[s.stateName] = s.stateId;
+        }
+        states = _stateNameToId.keys.toList();
+        isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      AppLogger.logWarning(_tag,
+          'Failed to load states (attempt $attempt): ${result.failure?.message}');
     }
 
     isLoading = false;
@@ -183,6 +240,13 @@ class TransactionCreationViewModel extends ChangeNotifier {
       return;
     }
 
+    if (selectedPayloadCategory == null) {
+      errorMessage = 'Please select a payload category';
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
+
     AppLogger.logInfo(_tag,
         'Submitting: ${vehicle.vehicleLicense}, method=$selectedPaymentMethod');
 
@@ -206,6 +270,23 @@ class TransactionCreationViewModel extends ChangeNotifier {
         ? payerEmailController.text
         : 'noemail@cyber1tms.com';
 
+    await _fetchPayloadCategory();
+
+    Map<String, dynamic>? payloadObject;
+    if (selectedPayloadCategory != null) {
+      final name = selectedPayloadCategory!['name']?.toString() ?? '';
+      final id = selectedPayloadCategory!['id']?.toString() ?? '';
+      final items = selectedPayloadCategory!['items'];
+      final firstItem = (items is List && items.isNotEmpty)
+          ? items[0].toString()
+          : name;
+      payloadObject = {
+        'subcategory': firstItem,
+        'haulage_category': name,
+        'haulage_category_id': id,
+      };
+    }
+
     final metadata = <String, dynamic>{
       'terminal_id': terminalId,
       'contact': payerPhoneController.text.trim(),
@@ -219,7 +300,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'origin_lga': selectedOriginLga,
       'destination_state': isCompleteTrip ? selectedDestinationState : null,
       'destination_lga': isCompleteTrip ? selectedDestinationLga : null,
-      'payload': null,
+      'payload': payloadObject,
     };
 
     final payload = <String, dynamic>{

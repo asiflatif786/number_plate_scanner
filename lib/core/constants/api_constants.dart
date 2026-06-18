@@ -91,6 +91,10 @@ class ApiConstants {
   static const String listTerminals = '/terminal/list-terminals';
   static const String getTerminalDetail = '/terminal/get-terminal-detail';
 
+  // JRB payload category endpoint
+  static const String jrbPayloadCategory =
+      'https://api.jrb-shf.com/api/v3/enum/get-payload-category';
+
   // Payment methods
   static const String paymentMethodCard = 'card';
   static const String paymentMethodWallet = 'wallet';

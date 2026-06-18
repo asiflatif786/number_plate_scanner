@@ -52,6 +52,8 @@ class _TransactionCreationBody extends StatelessWidget {
                 const SizedBox(height: 12),
                 _buildPaymentMethodSection(vm),
                 const SizedBox(height: 12),
+                _buildPayloadCategoryCard(vm),
+                const SizedBox(height: 12),
                 _buildFeeSummaryCard(vm),
                 if (vm.errorMessage != null) ...[
                   const SizedBox(height: 16),
@@ -227,6 +229,49 @@ class _TransactionCreationBody extends StatelessWidget {
               _buildPaymentChip(vm, 'transfer', 'Transfer', Icons.swap_horiz),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPayloadCategoryCard(TransactionCreationViewModel vm) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(title: 'Payload Category'),
+          const Divider(),
+          if (!vm.hasPayloadCategories)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('Loading categories...',
+                  style: TextStyle(color: Colors.grey)),
+            )
+          else
+            DropdownButtonFormField<String>(
+              value: vm.selectedPayloadCategory?['name']?.toString(),
+              decoration: InputDecoration(
+                labelText: 'Select Category *',
+                isDense: true,
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              isExpanded: true,
+              items: vm.payloadCategories
+                  .map((c) => DropdownMenuItem(
+                        value: c['name']?.toString() ?? '',
+                        child: Text(c['name']?.toString() ?? '',
+                            overflow: TextOverflow.ellipsis),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v == null) return;
+                final cat = vm.payloadCategories.cast<Map<String, dynamic>?>().firstWhere(
+                    (c) => c?['name']?.toString() == v,
+                    orElse: () => null);
+                if (cat != null) vm.selectPayloadCategory(cat);
+              },
+            ),
         ],
       ),
     );
