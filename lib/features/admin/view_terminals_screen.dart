@@ -64,68 +64,52 @@ class _ViewTerminalsScreenState extends State<ViewTerminalsScreen> {
                 return Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: ExpansionTile(
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     leading: CircleAvatar(
-                      backgroundColor: terminal.status == 'active' ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
-                      child: Icon(
+                      backgroundColor: const Color(0xFF1A237E).withValues(alpha: 0.1),
+                      child: const Icon(
                         Icons.settings_input_component,
-                        color: terminal.status == 'active' ? Colors.green : Colors.red,
+                        color: Color(0xFF1A237E),
                       ),
                     ),
                     title: Text(
                       terminal.terminalId,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    subtitle: Text('Serial: ${terminal.serialNumber}'),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: terminal.status == 'active' ? Colors.green : Colors.grey,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        terminal.status.toUpperCase(),
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _detailRow('Agent Number', terminal.agentNumber),
-                            _detailRow('Created At', terminal.createdAt),
-                            _detailRow('Updated At', terminal.updatedAt),
-                            if (terminal.tmsResponse != null) ...[
-                              const Divider(),
-                              const Text('TMS Response:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                              const SizedBox(height: 4),
-                              Text(terminal.tmsResponse!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                            ],
-                          ],
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Serial: ${terminal.serialNumber}', 
+                            style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: () => vm.viewAgentDetail(context, terminal.agentNumber),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF1A237E),
+                            side: const BorderSide(color: Color(0xFF1A237E)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            minimumSize: const Size(0, 32),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'View Agent Detail',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _detailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-        ],
       ),
     );
   }

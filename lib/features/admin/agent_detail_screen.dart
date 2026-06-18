@@ -25,7 +25,9 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AgentDetailViewModel>().loadAgentHealth();
+      final vm = context.read<AgentDetailViewModel>();
+      vm.loadAgentHealth();
+      vm.loadTerminalDetails();
     });
   }
 
@@ -56,26 +58,28 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
             ),
           ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _buildAgentHeader(vm),
-            const SizedBox(height: 16),
-            _buildPersonalInfo(vm.agent),
-            const SizedBox(height: 12),
-            _buildAddressInfo(vm.agent),
-            const SizedBox(height: 12),
-            _buildIdentityVerification(vm.agent),
-            const SizedBox(height: 12),
-            _buildBankingDetails(vm.agent),
-            const SizedBox(height: 12),
-            _buildCompanyAssociation(vm.agent),
-            if (vm.kycComplete == false) ...[
+        body: RefreshIndicator(
+          onRefresh: vm.refreshAgent,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              _buildAgentHeader(vm),
+              const SizedBox(height: 16),
+              _buildTerminalDetails(vm),
               const SizedBox(height: 12),
-              _buildKycWarning(vm),
+              _buildPersonalInfo(vm.agent),
+              const SizedBox(height: 12),
+              _buildAddressInfo(vm.agent),
+              const SizedBox(height: 12),
+              _buildIdentityVerification(vm.agent),
+              const SizedBox(height: 12),
+              _buildBankingDetails(vm.agent),
+              const SizedBox(height: 12),
+              _buildCompanyAssociation(vm.agent),
+              const SizedBox(height: 24),
             ],
-            const SizedBox(height: 24),
-          ],
+          ),
         ),
       ),
     );
@@ -86,6 +90,10 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
     final initials = agent.firstName.isNotEmpty && agent.lastName.isNotEmpty
         ? '${agent.firstName[0]}${agent.lastName[0]}'
         : '?';
+
+    final bool hasValidStatus = vm.agentStatus != null &&
+        vm.agentStatus!.toLowerCase() != 'unknown';
+    final bool isKycComplete = vm.kycComplete == true;
 
     return Container(
       width: double.infinity,
@@ -129,12 +137,15 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
             children: [
               if (vm.isLoadingStatus)
                 const ShimmerField(height: 24, width: 80)
-              else
-                StatusChip(status: vm.agentStatus ?? 'Unknown'),
-              const SizedBox(width: 12),
+              else if (hasValidStatus)
+                StatusChip(status: vm.agentStatus!),
+              
+              if (!vm.isLoadingStatus && hasValidStatus && isKycComplete)
+                const SizedBox(width: 12),
+
               if (vm.isLoadingStatus)
                 const ShimmerField(height: 24, width: 100)
-              else
+              else if (isKycComplete)
                 _buildKycChip(vm),
             ],
           ),
@@ -144,19 +155,20 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
   }
 
   Widget _buildKycChip(AgentDetailViewModel vm) {
-    final complete = vm.kycComplete == true;
+    if (vm.kycComplete != true) return const SizedBox.shrink();
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: (complete ? Colors.green : Colors.amber).withValues(alpha: 0.2),
+        color: Colors.green.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
-        complete ? 'KYC Complete' : 'KYC Pending',
+      child: const Text(
+        'KYC Complete',
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.bold,
-          color: complete ? Colors.green : Colors.amber.shade800,
+          color: Colors.green,
           letterSpacing: 1,
         ),
       ),
@@ -274,6 +286,35 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
     );
   }
 
+  Widget _buildTerminalDetails(AgentDetailViewModel vm) {
+    return _buildSectionCard(
+      title: 'POS TERMINAL DETAILS',
+      accentColor: Colors.blueGrey,
+      children: [
+        if (vm.isLoadingTerminals)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (vm.terminals.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Text('No terminals assigned', style: TextStyle(color: Colors.grey, fontSize: 13)),
+          )
+        else
+          ...vm.terminals.map((terminal) => Column(
+                children: [
+                  DetailRow(label: 'Terminal ID', value: terminal.terminalId),
+                  DetailRow(label: 'Serial Number', value: terminal.serialNumber),
+                  if (terminal != vm.terminals.last) const Divider(height: 16),
+                ],
+              )),
+      ],
+    );
+  }
+
   Widget _buildCompanyAssociation(AgentModel a) {
     return _buildSectionCard(
       title: 'COMPANY ASSOCIATION',
@@ -297,41 +338,6 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
           },
         ),
       ],
-    );
-  }
-
-  Widget _buildKycWarning(AgentDetailViewModel vm) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.shade200),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.warning_amber_rounded,
-              color: Colors.amber, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'KYC verification is incomplete for this agent. They may be unable to process transactions.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF5D4037)),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Contact: technology@cyber1systemsnetwork.com',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../data/models/terminal_model.dart';
+import '../../data/models/agent_model.dart';
 import '../../data/repositories/terminal_repository.dart';
 import '../../core/utils/logger.dart';
+import '../../app/routes.dart';
 
 class ViewTerminalsViewModel extends ChangeNotifier {
   static const String _tag = 'ViewTerminalsVM';
@@ -37,5 +39,47 @@ class ViewTerminalsViewModel extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> viewAgentDetail(BuildContext context, String id) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final response = await _terminalRepository.getTerminalDetail(id: id);
+      
+      if (!context.mounted) return;
+      Navigator.pop(context); // Dismiss loading dialog
+
+      if (response.success && response.data != null) {
+        final agentData = response.data!['agent_data'];
+        if (agentData != null) {
+          final agent = AgentModel.fromJson(agentData);
+          Navigator.pushNamed(
+            context,
+            AppRoutes.agentDetail,
+            arguments: agent,
+          );
+        } else {
+          _showError(context, 'No agent data found for this terminal');
+        }
+      } else {
+        _showError(context, response.failure?.message ?? 'Failed to fetch terminal details');
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      _showError(context, 'An error occurred while fetching details');
+    }
+  }
+
+  void _showError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 }

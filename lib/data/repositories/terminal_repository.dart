@@ -19,16 +19,14 @@ class TerminalRepository {
       List<dynamic> list = [];
 
       // Handle different possible response structures
-      if (data['data_list'] is List) {
-        list = data['data_list'] as List;
-      } else if (data['data_list'] is Map) {
-        // Handle associative array/object representing a list
-        list = (data['data_list'] as Map).values.toList();
+      final rawDataList = data['data_list'];
+      if (rawDataList is List) {
+        list = rawDataList;
+      } else if (rawDataList is Map) {
+        list = (rawDataList).values.toList();
       } else if (data.containsKey('terminal_id')) {
-        // Single terminal object returned directly
         list = [data];
       } else {
-        // Fallback: try to see if the map values themselves are terminals
         final values = data.values.whereType<Map<String, dynamic>>().toList();
         if (values.isNotEmpty && values.any((v) => v.containsKey('terminal_id'))) {
           list = values;
@@ -42,6 +40,23 @@ class TerminalRepository {
 
       AppLogger.logInfo(_tag, 'Successfully retrieved ${terminals.length} terminals');
       return ApiResponse.success(terminals, response.message);
+    }
+
+    return ApiResponse.failure(response.failure!);
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> getTerminalDetail({
+    required String id,
+  }) async {
+    AppLogger.logInfo(_tag, 'Getting terminal detail for: $id');
+
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGetTerminalDetail,
+      fields: {'id': id},
+    );
+
+    if (response.success && response.data != null) {
+      return ApiResponse.success(response.data!, response.message);
     }
 
     return ApiResponse.failure(response.failure!);

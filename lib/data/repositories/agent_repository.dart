@@ -3,6 +3,7 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_response.dart';
 import '../../core/utils/logger.dart';
 import '../models/agent_model.dart';
+import '../models/terminal_model.dart';
 
 class AgentRepository {
   static const String _tag = 'AgentRepo';
@@ -72,6 +73,23 @@ class AgentRepository {
     if (response.success && response.data != null) {
       final agent = AgentModel.fromJson(response.data!);
       return ApiResponse.success(agent, response.message);
+    }
+
+    return ApiResponse.failure(response.failure!);
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> getTerminalDetail({
+    required String agentNumber,
+  }) async {
+    AppLogger.logInfo(_tag, 'Getting terminal detail for: $agentNumber');
+
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGetTerminalDetail,
+      fields: {'id': agentNumber},
+    );
+
+    if (response.success && response.data != null) {
+      return ApiResponse.success(response.data!, response.message);
     }
 
     return ApiResponse.failure(response.failure!);

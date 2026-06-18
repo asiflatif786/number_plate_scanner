@@ -5,17 +5,21 @@ import '../../app/routes.dart';
 import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../../data/repositories/terminal_repository.dart';
+import '../../data/models/terminal_model.dart';
 
 class AgentDashboardViewModel extends ChangeNotifier {
   static const String _tag = 'AgentDashVM';
 
   final TransactionRepository _txRepo = TransactionRepository();
+  final TerminalRepository _terminalRepo = TerminalRepository();
 
   String agentFullName = '';
   String agentNumber = '';
   String terminalId = '';
   String companyNumber = '';
   String serialNumber = '';
+  String terminalStatus = 'Not Configured';
   String currentDate = '';
   String greeting = '';
 
@@ -36,14 +40,44 @@ class AgentDashboardViewModel extends ChangeNotifier {
     currentDate = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
     greeting = _computeGreeting(DateTime.now().hour);
     notifyListeners();
-    await _fetchTransactionStats();
+    
+    await Future.wait([
+      _fetchTransactionStats(),
+      _fetchTerminalDetails(),
+    ]);
   }
 
   Future<void> refresh() async {
     isRefreshing = true;
     notifyListeners();
-    await _fetchTransactionStats();
+    await Future.wait([
+      _fetchTransactionStats(),
+      _fetchTerminalDetails(),
+    ]);
     isRefreshing = false;
+    notifyListeners();
+  }
+
+  Future<void> _fetchTerminalDetails() async {
+    if (agentNumber == 'N/A' || agentNumber.isEmpty) return;
+
+    try {
+      final response = await _terminalRepo.getTerminalDetail(id: agentNumber);
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        final terminals = data['terminals'] as List?;
+        if (terminals != null && terminals.isNotEmpty) {
+          final terminal = TerminalModel.fromJson(terminals.first);
+          terminalId = terminal.terminalId;
+          serialNumber = terminal.serialNumber;
+          terminalStatus = terminal.status;
+          
+          // Optionally update session if needed, but for dashboard display, updating VM state is enough
+        }
+      }
+    } catch (e) {
+      AppLogger.logError(_tag, 'fetchTerminalDetails error', e);
+    }
     notifyListeners();
   }
 

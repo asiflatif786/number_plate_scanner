@@ -29,17 +29,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         appBar: _buildAppBar(),
         body: Consumer<AdminDashboardViewModel>(
           builder: (context, vm, _) {
-            return Column(
-              children: [
-                _buildWelcomeSection(vm),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: _buildGridMenu(vm),
+            return RefreshIndicator(
+              onRefresh: vm.loadStats,
+              color: const Color(0xFF1A237E),
+              child: Column(
+                children: [
+                  _buildWelcomeSection(vm),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(20),
+                      child: _buildGridMenu(vm),
+                    ),
                   ),
-                ),
-                _buildFooter(),
-              ],
+                  _buildFooter(),
+                ],
+              ),
             );
           },
         ),
@@ -55,7 +60,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Cyber1 TMS',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
           Text('Admin Portal',
               style: TextStyle(fontSize: 11, color: Colors.white70)),
         ],
@@ -192,13 +197,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Navigator.pushNamed(context, AppRoutes.viewTerminals),
               badge: vm.totalTerminals > 0 ? '${vm.totalTerminals}' : null,
             ),
-            _menuCard(
-              icon: Icons.search,
-              label: 'Search Vehicle',
-              subtitle: 'Check vehicle status',
-              onTap: () =>
-                  Navigator.pushNamed(context, AppRoutes.vehicleSearch),
-            ),
+
           ],
         ),
       ],
@@ -280,7 +279,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           Text('Cyber1 TMS v1.0.0',
               style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),
-          SizedBox(height: 2),
+          const SizedBox(height: 2),
           Text('Powered by Cyber1 Systems',
               style: TextStyle(fontSize: 11, color: Color(0xFFBDBDBD))),
         ],

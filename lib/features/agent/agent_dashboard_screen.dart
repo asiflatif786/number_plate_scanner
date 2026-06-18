@@ -168,7 +168,6 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           const SizedBox(height: 14),
           Row(
             children: [
-
               Expanded(
                 child: _actionCard(
                   icon: Icons.search,
@@ -312,7 +311,9 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   }
 
   Widget _buildTerminalInfo(AgentDashboardViewModel vm) {
-    final notConfigured = vm.terminalId == 'N/A';
+    final notConfigured = vm.terminalId == 'N/A' || vm.terminalId.isEmpty;
+    final isActive = vm.terminalStatus.toLowerCase() == 'active';
+    
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Column(
@@ -354,19 +355,19 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: notConfigured
-                            ? const Color(0xFFF57C00).withValues(alpha: 0.1)
-                            : const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                        color: isActive
+                            ? const Color(0xFF2E7D32).withValues(alpha: 0.1)
+                            : const Color(0xFFF57C00).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        notConfigured ? 'Not Configured' : 'Active',
+                        vm.terminalStatus.toUpperCase(),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: notConfigured
-                              ? const Color(0xFFF57C00)
-                              : const Color(0xFF2E7D32),
+                          color: isActive
+                              ? const Color(0xFF2E7D32)
+                              : const Color(0xFFF57C00),
                         ),
                       ),
                     ),
