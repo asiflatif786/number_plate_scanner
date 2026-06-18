@@ -7,6 +7,9 @@ class UserModel {
   final String? agentNumber;
   final String? companyNumber;
   final String? authToken;
+  final String? channelNumber;
+  final String? serviceNumberValidation;
+  final String? serviceNumberTransaction;
 
   const UserModel({
     required this.id,
@@ -17,6 +20,9 @@ class UserModel {
     this.agentNumber,
     this.companyNumber,
     this.authToken,
+    this.channelNumber,
+    this.serviceNumberValidation,
+    this.serviceNumberTransaction,
   });
 
   String get fullName => '$firstName $lastName';
@@ -33,6 +39,9 @@ class UserModel {
       agentNumber: json['agent_number'] as String?,
       companyNumber: json['company_number'] as String?,
       authToken: json['token'] as String?,
+      channelNumber: json['channel_number'] as String?,
+      serviceNumberValidation: json['service_number_validation'] as String? ?? json['service_number'] as String?,
+      serviceNumberTransaction: json['service_number_transaction'] as String? ?? json['service_number'] as String?,
     );
   }
 
@@ -45,6 +54,9 @@ class UserModel {
         'agent_number': agentNumber,
         'company_number': companyNumber,
         'token': authToken,
+        'channel_number': channelNumber,
+        'service_number_validation': serviceNumberValidation,
+        'service_number_transaction': serviceNumberTransaction,
       };
 
   UserModel copyWith({
@@ -56,6 +68,9 @@ class UserModel {
     String? agentNumber,
     String? companyNumber,
     String? authToken,
+    String? channelNumber,
+    String? serviceNumberValidation,
+    String? serviceNumberTransaction,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -66,6 +81,9 @@ class UserModel {
       agentNumber: agentNumber ?? this.agentNumber,
       companyNumber: companyNumber ?? this.companyNumber,
       authToken: authToken ?? this.authToken,
+      channelNumber: channelNumber ?? this.channelNumber,
+      serviceNumberValidation: serviceNumberValidation ?? this.serviceNumberValidation,
+      serviceNumberTransaction: serviceNumberTransaction ?? this.serviceNumberTransaction,
     );
   }
 }

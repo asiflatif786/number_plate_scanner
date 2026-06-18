@@ -188,8 +188,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
 
     final session = await SessionManager.instance;
     final terminalId = session.terminalId;
-    final channelNumber = session.channelNumber;
-    final serviceNumber = session.serviceNumberTransaction;
 
     if (terminalId == null || terminalId.isEmpty) {
       errorMessage = 'Session error. Terminal ID missing. Please restart.';
@@ -241,10 +239,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'destination_state': isCompleteTrip ? selectedDestinationState : null,
       'destination_lga': isCompleteTrip ? selectedDestinationLga : null,
       'transaction_date': transactionDate,
-      if (channelNumber != null && channelNumber.isNotEmpty)
-        'channel_number': channelNumber,
-      if (serviceNumber != null && serviceNumber.isNotEmpty)
-        'service_number': serviceNumber,
       'metadata': metadata,
     };
 

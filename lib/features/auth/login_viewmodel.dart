@@ -108,6 +108,15 @@ class LoginViewModel extends ChangeNotifier {
         if (user.authToken != null) {
           await session.setAuthToken(user.authToken!);
         }
+        if (user.channelNumber != null && user.channelNumber!.isNotEmpty) {
+          await session.setChannelNumber(user.channelNumber!);
+        }
+        if (user.serviceNumberValidation != null && user.serviceNumberValidation!.isNotEmpty) {
+          await session.setServiceNumberValidation(user.serviceNumberValidation!);
+        }
+        if (user.serviceNumberTransaction != null && user.serviceNumberTransaction!.isNotEmpty) {
+          await session.setServiceNumberTransaction(user.serviceNumberTransaction!);
+        }
 
         AppLogger.logInfo(_tag, 'Login successful — role: ${user.role}');
 
