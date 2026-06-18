@@ -96,9 +96,10 @@ class _SplashScreenState extends State<SplashScreen>
                     _buildLogo(),
                     const SizedBox(height: 20),
                     const Text(
-                      'Cyber1 TMS',
+                      'Consolidated Haulage Levy',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                         letterSpacing: 1.2,
@@ -184,7 +185,7 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: const Center(
           child: Text(
-            'C1',
+            'CHL',
             style: TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.bold,

@@ -55,8 +55,8 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     return AppBar(
       backgroundColor: const Color(0xFF1A237E),
       automaticallyImplyLeading: false,
-      title: const Text('Cyber1 TMS',
-          style: TextStyle(fontWeight: FontWeight.bold)),
+      title: const Text('Consolidated Haulage Levy',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
       actions: [
         IconButton(
           icon: const Icon(Icons.notifications_outlined, color: Colors.white),
@@ -98,7 +98,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Center(
-                  child: Text('C1',
+                  child: Text('CHL',
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -405,7 +405,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: const Column(
         children: [
-          Text('Cyber1 TMS v1.0.0',
+          Text('Consolidated Haulage Levy v1.0.0',
               style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),
           SizedBox(height: 2),
           Text('Powered by Cyber1 Systems',

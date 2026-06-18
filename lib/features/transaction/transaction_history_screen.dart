@@ -604,14 +604,14 @@ class _TransactionDetailSheet extends StatelessWidget {
   void _shareReceipt(BuildContext context, t) {
     Share.share(
       _buildReceiptText(t),
-      subject: 'Cyber1 TMS Receipt - ${t.transactionReference}',
+      subject: 'Consolidated Haulage Levy Receipt - ${t.transactionReference}',
     );
   }
 
   String _buildReceiptText(t) {
     final sb = StringBuffer();
     sb.writeln('══════════════════════════════════════');
-    sb.writeln('       CYBER1 TMS — RECEIPT');
+    sb.writeln('   CONSOLIDATED HAULAGE LEVY — RECEIPT');
     sb.writeln('══════════════════════════════════════');
     sb.writeln();
     sb.writeln('Transaction Ref:  ${t.transactionReference}');
@@ -647,7 +647,7 @@ class _TransactionDetailSheet extends StatelessWidget {
     sb.writeln('Terminal:         ${t.terminalId}');
     sb.writeln('──────────────────────────────────────');
     sb.writeln();
-    sb.writeln('     Thank you for using Cyber1 TMS');
+    sb.writeln(' Thank you for using Consolidated Haulage Levy');
     return sb.toString();
   }
 

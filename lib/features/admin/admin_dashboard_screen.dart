@@ -59,8 +59,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       title: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Cyber1 TMS',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text('Consolidated Haulage Levy',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
           Text('Admin Portal',
               style: TextStyle(fontSize: 11, color: Colors.white70)),
         ],
@@ -112,7 +112,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Center(
-                  child: Text('C1',
+                  child: Text('CHL',
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -277,7 +277,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: const Column(
         children: [
-          Text('Cyber1 TMS v1.0.0',
+          Text('Consolidated Haulage Levy v1.0.0',
               style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),
           const SizedBox(height: 2),
           Text('Powered by Cyber1 Systems',

@@ -1,7 +1,7 @@
 class AppConstants {
   AppConstants._();
 
-  static const String appName = 'Cyber1 TMS';
+  static const String appName = 'Consolidated Haulage Levy';
   static const String appVersion = '1.0.0';
 
   // Storage Keys

@@ -137,14 +137,7 @@ class _VehicleFoundBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(title: 'Payment Breakdown'),
-          const Divider(),
-            _buildFeeRow('Base Amount', vm.formattedBaseAmount),
-            const Divider(height: 1),
-            _buildFeeRow('Admin Fee (2%)', vm.formattedAdminFee),
-            const Divider(height: 1),
-            _buildFeeRow('Processing Fee', vm.formattedFlatFee),
-            const Divider(thickness: 1.5, height: 20),
+
             _buildTotalPayableRow(vm.formattedTotalPayable),
           ],
         ),

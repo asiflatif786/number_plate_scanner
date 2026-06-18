@@ -91,13 +91,13 @@ class _TransactionDetailScreenState
   void _shareReceipt(BuildContext context, t) {
     final text = _buildReceiptText(t);
     Share.share(text,
-        subject: 'Cyber1 TMS Receipt - ${t.transactionReference}');
+        subject: 'Consolidated Haulage Levy Receipt - ${t.transactionReference}');
   }
 
   String _buildReceiptText(t) {
     final sb = StringBuffer();
     sb.writeln('══════════════════════════════════════');
-    sb.writeln('       CYBER1 TMS — RECEIPT');
+    sb.writeln('   CONSOLIDATED HAULAGE LEVY — RECEIPT');
     sb.writeln('══════════════════════════════════════');
     sb.writeln();
     sb.writeln('Transaction Ref:  ${t.transactionReference}');
@@ -134,7 +134,7 @@ class _TransactionDetailScreenState
     sb.writeln('Terminal:         ${t.terminalId}');
     sb.writeln('──────────────────────────────────────');
     sb.writeln();
-    sb.writeln('     Thank you for using Cyber1 TMS');
+    sb.writeln(' Thank you for using Consolidated Haulage Levy');
     return sb.toString();
   }
 
@@ -384,7 +384,7 @@ class _TransactionDetailScreenState
         ),
         const SizedBox(height: 8),
         const Center(
-          child: Text('Thank you for using Cyber1 TMS',
+          child: Text('Thank you for using Consolidated Haulage Levy',
               style: TextStyle(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,

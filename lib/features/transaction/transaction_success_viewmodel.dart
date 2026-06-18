@@ -29,7 +29,7 @@ class TransactionSuccessViewModel extends ChangeNotifier {
     final t = transaction;
     final sb = StringBuffer();
     sb.writeln('══════════════════════════════════════');
-    sb.writeln('       CYBER1 TMS — RECEIPT');
+    sb.writeln('   CONSOLIDATED HAULAGE LEVY — RECEIPT');
     sb.writeln('══════════════════════════════════════');
     sb.writeln();
     sb.writeln('Transaction Ref:  ${t.transactionReference}');
@@ -66,7 +66,7 @@ class TransactionSuccessViewModel extends ChangeNotifier {
     sb.writeln('Terminal:         ${t.terminalId}');
     sb.writeln('──────────────────────────────────────');
     sb.writeln();
-    sb.writeln('     Thank you for using Cyber1 TMS');
+    sb.writeln(' Thank you for using Consolidated Haulage Levy');
     return sb.toString();
   }
 
@@ -89,7 +89,7 @@ class TransactionSuccessViewModel extends ChangeNotifier {
       AppLogger.logDebug(_tag, 'Sharing receipt');
       await Share.share(
         _buildReceiptText(),
-        subject: 'Cyber1 TMS Receipt - ${transaction.transactionReference}',
+        subject: 'Consolidated Haulage Levy Receipt - ${transaction.transactionReference}',
       );
     } catch (_) {}
     isSharing = false;

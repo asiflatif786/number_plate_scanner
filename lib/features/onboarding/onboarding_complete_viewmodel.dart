@@ -29,7 +29,7 @@ class OnboardingCompleteViewModel extends ChangeNotifier {
 
   Future<void> copyCredentials() async {
     final buffer = StringBuffer();
-    buffer.writeln('Cyber1 TMS — Agent Credentials');
+    buffer.writeln('Consolidated Haulage Levy — Agent Credentials');
     buffer.writeln('================================');
     buffer.writeln('Name:\t\t$agentFullName');
     buffer.writeln('Email:\t\t$agentEmail');

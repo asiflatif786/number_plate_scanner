@@ -678,7 +678,7 @@ class _SuccessBody extends StatelessWidget {
         const SizedBox(height: 8),
         const Center(
           child: Text(
-            'Thank you for using Cyber1 TMS',
+            'Thank you for using Consolidated Haulage Levy',
             style: TextStyle(
                 fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
           ),

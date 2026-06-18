@@ -27,11 +27,11 @@ void main() async {
 
   await (await SessionManager.instance).init();
 
-  runApp(const Cyber1TMSApp());
+  runApp(const HaulageLevyApp());
 }
 
-class Cyber1TMSApp extends StatelessWidget {
-  const Cyber1TMSApp({super.key});
+class HaulageLevyApp extends StatelessWidget {
+  const HaulageLevyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +48,7 @@ class Cyber1TMSApp extends StatelessWidget {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Cyber1 TMS',
+        title: 'Consolidated Haulage Levy',
         theme: AppTheme.light,
         initialRoute: AppRoutes.splash,
         routes: AppRoutes.routes,
