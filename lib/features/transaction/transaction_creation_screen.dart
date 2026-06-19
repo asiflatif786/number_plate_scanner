@@ -51,8 +51,10 @@ class _TransactionCreationBody extends StatelessWidget {
                 ],
                 const SizedBox(height: 12),
                 _buildPaymentMethodSection(vm),
-                const SizedBox(height: 12),
-                _buildPayloadCategoryCard(vm),
+                if (!vm.isCompleteTrip) ...[
+                  const SizedBox(height: 12),
+                  _buildPayloadCategoryCard(vm),
+                ],
                 const SizedBox(height: 12),
                 _buildFeeSummaryCard(vm),
                 if (vm.errorMessage != null) ...[
@@ -119,7 +121,7 @@ class _TransactionCreationBody extends StatelessWidget {
           AppTextField(
             controller: vm.payerEmailController,
             label: 'Payer Email',
-            hint: 'customer@example.com (optional)',
+            hint: 'customer@example.com',
             keyboardType: TextInputType.emailAddress,
           ),
         ],
@@ -247,7 +249,7 @@ class _TransactionCreationBody extends StatelessWidget {
               child: Text('Loading categories...',
                   style: TextStyle(color: Colors.grey)),
             )
-          else
+          else ...[
             DropdownButtonFormField<String>(
               value: vm.selectedPayloadCategory?['name']?.toString(),
               decoration: InputDecoration(
@@ -266,12 +268,37 @@ class _TransactionCreationBody extends StatelessWidget {
                   .toList(),
               onChanged: (v) {
                 if (v == null) return;
-                final cat = vm.payloadCategories.cast<Map<String, dynamic>?>().firstWhere(
-                    (c) => c?['name']?.toString() == v,
-                    orElse: () => null);
+                final cat = vm.payloadCategories
+                    .cast<Map<String, dynamic>?>()
+                    .firstWhere((c) => c?['name']?.toString() == v,
+                        orElse: () => null);
                 if (cat != null) vm.selectPayloadCategory(cat);
               },
             ),
+            if (vm.selectedPayloadCategory != null &&
+                vm.subCategories.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: vm.selectedSubCategory,
+                decoration: InputDecoration(
+                  labelText: 'Select Subcategory *',
+                  isDense: true,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                isExpanded: true,
+                items: vm.subCategories
+                    .map((s) => DropdownMenuItem(
+                          value: s,
+                          child: Text(s, overflow: TextOverflow.ellipsis),
+                        ))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) vm.selectSubCategory(v);
+                },
+              ),
+            ],
+          ],
         ],
       ),
     );
@@ -288,7 +315,7 @@ class _TransactionCreationBody extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: isSelected
-                ? Colors.green.withValues(alpha: 0.1)
+                ? Colors.green.withOpacity(0.1)
                 : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
@@ -334,7 +361,7 @@ class _TransactionCreationBody extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A237E).withValues(alpha: 0.05),
+              color: const Color(0xFF1A237E).withOpacity(0.05),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -404,13 +431,13 @@ class _TransactionCreationBody extends StatelessWidget {
   }
 
   Widget _buildTripTypeChip(String transactionType) {
-    final isSingle = transactionType == 'single';
+    final isSingle = transactionType.toLowerCase().contains('single');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: isSingle
-            ? Colors.blue.withValues(alpha: 0.1)
-            : Colors.purple.withValues(alpha: 0.1),
+            ? Colors.blue.withOpacity(0.1)
+            : Colors.purple.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

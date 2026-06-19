@@ -30,12 +30,14 @@ class TransactionCreationViewModel extends ChangeNotifier {
   List<String> originLgas = [];
   List<String> destinationLgas = [];
   final Map<String, String> _stateNameToId = {};
+  
+  String? _terminalId;
 
   final TextEditingController payerNameController = TextEditingController();
   final TextEditingController payerPhoneController = TextEditingController();
   final TextEditingController payerEmailController = TextEditingController();
 
-  bool get isCompleteTrip => vehicle.transactionType == 'complete';
+  bool get isCompleteTrip => vehicle.transactionType.trim().toLowerCase() == 'complete';
 
   double get baseAmount => vehicle.price.amount;
   double get adminFee => baseAmount * AppConstants.adminFeePercent;
@@ -47,8 +49,21 @@ class TransactionCreationViewModel extends ChangeNotifier {
     payerNameController.text =
         vehicle.customerName != 'N/A' ? vehicle.customerName : '';
     payerPhoneController.text = vehicle.phoneNumber ?? '';
+    _init();
+  }
+  
+  Future<void> _init() async {
     loadStates();
     _fetchPayloadCategory();
+    
+    final session = await SessionManager.instance;
+    _terminalId = session.terminalId;
+
+    if (_terminalId == null || _terminalId!.isEmpty) {
+      AppLogger.logWarning(_tag, 'Terminal ID missing from session during init');
+    }
+    
+    AppLogger.logInfo(_tag, 'Session loaded: Terminal=$_terminalId');
   }
 
   String _formatAmount(double value) {
@@ -63,6 +78,8 @@ class TransactionCreationViewModel extends ChangeNotifier {
 
   List<Map<String, dynamic>> _payloadCategories = [];
   Map<String, dynamic>? selectedPayloadCategory;
+  List<String> subCategories = [];
+  String? selectedSubCategory;
 
   bool get hasPayloadCategories => _payloadCategories.isNotEmpty;
   List<Map<String, dynamic>> get payloadCategories => _payloadCategories;
@@ -100,6 +117,18 @@ class TransactionCreationViewModel extends ChangeNotifier {
 
   void selectPayloadCategory(Map<String, dynamic> category) {
     selectedPayloadCategory = category;
+    selectedSubCategory = null;
+    final items = category['items'];
+    if (items is List) {
+      subCategories = items.map((e) => e.toString()).toList();
+    } else {
+      subCategories = [];
+    }
+    notifyListeners();
+  }
+
+  void selectSubCategory(String sub) {
+    selectedSubCategory = sub;
     notifyListeners();
   }
 
@@ -190,7 +219,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
   }
 
   String generateTransactionReference() {
-    return 'TXN-${DateTime.now().millisecondsSinceEpoch.toString()}';
+    return 'TXN${DateTime.now().millisecondsSinceEpoch.toString()}';
   }
 
   Future<void> submit(BuildContext context) async {
@@ -198,6 +227,10 @@ class TransactionCreationViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
+    final txType = vehicle.transactionType.trim().toLowerCase();
+    final isSingle = txType == 'single';
+
+    // Validations
     if (payerNameController.text.trim().isEmpty) {
       errorMessage = 'Payer name is required';
       isLoading = false;
@@ -240,21 +273,26 @@ class TransactionCreationViewModel extends ChangeNotifier {
       return;
     }
 
-    if (selectedPayloadCategory == null) {
+    // Haulage category is mandatory for Single Trip as per specification
+    if (isSingle && selectedPayloadCategory == null) {
       errorMessage = 'Please select a payload category';
       isLoading = false;
       notifyListeners();
       return;
     }
 
-    AppLogger.logInfo(_tag,
-        'Submitting: ${vehicle.vehicleLicense}, method=$selectedPaymentMethod');
+    if (isSingle && subCategories.isNotEmpty && selectedSubCategory == null) {
+      errorMessage = 'Please select a subcategory';
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
 
     final session = await SessionManager.instance;
-    final terminalId = session.terminalId;
+    _terminalId = session.terminalId;
 
-    if (terminalId == null || terminalId.isEmpty) {
-      errorMessage = 'Session error. Terminal ID missing. Please restart.';
+    if (_terminalId == null || _terminalId!.isEmpty) {
+      errorMessage = 'Session error. Terminal ID missing. Please restart or refresh the dashboard.';
       isLoading = false;
       notifyListeners();
       return;
@@ -262,33 +300,31 @@ class TransactionCreationViewModel extends ChangeNotifier {
 
     final ref = generateTransactionReference();
     final now = DateTime.now();
+    // Format: YYYY-MM-DD HH:mm:ss
     final transactionDate =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
 
-    final payerEmail = payerEmailController.text.isNotEmpty
-        ? payerEmailController.text
-        : 'noemail@cyber1tms.com';
+    final payerEmail = payerEmailController.text.trim().isNotEmpty
+        ? payerEmailController.text.trim()
+        : 'customer@example.com';
 
-    await _fetchPayloadCategory();
-
+    // Build payload object for Single trips
     Map<String, dynamic>? payloadObject;
-    if (selectedPayloadCategory != null) {
+    if (isSingle && selectedPayloadCategory != null) {
       final name = selectedPayloadCategory!['name']?.toString() ?? '';
       final id = selectedPayloadCategory!['id']?.toString() ?? '';
-      final items = selectedPayloadCategory!['items'];
-      final firstItem = (items is List && items.isNotEmpty)
-          ? items[0].toString()
-          : name;
+      final subCategory = selectedSubCategory ?? name;
+      
       payloadObject = {
-        'subcategory': firstItem,
+        'subcategory': subCategory,
         'haulage_category': name,
         'haulage_category_id': id,
       };
     }
 
     final metadata = <String, dynamic>{
-      'terminal_id': terminalId,
+      'terminal_id': _terminalId,
       'contact': payerPhoneController.text.trim(),
       'vehicle_type': vehicle.vehicleType,
       'transaction_type': vehicle.transactionType,
@@ -296,10 +332,10 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'amount': _formatAmount(baseAmount),
       'vehicle_license': vehicle.vehicleLicense,
       'transaction_reference': ref,
-      'origin_state': selectedOriginState,
-      'origin_lga': selectedOriginLga,
-      'destination_state': isCompleteTrip ? selectedDestinationState : null,
-      'destination_lga': isCompleteTrip ? selectedDestinationLga : null,
+      'origin_state': selectedOriginState?.toUpperCase(),
+      'origin_lga': selectedOriginLga?.toUpperCase(),
+      'destination_state': isCompleteTrip ? selectedDestinationState?.toUpperCase() : null,
+      'destination_lga': isCompleteTrip ? selectedDestinationLga?.toUpperCase() : null,
       'payload': payloadObject,
     };
 
@@ -310,20 +346,21 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'payer_email': payerEmail,
       'amount': _formatAmount(baseAmount),
       'fee': _formatAmount(totalFee),
+      'transaction_date': transactionDate,
       'payment_method': selectedPaymentMethod,
-      'terminal_id': terminalId,
+      'terminal_id': _terminalId,
       'vehicle_license': vehicle.vehicleLicense,
       'vehicle_type': vehicle.vehicleType,
       'transaction_type': vehicle.transactionType,
       'origin_state': selectedOriginState,
       'origin_lga': selectedOriginLga,
-      'destination_state': isCompleteTrip ? selectedDestinationState : null,
-      'destination_lga': isCompleteTrip ? selectedDestinationLga : null,
-      'transaction_date': transactionDate,
+      'destination_state': selectedDestinationState,
+      'destination_lga': selectedDestinationLga,
+      'payload': payloadObject, // Ensure payload is also at top level
       'metadata': metadata,
     };
 
-    AppLogger.logInfo(_tag, 'Payload ready: $ref');
+    AppLogger.logInfo(_tag, 'Payload ready: $ref (Type: $txType, Payload: ${payloadObject != null})');
 
     final result = await _transactionRepository.createTransaction(payload);
 

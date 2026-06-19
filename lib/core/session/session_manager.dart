@@ -200,33 +200,39 @@ class SessionManager {
   // Channel / Service Numbers (from admin setup)
   // ──────────────────────────────────────────────
 
-  String? get channelNumber =>
-      _p.getString(ApiConstants.channelNumberKey) ??
-      (ApiConstants.defaultChannelNumber.isNotEmpty
-          ? ApiConstants.defaultChannelNumber
-          : null);
+  String? get channelNumber {
+    final val = _p.getString(ApiConstants.channelNumberKey);
+    if (val != null && val.isNotEmpty) return val;
+    return ApiConstants.defaultChannelNumber.isNotEmpty
+        ? ApiConstants.defaultChannelNumber
+        : null;
+  }
 
   Future<void> setChannelNumber(String value) async {
     await _p.setString(ApiConstants.channelNumberKey, value);
     AppLogger.logInfo(_tag, 'channelNumber saved');
   }
 
-  String? get serviceNumberValidation =>
-      _p.getString(ApiConstants.serviceNumberValidationKey) ??
-      (ApiConstants.defaultValidationServiceNumber.isNotEmpty
-          ? ApiConstants.defaultValidationServiceNumber
-          : null);
+  String? get serviceNumberValidation {
+    final val = _p.getString(ApiConstants.serviceNumberValidationKey);
+    if (val != null && val.isNotEmpty) return val;
+    return ApiConstants.defaultValidationServiceNumber.isNotEmpty
+        ? ApiConstants.defaultValidationServiceNumber
+        : null;
+  }
 
   Future<void> setServiceNumberValidation(String value) async {
     await _p.setString(ApiConstants.serviceNumberValidationKey, value);
     AppLogger.logInfo(_tag, 'serviceNumberValidation saved');
   }
 
-  String? get serviceNumberTransaction =>
-      _p.getString(ApiConstants.serviceNumberTransactionKey) ??
-      (ApiConstants.defaultTransactionServiceNumber.isNotEmpty
-          ? ApiConstants.defaultTransactionServiceNumber
-          : null);
+  String? get serviceNumberTransaction {
+    final val = _p.getString(ApiConstants.serviceNumberTransactionKey);
+    if (val != null && val.isNotEmpty) return val;
+    return ApiConstants.defaultTransactionServiceNumber.isNotEmpty
+        ? ApiConstants.defaultTransactionServiceNumber
+        : null;
+  }
 
   Future<void> setServiceNumberTransaction(String value) async {
     await _p.setString(ApiConstants.serviceNumberTransactionKey, value);

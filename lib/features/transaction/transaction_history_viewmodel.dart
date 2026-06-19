@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/repositories/transaction_repository.dart';
@@ -43,16 +42,6 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   }
 
   Future<void> loadTransactions({bool refresh = false}) async {
-    final session = await SessionManager.instance;
-    final channelNumber = session.channelNumber;
-    if (channelNumber == null) {
-      _errorMessage = 'Channel number not configured. Please contact admin.';
-      _isLoading = false;
-      _isRefreshing = false;
-      notifyListeners();
-      return;
-    }
-
     if (refresh) {
       _transactions = [];
       _currentPage = 1;
@@ -66,7 +55,6 @@ class TransactionHistoryViewModel extends ChangeNotifier {
     notifyListeners();
 
     final result = await _repository.listTransactions(
-      channelNumber: channelNumber,
       page: _currentPage,
       statusFilter: _selectedStatusFilter,
     );
@@ -109,16 +97,11 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   }
 
   Future<void> verifyTransaction(String transactionReference) async {
-    final session = await SessionManager.instance;
-    final channelNumber = session.channelNumber;
-    if (channelNumber == null) return;
-
     _verifyingReference = transactionReference;
     notifyListeners();
 
     final result = await _repository.verifyTransaction(
       transactionReference: transactionReference,
-      channelNumber: channelNumber,
     );
 
     if (result.success && result.data != null) {
@@ -158,13 +141,8 @@ class TransactionHistoryViewModel extends ChangeNotifier {
 
     if (confirmed != true) return;
 
-    final session = await SessionManager.instance;
-    final channelNumber = session.channelNumber;
-    if (channelNumber == null) return;
-
     final result = await _repository.abandonTransaction(
       transactionReference: transactionReference,
-      channelNumber: channelNumber,
     );
 
     if (result.success) {

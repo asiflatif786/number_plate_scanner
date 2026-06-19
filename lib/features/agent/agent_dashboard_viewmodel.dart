@@ -72,7 +72,12 @@ class AgentDashboardViewModel extends ChangeNotifier {
           serialNumber = terminal.serialNumber;
           terminalStatus = terminal.status;
           
-          // Optionally update session if needed, but for dashboard display, updating VM state is enough
+          // Persist to session so it's available for transactions
+          final session = await SessionManager.instance;
+          await session.setTerminalId(terminalId);
+          await session.setSerialNumber(serialNumber);
+          
+          AppLogger.logInfo(_tag, 'Terminal details synced to session: $terminalId');
         }
       }
     } catch (e) {
@@ -83,28 +88,20 @@ class AgentDashboardViewModel extends ChangeNotifier {
 
   Future<void> _fetchTransactionStats() async {
     try {
-      final session = await SessionManager.instance;
-      final channel = session.channelNumber ?? '';
-
-      if (channel.isEmpty) {
-        AppLogger.logWarning(_tag, 'No channel number available for stats');
-        return;
-      }
-
       // Each call updates _txRepo.totalTransactions — save before next overwrites
-      await _txRepo.listTransactions(channelNumber: channel, page: 1);
+      await _txRepo.listTransactions(page: 1);
       totalTransactions = _txRepo.totalTransactions;
 
       await _txRepo.listTransactions(
-          channelNumber: channel, page: 1, statusFilter: 'approved');
+          page: 1, statusFilter: 'approved');
       approvedCount = _txRepo.totalTransactions;
 
       await _txRepo.listTransactions(
-          channelNumber: channel, page: 1, statusFilter: 'pending');
+          page: 1, statusFilter: 'pending');
       pendingCount = _txRepo.totalTransactions;
 
       await _txRepo.listTransactions(
-          channelNumber: channel, page: 1, statusFilter: 'declined');
+          page: 1, statusFilter: 'declined');
       declinedCount = _txRepo.totalTransactions;
     } catch (e) {
       AppLogger.logError(_tag, 'fetchStats error', e);

@@ -1,7 +1,6 @@
 import '../../core/constants/api_constants.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_response.dart';
-import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
 import '../models/transaction_model.dart';
 
@@ -35,7 +34,6 @@ class TransactionRepository {
 
   Future<ApiResponse<bool>> approveTransaction({
     required String transactionReference,
-    required String channelNumber,
   }) async {
     AppLogger.logInfo(_tag, 'Approving: $transactionReference');
 
@@ -58,7 +56,6 @@ class TransactionRepository {
 
   Future<ApiResponse<bool>> declineTransaction({
     required String transactionReference,
-    required String channelNumber,
   }) async {
     AppLogger.logInfo(_tag, 'Declining: $transactionReference');
 
@@ -81,7 +78,6 @@ class TransactionRepository {
 
   Future<ApiResponse<TransactionModel>> verifyTransaction({
     required String transactionReference,
-    required String channelNumber,
   }) async {
     AppLogger.logInfo(_tag, 'Verifying: $transactionReference');
 
@@ -102,7 +98,6 @@ class TransactionRepository {
   }
 
   Future<ApiResponse<List<TransactionModel>>> listTransactions({
-    required String channelNumber,
     int page = 1,
     String? statusFilter,
   }) async {
@@ -113,7 +108,6 @@ class TransactionRepository {
     final response = await ApiClient.instance.tmsPost(
       'list-transactions',
       fields: {
-        'channel_number': channelNumber,
         'page': page.toString(),
         if (statusFilter != null) 'status': statusFilter,
       },
@@ -136,7 +130,6 @@ class TransactionRepository {
 
   Future<ApiResponse<bool>> invalidateTransaction({
     required String transactionReference,
-    required String channelNumber,
   }) async {
     AppLogger.logInfo(_tag, 'Invalidating: $transactionReference');
 
@@ -159,7 +152,6 @@ class TransactionRepository {
 
   Future<ApiResponse<bool>> abandonTransaction({
     required String transactionReference,
-    required String channelNumber,
   }) async {
     AppLogger.logInfo(_tag, 'Abandoning: $transactionReference');
 

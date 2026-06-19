@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../core/session/session_manager.dart';
 import '../../app/routes.dart';
 import '../../core/utils/logger.dart';
 import '../../data/models/transaction_model.dart';
@@ -101,11 +100,8 @@ class TransactionSuccessViewModel extends ChangeNotifier {
     statusMessage = null;
     notifyListeners();
     try {
-      final session = await SessionManager.instance;
-      final channelNumber = session.channelNumber ?? '';
       final response = await TransactionRepository().approveTransaction(
         transactionReference: transaction.transactionReference,
-        channelNumber: channelNumber,
       );
       if (response.success) {
         transaction = transaction.copyWith(status: 'approved');
@@ -128,11 +124,8 @@ class TransactionSuccessViewModel extends ChangeNotifier {
     statusMessage = null;
     notifyListeners();
     try {
-      final session = await SessionManager.instance;
-      final channelNumber = session.channelNumber ?? '';
       final response = await TransactionRepository().declineTransaction(
         transactionReference: transaction.transactionReference,
-        channelNumber: channelNumber,
       );
       if (response.success) {
         transaction = transaction.copyWith(status: 'declined');
@@ -155,11 +148,8 @@ class TransactionSuccessViewModel extends ChangeNotifier {
     statusMessage = null;
     notifyListeners();
     try {
-      final session = await SessionManager.instance;
-      final channelNumber = session.channelNumber ?? '';
       final response = await TransactionRepository().verifyTransaction(
         transactionReference: transaction.transactionReference,
-        channelNumber: channelNumber,
       );
       if (response.success && response.data != null) {
         final verified = response.data!;
