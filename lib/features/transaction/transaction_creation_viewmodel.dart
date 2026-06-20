@@ -274,7 +274,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
     return true;
   }
 
-  Map<String, dynamic> _prepareTmsPayload(String ref) {
+  Map<String, dynamic> _prepareTmsPayload(String ref, SessionManager session, String email) {
     final txType = vehicle.transactionType.trim().toLowerCase();
     final isSingle = txType == 'single';
     
@@ -282,10 +282,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
     final transactionDate =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
-
-    final payerEmail = payerEmailController.text.trim().isNotEmpty
-        ? payerEmailController.text.trim()
-        : 'customer@example.com';
 
     Map<String, dynamic>? payloadObject;
     if (isSingle && selectedPayloadCategory != null) {
@@ -301,7 +297,9 @@ class TransactionCreationViewModel extends ChangeNotifier {
     }
 
     final metadata = <String, dynamic>{
-      'terminal_id': _terminalId,
+      'channel': 'dealcity',
+      'channel_type': 'pos',
+      'terminal_id': session.terminalId,
       'contact': payerPhoneController.text.trim(),
       'vehicle_type': vehicle.vehicleType,
       'transaction_type': vehicle.transactionType,
@@ -309,10 +307,10 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'amount': _formatAmount(baseAmount),
       'vehicle_license': vehicle.vehicleLicense,
       'transaction_reference': ref,
-      'origin_state': selectedOriginState?.toUpperCase(),
-      'origin_lga': selectedOriginLga?.toUpperCase(),
-      'destination_state': isCompleteTrip ? selectedDestinationState?.toUpperCase() : null,
-      'destination_lga': isCompleteTrip ? selectedDestinationLga?.toUpperCase() : null,
+      'origin_state': selectedOriginState,
+      'origin_lga': selectedOriginLga,
+      'destination_state': isCompleteTrip ? selectedDestinationState : null,
+      'destination_lga': isCompleteTrip ? selectedDestinationLga : null,
       'payload': payloadObject,
     };
 
@@ -320,12 +318,15 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'transaction_reference': ref,
       'payer_name': payerNameController.text.trim(),
       'payer_phone': payerPhoneController.text.trim(),
-      'payer_email': payerEmail,
+      'payer_email': email,
       'amount': _formatAmount(baseAmount),
       'fee': _formatAmount(totalFee),
       'transaction_date': transactionDate,
+      'channel_number': session.channelNumber,
       'payment_method': 'transfer',
-      'terminal_id': _terminalId,
+      'terminal_id': session.terminalId,
+      'service_number': session.serviceNumberTransaction,
+      // Root-level fields to satisfy server validation
       'vehicle_license': vehicle.vehicleLicense,
       'vehicle_type': vehicle.vehicleType,
       'transaction_type': vehicle.transactionType,
@@ -333,7 +334,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'origin_lga': selectedOriginLga,
       'destination_state': selectedDestinationState,
       'destination_lga': selectedDestinationLga,
-      'payload': payloadObject,
       'metadata': metadata,
     };
   }
@@ -356,7 +356,10 @@ class TransactionCreationViewModel extends ChangeNotifier {
     }
 
     final ref = generateTransactionReference();
-    final payload = _prepareTmsPayload(ref);
+    final email = payerEmailController.text.trim().isNotEmpty
+        ? payerEmailController.text.trim()
+        : (session.agentEmail ?? 'customer@example.com');
+    final payload = _prepareTmsPayload(ref, session, email);
 
     AppLogger.logInfo(_tag, 'Payload ready: $ref (Type: ${vehicle.transactionType})');
 
@@ -394,10 +397,10 @@ class TransactionCreationViewModel extends ChangeNotifier {
     _terminalId = session.terminalId;
     final email = payerEmailController.text.trim().isNotEmpty 
         ? payerEmailController.text.trim() 
-        : session.agentEmail;
+        : session.agentEmail ?? 'customer@example.com';
     final userId = session.agentNumber;
 
-    if (email == null || email.isEmpty || userId == null || userId.isEmpty || _terminalId == null || _terminalId!.isEmpty) {
+    if (userId == null || userId.isEmpty || _terminalId == null || _terminalId!.isEmpty) {
       isSquadCoProceeding = false;
       errorMessage = "Agent/Terminal session data not available. Please refresh dashboard.";
       notifyListeners();
@@ -434,7 +437,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
       }
 
       // Create transaction in TMS as pending using Squad's reference
-      final tmsPayload = _prepareTmsPayload(transactionRef);
+      final tmsPayload = _prepareTmsPayload(transactionRef, session, email);
       
       final tmsResult = await _transactionRepository.createTransaction(tmsPayload);
       if (!tmsResult.success) {
