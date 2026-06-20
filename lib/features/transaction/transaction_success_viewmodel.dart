@@ -104,8 +104,8 @@ class TransactionSuccessViewModel extends ChangeNotifier {
         transactionReference: transaction.transactionReference,
       );
       if (response.success) {
-        transaction = transaction.copyWith(status: 'approved');
-        statusMessage = 'Transaction approved.';
+        transaction = transaction.copyWith(status: 'confirmed');
+        statusMessage = response.message ?? 'Transaction approved and confirmed successfully!';
         AppLogger.logInfo(_tag, '[SUCCESS] Transaction approved');
       } else {
         statusMessage = response.failure?.message ?? 'Approval failed.';
@@ -114,6 +114,7 @@ class TransactionSuccessViewModel extends ChangeNotifier {
       }
     } catch (e) {
       AppLogger.logError(_tag, 'Approval error', e);
+      statusMessage = 'Error during approval: $e';
     }
     isApproving = false;
     notifyListeners();
@@ -129,7 +130,7 @@ class TransactionSuccessViewModel extends ChangeNotifier {
       );
       if (response.success) {
         transaction = transaction.copyWith(status: 'declined');
-        statusMessage = 'Transaction declined.';
+        statusMessage = response.message ?? 'Transaction declined!';
         AppLogger.logInfo(_tag, '[SUCCESS] Transaction declined');
       } else {
         statusMessage = response.failure?.message ?? 'Decline failed.';
@@ -138,6 +139,7 @@ class TransactionSuccessViewModel extends ChangeNotifier {
       }
     } catch (e) {
       AppLogger.logError(_tag, 'Decline error', e);
+      statusMessage = 'Error during decline: $e';
     }
     isDeclining = false;
     notifyListeners();

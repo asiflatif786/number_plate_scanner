@@ -4,15 +4,31 @@ import 'package:provider/provider.dart';
 import '../../data/models/transaction_model.dart';
 import 'transaction_success_viewmodel.dart';
 
-class TransactionSuccessScreen extends StatefulWidget {
+class TransactionSuccessScreen extends StatelessWidget {
   const TransactionSuccessScreen({super.key});
 
   @override
-  State<TransactionSuccessScreen> createState() =>
-      _TransactionSuccessScreenState();
+  Widget build(BuildContext context) {
+    final transaction =
+        ModalRoute.of(context)!.settings.arguments as TransactionModel;
+
+    return ChangeNotifierProvider(
+      create: (_) => TransactionSuccessViewModel(transaction: transaction),
+      child: const _TransactionSuccessAnimatedBody(),
+    );
+  }
 }
 
-class _TransactionSuccessScreenState extends State<TransactionSuccessScreen>
+class _TransactionSuccessAnimatedBody extends StatefulWidget {
+  const _TransactionSuccessAnimatedBody();
+
+  @override
+  State<_TransactionSuccessAnimatedBody> createState() =>
+      _TransactionSuccessAnimatedBodyState();
+}
+
+class _TransactionSuccessAnimatedBodyState
+    extends State<_TransactionSuccessAnimatedBody>
     with TickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _panelFade;
@@ -79,35 +95,29 @@ class _TransactionSuccessScreenState extends State<TransactionSuccessScreen>
 
   @override
   Widget build(BuildContext context) {
-    final transaction =
-        ModalRoute.of(context)!.settings.arguments as TransactionModel;
-
-    return ChangeNotifierProvider(
-      create: (_) => TransactionSuccessViewModel(transaction: transaction),
-      child: PopScope(
+    return Consumer<TransactionSuccessViewModel>(
+      builder: (context, vm, _) => PopScope(
         canPop: false,
         child: Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            title: const Text('Transaction Created'),
-            backgroundColor: Colors.green.shade700,
+            title: const Text('Transaction Details'),
+            backgroundColor: vm.transaction.statusColor,
             foregroundColor: Colors.white,
             actions: [
-              Consumer<TransactionSuccessViewModel>(
-                builder: (context, vm, _) => IconButton(
-                  icon: vm.isSharing
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.share),
-                  tooltip: 'Share Receipt',
-                  onPressed: vm.isSharing ? null : () => vm.shareReceipt(),
-                ),
+              IconButton(
+                icon: vm.isSharing
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.share),
+                tooltip: 'Share Receipt',
+                onPressed: vm.isSharing ? null : () => vm.shareReceipt(),
               ),
             ],
           ),
@@ -153,6 +163,12 @@ class _SuccessBody extends StatelessWidget {
     return Consumer<TransactionSuccessViewModel>(
       builder: (context, vm, _) {
         final t = vm.transaction;
+        final isSquad = t.paymentMethod.toLowerCase() == 'squad';
+        final isConfirmed = t.status == 'approved' ||
+            t.status == 'confirmed' ||
+            t.status == 'success';
+        final isDeclined = t.status == 'declined' || t.status == 'failed';
+
         return SingleChildScrollView(
           child: Column(
             children: [
@@ -161,7 +177,7 @@ class _SuccessBody extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade700,
+                    color: t.statusColor,
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(24),
                       bottomRight: Radius.circular(24),
@@ -171,8 +187,12 @@ class _SuccessBody extends StatelessWidget {
                     children: [
                       ScaleTransition(
                         scale: checkScale,
-                        child: const Icon(
-                          Icons.check_circle,
+                        child: Icon(
+                          isConfirmed
+                              ? Icons.check_circle
+                              : (isDeclined
+                                  ? Icons.cancel
+                                  : Icons.info_outline),
                           size: 80,
                           color: Colors.white,
                         ),
@@ -180,9 +200,13 @@ class _SuccessBody extends StatelessWidget {
                       const SizedBox(height: 12),
                       FadeTransition(
                         opacity: textFade,
-                        child: const Text(
-                          'Transaction Created!',
-                          style: TextStyle(
+                        child: Text(
+                          isConfirmed
+                              ? 'Transaction Successful!'
+                              : (isDeclined
+                                  ? 'Transaction Declined'
+                                  : 'Transaction Created'),
+                          style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -237,7 +261,8 @@ class _SuccessBody extends StatelessWidget {
                                 ? null
                                 : () => vm.approveTransaction(),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green.shade600,
+                              backgroundColor:
+                                  isSquad ? Colors.indigo : Colors.green.shade600,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -252,9 +277,11 @@ class _SuccessBody extends StatelessWidget {
                                       color: Colors.white,
                                     ),
                                   )
-                                : const Text(
-                                    'Approve Transaction',
-                                    style: TextStyle(
+                                : Text(
+                                    isSquad
+                                        ? 'Confirm Squad Payment'
+                                        : 'Approve Transaction',
+                                    style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -347,7 +374,7 @@ class _SuccessBody extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12,
-                            color: t.status == 'declined'
+                            color: isDeclined
                                 ? Colors.red
                                 : Colors.green.shade700,
                             fontWeight: FontWeight.w600,
@@ -387,22 +414,20 @@ class _SuccessBody extends StatelessWidget {
               const SizedBox(height: 12),
               FadeTransition(
                 opacity: shareFade,
-                child: Consumer<TransactionSuccessViewModel>(
-                  builder: (context, vm, _) => TextButton.icon(
-                    onPressed: vm.isSharing ? null : () => vm.shareReceipt(),
-                    icon: vm.isSharing
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.share, size: 18),
-                    label: Text(
-                      vm.isSharing ? 'Sharing...' : 'Share Receipt',
-                    ),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.grey,
-                    ),
+                child: TextButton.icon(
+                  onPressed: vm.isSharing ? null : () => vm.shareReceipt(),
+                  icon: vm.isSharing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.share, size: 18),
+                  label: Text(
+                    vm.isSharing ? 'Sharing...' : 'Share Receipt',
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey,
                   ),
                 ),
               ),
@@ -443,14 +468,17 @@ class _SuccessBody extends StatelessWidget {
   Widget _buildStatusChip(String status) {
     MaterialColor chipColor;
     String label;
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'approved':
+      case 'confirmed':
+      case 'success':
         chipColor = Colors.green;
-        label = 'APPROVED';
+        label = status.toUpperCase();
         break;
       case 'declined':
+      case 'failed':
         chipColor = Colors.red;
-        label = 'DECLINED';
+        label = status.toUpperCase();
         break;
       default:
         chipColor = Colors.amber;

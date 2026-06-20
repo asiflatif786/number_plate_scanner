@@ -50,19 +50,17 @@ class _TransactionCreationBody extends StatelessWidget {
                   _buildDestinationCard(vm),
                 ],
                 const SizedBox(height: 12),
-                _buildPaymentMethodSection(vm),
                 if (!vm.isCompleteTrip) ...[
-                  const SizedBox(height: 12),
                   _buildPayloadCategoryCard(vm),
+                  const SizedBox(height: 12),
                 ],
-                const SizedBox(height: 12),
                 _buildFeeSummaryCard(vm),
                 if (vm.errorMessage != null) ...[
                   const SizedBox(height: 16),
                   _buildErrorBanner(vm),
                 ],
-                const SizedBox(height: 20),
-                _buildSubmitButton(vm, context),
+                const SizedBox(height: 24),
+                _buildSquadCoButton(vm, context),
                 const SizedBox(height: 16),
               ],
             ),
@@ -214,28 +212,6 @@ class _TransactionCreationBody extends StatelessWidget {
     );
   }
 
-  Widget _buildPaymentMethodSection(TransactionCreationViewModel vm) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SectionHeader(title: 'Payment Method'),
-          const Divider(),
-          Row(
-            children: [
-              _buildPaymentChip(vm, 'card', 'Card', Icons.credit_card),
-              const SizedBox(width: 8),
-              _buildPaymentChip(
-                  vm, 'wallet', 'Wallet', Icons.account_balance_wallet),
-              const SizedBox(width: 8),
-              _buildPaymentChip(vm, 'transfer', 'Transfer', Icons.swap_horiz),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPayloadCategoryCard(TransactionCreationViewModel vm) {
     return AppCard(
       child: Column(
@@ -304,64 +280,16 @@ class _TransactionCreationBody extends StatelessWidget {
     );
   }
 
-  Widget _buildPaymentChip(TransactionCreationViewModel vm, String value,
-      String label, IconData icon) {
-    final isSelected = vm.selectedPaymentMethod == value;
-    return Expanded(
-      child: InkWell(
-        onTap: () => vm.onPaymentMethodChanged(value),
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? Colors.green.withOpacity(0.1)
-                : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isSelected ? Colors.green : Colors.grey.shade300,
-              width: isSelected ? 2 : 1,
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(icon,
-                  size: 22, color: isSelected ? Colors.green : Colors.grey),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? Colors.green : Colors.grey,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildFeeSummaryCard(TransactionCreationViewModel vm) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(title: 'Fee Summary'),
-          const Divider(),
-          DetailRow(label: 'Base Amount', value: '₦${vm.formattedBaseAmount}'),
-          const SizedBox(height: 6),
-          DetailRow(label: 'Admin Fee (2%)', value: '₦${vm.formattedAdminFee}'),
-          const SizedBox(height: 6),
-          DetailRow(
-              label: 'Processing Fee', value: '₦${vm.formattedProcessingFee}'),
-          const Divider(thickness: 1.5),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A237E).withOpacity(0.05),
+              color: const Color(0xFF1A237E).withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -417,15 +345,18 @@ class _TransactionCreationBody extends StatelessWidget {
     );
   }
 
-  Widget _buildSubmitButton(
-      TransactionCreationViewModel vm, BuildContext context) {
+  Widget _buildSquadCoButton(TransactionCreationViewModel vm, BuildContext context) {
     return SizedBox(
       width: double.infinity,
       height: 50,
       child: AppButton(
-        onPressed: vm.isLoading ? null : () => vm.submit(context),
-        isLoading: vm.isLoading,
-        label: 'Confirm & Create Transaction',
+        label: vm.isSquadCoProceeding ? 'Proceeding...' : 'Confirm & Proceed With Squad',
+        onPressed: (vm.isLoading || vm.isSquadCoProceeding)
+            ? null
+            : () => vm.proceedWithSquadCo(context),
+        isLoading: vm.isSquadCoProceeding,
+        icon: Icons.payment,
+        color: Colors.indigo,
       ),
     );
   }
@@ -436,8 +367,8 @@ class _TransactionCreationBody extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: isSingle
-            ? Colors.blue.withOpacity(0.1)
-            : Colors.purple.withOpacity(0.1),
+            ? Colors.blue.withValues(alpha: 0.1)
+            : Colors.purple.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

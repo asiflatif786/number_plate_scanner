@@ -56,25 +56,30 @@ class TransactionModel {
           .format(serviceFee);
 
   String get paymentMethodDisplay {
-    switch (paymentMethod) {
+    switch (paymentMethod.toLowerCase()) {
       case 'card':
         return 'Card Payment';
       case 'wallet':
         return 'Wallet';
       case 'transfer':
         return 'Bank Transfer';
+      case 'squad':
+        return 'Squad (Online)';
       default:
         return paymentMethod;
     }
   }
 
   Color get statusColor {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'approved':
+      case 'confirmed':
+      case 'success':
         return Colors.green;
       case 'pending':
         return Colors.amber;
       case 'declined':
+      case 'failed':
         return Colors.red;
       default:
         return Colors.grey;

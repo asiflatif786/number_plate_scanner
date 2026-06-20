@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/routes.dart';
 import '../../core/constants/api_constants.dart';
@@ -20,8 +22,8 @@ class TransactionCreationViewModel extends ChangeNotifier {
   final TransactionRepository _transactionRepository = TransactionRepository();
 
   bool isLoading = false;
+  bool isSquadCoProceeding = false;
   String? errorMessage;
-  String selectedPaymentMethod = 'card';
   String? selectedOriginState;
   String? selectedOriginLga;
   String? selectedDestinationState;
@@ -198,11 +200,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void onPaymentMethodChanged(String method) {
-    selectedPaymentMethod = method;
-    notifyListeners();
-  }
-
   void onOriginLgaChanged(String? lga) {
     selectedOriginLga = lga;
     notifyListeners();
@@ -222,85 +219,66 @@ class TransactionCreationViewModel extends ChangeNotifier {
     return 'TXN${DateTime.now().millisecondsSinceEpoch.toString()}';
   }
 
-  Future<void> submit(BuildContext context) async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
-
+  bool _validate() {
     final txType = vehicle.transactionType.trim().toLowerCase();
     final isSingle = txType == 'single';
 
-    // Validations
     if (payerNameController.text.trim().isEmpty) {
       errorMessage = 'Payer name is required';
-      isLoading = false;
       notifyListeners();
-      return;
+      return false;
     }
 
     if (payerPhoneController.text.trim().length != 11) {
       errorMessage = 'Phone number must be 11 digits';
-      isLoading = false;
       notifyListeners();
-      return;
+      return false;
     }
 
     if (selectedOriginState == null) {
       errorMessage = 'Please select origin state';
-      isLoading = false;
       notifyListeners();
-      return;
+      return false;
     }
 
     if (selectedOriginLga == null) {
       errorMessage = 'Please select origin LGA';
-      isLoading = false;
       notifyListeners();
-      return;
+      return false;
     }
 
     if (isCompleteTrip && selectedDestinationState == null) {
       errorMessage = 'Please select destination state';
-      isLoading = false;
       notifyListeners();
-      return;
+      return false;
     }
 
     if (isCompleteTrip && selectedDestinationLga == null) {
       errorMessage = 'Please select destination LGA';
-      isLoading = false;
       notifyListeners();
-      return;
+      return false;
     }
 
-    // Haulage category is mandatory for Single Trip as per specification
     if (isSingle && selectedPayloadCategory == null) {
       errorMessage = 'Please select a payload category';
-      isLoading = false;
       notifyListeners();
-      return;
+      return false;
     }
 
     if (isSingle && subCategories.isNotEmpty && selectedSubCategory == null) {
       errorMessage = 'Please select a subcategory';
-      isLoading = false;
       notifyListeners();
-      return;
+      return false;
     }
+    
+    return true;
+  }
 
-    final session = await SessionManager.instance;
-    _terminalId = session.terminalId;
-
-    if (_terminalId == null || _terminalId!.isEmpty) {
-      errorMessage = 'Session error. Terminal ID missing. Please restart or refresh the dashboard.';
-      isLoading = false;
-      notifyListeners();
-      return;
-    }
-
-    final ref = generateTransactionReference();
+  Map<String, dynamic> _prepareTmsPayload(String ref) {
+    final txType = vehicle.transactionType.trim().toLowerCase();
+    final isSingle = txType == 'single';
+    
     final now = DateTime.now();
-    // Format: YYYY-MM-DD HH:mm:ss
     final transactionDate =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
@@ -309,7 +287,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
         ? payerEmailController.text.trim()
         : 'customer@example.com';
 
-    // Build payload object for Single trips
     Map<String, dynamic>? payloadObject;
     if (isSingle && selectedPayloadCategory != null) {
       final name = selectedPayloadCategory!['name']?.toString() ?? '';
@@ -339,7 +316,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'payload': payloadObject,
     };
 
-    final payload = <String, dynamic>{
+    return <String, dynamic>{
       'transaction_reference': ref,
       'payer_name': payerNameController.text.trim(),
       'payer_phone': payerPhoneController.text.trim(),
@@ -347,7 +324,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'amount': _formatAmount(baseAmount),
       'fee': _formatAmount(totalFee),
       'transaction_date': transactionDate,
-      'payment_method': selectedPaymentMethod,
+      'payment_method': 'transfer',
       'terminal_id': _terminalId,
       'vehicle_license': vehicle.vehicleLicense,
       'vehicle_type': vehicle.vehicleType,
@@ -356,11 +333,32 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'origin_lga': selectedOriginLga,
       'destination_state': selectedDestinationState,
       'destination_lga': selectedDestinationLga,
-      'payload': payloadObject, // Ensure payload is also at top level
+      'payload': payloadObject,
       'metadata': metadata,
     };
+  }
 
-    AppLogger.logInfo(_tag, 'Payload ready: $ref (Type: $txType, Payload: ${payloadObject != null})');
+  Future<void> submit(BuildContext context) async {
+    if (!_validate()) return;
+    
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    final session = await SessionManager.instance;
+    _terminalId = session.terminalId;
+
+    if (_terminalId == null || _terminalId!.isEmpty) {
+      errorMessage = 'Session error. Terminal ID missing. Please restart or refresh the dashboard.';
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    final ref = generateTransactionReference();
+    final payload = _prepareTmsPayload(ref);
+
+    AppLogger.logInfo(_tag, 'Payload ready: $ref (Type: ${vehicle.transactionType})');
 
     final result = await _transactionRepository.createTransaction(payload);
 
@@ -380,6 +378,114 @@ class TransactionCreationViewModel extends ChangeNotifier {
       errorMessage = result.failure?.message ?? 'Transaction creation failed';
       isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> proceedWithSquadCo(BuildContext context) async {
+    if (!_validate()) return;
+
+    isSquadCoProceeding = true;
+    errorMessage = null;
+    notifyListeners();
+
+    AppLogger.logInfo(_tag, 'Proceeding with SquadCo for ${vehicle.vehicleLicense}');
+
+    final session = await SessionManager.instance;
+    _terminalId = session.terminalId;
+    final email = payerEmailController.text.trim().isNotEmpty 
+        ? payerEmailController.text.trim() 
+        : session.agentEmail;
+    final userId = session.agentNumber;
+
+    if (email == null || email.isEmpty || userId == null || userId.isEmpty || _terminalId == null || _terminalId!.isEmpty) {
+      isSquadCoProceeding = false;
+      errorMessage = "Agent/Terminal session data not available. Please refresh dashboard.";
+      notifyListeners();
+      return;
+    }
+
+    final serverUrl = Uri.parse('https://tms-local-api.justerrand.ie/squadco/post-transaction');
+
+    try {
+      final response = await http.post(
+        serverUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'amount': (totalPayable * 100).toInt(), // Amount in kobo
+          'email': email,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Server returned error: ${response.statusCode}');
+      }
+
+      final responseBody = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseBody['success'] != true) {
+        throw Exception(responseBody['message'] ?? 'Failed to initialize transaction');
+      }
+
+      final data = responseBody['data'] as Map<String, dynamic>;
+      final checkoutUrl = data['checkout_url'] as String?;
+      final transactionRef = data['transaction_ref'] as String?;
+
+      if (checkoutUrl == null || transactionRef == null) {
+        throw Exception('Missing checkout URL or transaction reference');
+      }
+
+      // Create transaction in TMS as pending using Squad's reference
+      final tmsPayload = _prepareTmsPayload(transactionRef);
+      
+      final tmsResult = await _transactionRepository.createTransaction(tmsPayload);
+      if (!tmsResult.success) {
+        throw Exception('Failed to record transaction in TMS: ${tmsResult.failure?.message}');
+      }
+      
+      final createdTransaction = tmsResult.data!;
+
+      final uri = Uri.parse(checkoutUrl);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (launched) {
+        await _storeTransactionInFirebase(transactionRef, totalPayable.toInt(), userId);
+
+        if (context.mounted) {
+          Navigator.pushNamed(
+            context,
+            AppRoutes.transactionSuccess,
+            arguments: createdTransaction,
+          );
+        }
+      } else {
+        throw Exception('Could not launch payment page');
+      }
+    } catch (e) {
+      AppLogger.logError(_tag, 'SquadCo error', e);
+      errorMessage = e.toString();
+    } finally {
+      isSquadCoProceeding = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _storeTransactionInFirebase(String transactionId, int amount, String userId) async {
+    try {
+      await FirebaseFirestore.instance.collection('transactions').add({
+        'id': transactionId,
+        'amount': amount,
+        'currency': 'NGN',
+        'payment_method': 'transfer',
+        'user_id': userId,
+        'vehicle_license': vehicle.vehicleLicense,
+        'created_at': FieldValue.serverTimestamp(),
+        'status': 'pending_verification',
+      });
+      AppLogger.logInfo(_tag, 'Transaction stored in Firebase: $transactionId');
+    } catch (e) {
+      AppLogger.logError(_tag, 'Error storing transaction in Firebase', e);
     }
   }
 

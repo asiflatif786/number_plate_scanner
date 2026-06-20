@@ -46,8 +46,6 @@ class _VehicleFoundBody extends StatelessWidget {
                 _buildFeeBreakdownCard(vm),
                 const SizedBox(height: 24),
                 _buildProceedButton(vm, context),
-                const SizedBox(height: 12),
-                _buildSquadCoButton(vm, context),
                 const SizedBox(height: 24),
               ],
             ),
@@ -160,21 +158,6 @@ class _VehicleFoundBody extends StatelessWidget {
         isLoading: vm.isProceeding,
         icon: Icons.arrow_forward,
         color: Colors.green,
-      ),
-    );
-  }
-
-  Widget _buildSquadCoButton(VehicleFoundViewModel vm, BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: AppButton(
-        label: vm.isSquadCoProceeding ? 'Proceeding...' : 'Proceed With SquadCo',
-        onPressed: (vm.isProceeding || vm.isSquadCoProceeding)
-            ? null
-            : () => vm.proceedWithSquadCo(context),
-        isLoading: vm.isSquadCoProceeding,
-        icon: Icons.payment,
-        color: Colors.indigo,
       ),
     );
   }
