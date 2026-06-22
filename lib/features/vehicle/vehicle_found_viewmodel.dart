@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -116,8 +115,6 @@ class VehicleFoundViewModel extends ChangeNotifier {
       }
 
       // Step 2: Launch Checkout URL directly
-      // skip canLaunchUrl check because it is unreliable on Android 11+ 
-      // even with queries in AndroidManifest.xml.
       final uri = Uri.parse(checkoutUrl);
       final launched = await launchUrl(
         uri,
@@ -125,9 +122,6 @@ class VehicleFoundViewModel extends ChangeNotifier {
       );
 
       if (launched) {
-        // Step 3: Store transaction in Firebase
-        await _storeTransactionInFirebase(transactionRef, totalPayable.toInt(), userId);
-
         // Step 4: Navigate to success or next screen
         if (context.mounted) {
           Navigator.pushNamed(
@@ -154,24 +148,6 @@ class VehicleFoundViewModel extends ChangeNotifier {
     } finally {
       isSquadCoProceeding = false;
       notifyListeners();
-    }
-  }
-
-  Future<void> _storeTransactionInFirebase(String transactionId, int amount, String userId) async {
-    try {
-      await FirebaseFirestore.instance.collection('transactions').add({
-        'id': transactionId,
-        'amount': amount,
-        'currency': 'NGN',
-        'payment_method': 'squad',
-        'user_id': userId,
-        'vehicle_license': vehicle.vehicleLicense,
-        'created_at': FieldValue.serverTimestamp(),
-        'status': 'pending_verification', // Status is pending until webhook confirms
-      });
-      AppLogger.logInfo(_tag, 'Transaction stored in Firebase: $transactionId');
-    } catch (e) {
-      AppLogger.logError(_tag, 'Error storing transaction in Firebase', e);
     }
   }
 }

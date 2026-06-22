@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -11,6 +10,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
 import '../../data/models/vehicle_model.dart';
+import '../../data/models/transaction_model.dart';
 import '../../data/repositories/location_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
 
@@ -64,8 +64,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
     if (_terminalId == null || _terminalId!.isEmpty) {
       AppLogger.logWarning(_tag, 'Terminal ID missing from session during init');
     }
-    
-    AppLogger.logInfo(_tag, 'Session loaded: Terminal=$_terminalId');
   }
 
   String _formatAmount(double value) {
@@ -88,29 +86,15 @@ class TransactionCreationViewModel extends ChangeNotifier {
 
   Future<void> _fetchPayloadCategory() async {
     if (_payloadCategories.isNotEmpty) return;
-    AppLogger.logInfo(_tag, 'Fetching payload from JRB...');
     try {
       final response = await http
           .get(Uri.parse(ApiConstants.jrbPayloadCategory))
           .timeout(const Duration(seconds: 10));
-      AppLogger.logInfo(_tag, 'JRB status: ${response.statusCode}');
-      AppLogger.logDebug(_tag, 'JRB body: ${response.body}');
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        final List raw;
-        if (body is List) {
-          raw = body;
-        } else if (body is Map<String, dynamic> && body['data'] is List) {
-          raw = body['data'];
-        } else {
-          AppLogger.logWarning(_tag, 'Unexpected JRB response format');
-          return;
-        }
+        final List raw = (body is List) ? body : (body['data'] is List ? body['data'] : []);
         _payloadCategories = raw.map((e) => Map<String, dynamic>.from(e)).toList();
-        AppLogger.logInfo(_tag, 'Loaded ${_payloadCategories.length} categories');
         notifyListeners();
-      } else {
-        AppLogger.logWarning(_tag, 'JRB returned ${response.statusCode}');
       }
     } catch (e) {
       AppLogger.logWarning(_tag, 'Payload fetch failed: $e');
@@ -121,11 +105,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
     selectedPayloadCategory = category;
     selectedSubCategory = null;
     final items = category['items'];
-    if (items is List) {
-      subCategories = items.map((e) => e.toString()).toList();
-    } else {
-      subCategories = [];
-    }
+    subCategories = (items is List) ? items.map((e) => e.toString()).toList() : [];
     notifyListeners();
   }
 
@@ -139,11 +119,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
     notifyListeners();
 
     for (int attempt = 0; attempt <= retries; attempt++) {
-      if (attempt > 0) {
-        AppLogger.logInfo(_tag, 'Retrying load states (attempt $attempt)');
-        await Future.delayed(const Duration(seconds: 2));
-      }
-
       final result = await _locationRepository.getStates();
       if (result.success && result.data != null) {
         _stateNameToId.clear();
@@ -155,11 +130,8 @@ class TransactionCreationViewModel extends ChangeNotifier {
         notifyListeners();
         return;
       }
-
-      AppLogger.logWarning(_tag,
-          'Failed to load states (attempt $attempt): ${result.failure?.message}');
+      if (attempt < retries) await Future.delayed(const Duration(seconds: 2));
     }
-
     isLoading = false;
     notifyListeners();
   }
@@ -169,12 +141,9 @@ class TransactionCreationViewModel extends ChangeNotifier {
     selectedOriginLga = null;
     originLgas = [];
     notifyListeners();
-
     if (state.isEmpty) return;
-
     final stateId = _stateNameToId[state];
     if (stateId == null) return;
-
     final result = await _locationRepository.getLgas(stateId);
     if (result.success && result.data != null) {
       originLgas = result.data!.map((l) => l.lgaName).toList();
@@ -187,12 +156,9 @@ class TransactionCreationViewModel extends ChangeNotifier {
     selectedDestinationLga = null;
     destinationLgas = [];
     notifyListeners();
-
     if (state.isEmpty) return;
-
     final stateId = _stateNameToId[state];
     if (stateId == null) return;
-
     final result = await _locationRepository.getLgas(stateId);
     if (result.success && result.data != null) {
       destinationLgas = result.data!.map((l) => l.lgaName).toList();
@@ -220,85 +186,51 @@ class TransactionCreationViewModel extends ChangeNotifier {
   }
 
   bool _validate() {
-    final txType = vehicle.transactionType.trim().toLowerCase();
-    final isSingle = txType == 'single';
-
     if (payerNameController.text.trim().isEmpty) {
       errorMessage = 'Payer name is required';
       notifyListeners();
       return false;
     }
-
     if (payerPhoneController.text.trim().length != 11) {
       errorMessage = 'Phone number must be 11 digits';
       notifyListeners();
       return false;
     }
-
     if (selectedOriginState == null) {
       errorMessage = 'Please select origin state';
       notifyListeners();
       return false;
     }
-
     if (selectedOriginLga == null) {
       errorMessage = 'Please select origin LGA';
       notifyListeners();
       return false;
     }
-
-    if (isCompleteTrip && selectedDestinationState == null) {
-      errorMessage = 'Please select destination state';
+    if (isCompleteTrip && (selectedDestinationState == null || selectedDestinationLga == null)) {
+      errorMessage = 'Please select destination state and LGA';
       notifyListeners();
       return false;
     }
-
-    if (isCompleteTrip && selectedDestinationLga == null) {
-      errorMessage = 'Please select destination LGA';
-      notifyListeners();
-      return false;
-    }
-
-    if (isSingle && selectedPayloadCategory == null) {
-      errorMessage = 'Please select a payload category';
-      notifyListeners();
-      return false;
-    }
-
-    if (isSingle && subCategories.isNotEmpty && selectedSubCategory == null) {
-      errorMessage = 'Please select a subcategory';
-      notifyListeners();
-      return false;
-    }
-    
     return true;
   }
 
   Map<String, dynamic> _prepareTmsPayload(String ref, SessionManager session, String email) {
     final txType = vehicle.transactionType.trim().toLowerCase();
     final isSingle = txType == 'single';
-    
     final now = DateTime.now();
-    final transactionDate =
-        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+    final transactionDate = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
 
     Map<String, dynamic>? payloadObject;
     if (isSingle && selectedPayloadCategory != null) {
-      final name = selectedPayloadCategory!['name']?.toString() ?? '';
-      final id = selectedPayloadCategory!['id']?.toString() ?? '';
-      final subCategory = selectedSubCategory ?? name;
-      
       payloadObject = {
-        'subcategory': subCategory,
-        'haulage_category': name,
-        'haulage_category_id': id,
+        'subcategory': selectedSubCategory ?? selectedPayloadCategory!['name'],
+        'haulage_category': selectedPayloadCategory!['name'],
+        'haulage_category_id': selectedPayloadCategory!['id'],
       };
     }
 
     final metadata = <String, dynamic>{
       'channel': 'dealcity',
-      'channel_type': 'pos',
       'terminal_id': session.terminalId,
       'contact': payerPhoneController.text.trim(),
       'vehicle_type': vehicle.vehicleType,
@@ -309,8 +241,8 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'transaction_reference': ref,
       'origin_state': selectedOriginState,
       'origin_lga': selectedOriginLga,
-      'destination_state': isCompleteTrip ? selectedDestinationState : null,
-      'destination_lga': isCompleteTrip ? selectedDestinationLga : null,
+      'destination_state': selectedDestinationState,
+      'destination_lga': selectedDestinationLga,
       'payload': payloadObject,
     };
 
@@ -326,7 +258,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'payment_method': 'transfer',
       'terminal_id': session.terminalId,
       'service_number': session.serviceNumberTransaction,
-      // Root-level fields to satisfy server validation
       'vehicle_license': vehicle.vehicleLicense,
       'vehicle_type': vehicle.vehicleType,
       'transaction_type': vehicle.transactionType,
@@ -340,45 +271,22 @@ class TransactionCreationViewModel extends ChangeNotifier {
 
   Future<void> submit(BuildContext context) async {
     if (!_validate()) return;
-    
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     final session = await SessionManager.instance;
-    _terminalId = session.terminalId;
-
-    if (_terminalId == null || _terminalId!.isEmpty) {
-      errorMessage = 'Session error. Terminal ID missing. Please restart or refresh the dashboard.';
-      isLoading = false;
-      notifyListeners();
-      return;
-    }
-
     final ref = generateTransactionReference();
-    final email = payerEmailController.text.trim().isNotEmpty
-        ? payerEmailController.text.trim()
-        : (session.agentEmail ?? 'customer@example.com');
-    final payload = _prepareTmsPayload(ref, session, email);
-
-    AppLogger.logInfo(_tag, 'Payload ready: $ref (Type: ${vehicle.transactionType})');
-
-    final result = await _transactionRepository.createTransaction(payload);
+    final email = payerEmailController.text.trim().isNotEmpty ? payerEmailController.text.trim() : (session.agentEmail ?? 'customer@example.com');
+    
+    final result = await _transactionRepository.createTransaction(_prepareTmsPayload(ref, session, email));
 
     if (result.success && result.data != null) {
-      AppLogger.logInfo(_tag, 'Created: ${result.data!.transactionReference}');
       isLoading = false;
       notifyListeners();
-
-      if (!context.mounted) return;
-      Navigator.pushReplacementNamed(
-        context,
-        AppRoutes.transactionSuccess,
-        arguments: result.data!,
-      );
+      if (context.mounted) Navigator.pushReplacementNamed(context, AppRoutes.transactionSuccess, arguments: result.data!);
     } else {
-      AppLogger.logWarning(_tag, 'Creation failed: ${result.failure?.message}');
-      errorMessage = result.failure?.message ?? 'Transaction creation failed';
+      errorMessage = result.failure?.message ?? 'Transaction failed';
       isLoading = false;
       notifyListeners();
     }
@@ -386,109 +294,107 @@ class TransactionCreationViewModel extends ChangeNotifier {
 
   Future<void> proceedWithSquadCo(BuildContext context) async {
     if (!_validate()) return;
-
     isSquadCoProceeding = true;
     errorMessage = null;
     notifyListeners();
 
-    AppLogger.logInfo(_tag, 'Proceeding with SquadCo for ${vehicle.vehicleLicense}');
-
-    final session = await SessionManager.instance;
-    _terminalId = session.terminalId;
-    final email = payerEmailController.text.trim().isNotEmpty 
-        ? payerEmailController.text.trim() 
-        : session.agentEmail ?? 'customer@example.com';
-    final userId = session.agentNumber;
-
-    if (userId == null || userId.isEmpty || _terminalId == null || _terminalId!.isEmpty) {
-      isSquadCoProceeding = false;
-      errorMessage = "Agent/Terminal session data not available. Please refresh dashboard.";
-      notifyListeners();
-      return;
-    }
-
-    final serverUrl = Uri.parse('https://tms-local-api.justerrand.ie/squadco/post-transaction');
-
     try {
+      final session = await SessionManager.instance;
+      final email = payerEmailController.text.trim().isNotEmpty ? payerEmailController.text.trim() : (session.agentEmail ?? 'customer@example.com');
+      final userId = session.agentNumber;
+
+      if (userId == null || session.terminalId == null) throw Exception("Session missing. Please log in again.");
+
+      final serverUrl = Uri.parse('https://tms-local-api.justerrand.ie/squadco/post-transaction');
+      final int amountInKobo = (totalPayable * 100).toInt();
+
+      AppLogger.logInfo(_tag, 'Initializing SquadCo Proxy: $serverUrl');
       final response = await http.post(
         serverUrl,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'amount': (totalPayable * 100).toInt(), // Amount in kobo
-          'email': email,
+          'amount': amountInKobo, 
+          'email': email, 
+          'redirect_url': 'chl://payment-success/payment-success'
         }),
+      ).timeout(const Duration(seconds: 25));
+
+      AppLogger.logDebug(_tag, 'SquadCo Proxy Response: ${response.body}');
+
+      if (response.statusCode != 200) throw Exception('Server error: ${response.statusCode}');
+
+      final responseBody = jsonDecode(response.body);
+      if (responseBody['success'] != true) throw Exception(responseBody['message'] ?? 'Init failed');
+
+      final data = responseBody['data'];
+      String rawUrl = (data?['checkout_url'] ?? data?['url'] ?? data?['link'] ?? '').toString();
+      final String transactionRef = (data?['transaction_ref'] ?? data?['reference'] ?? '').toString();
+
+      // Clean URL
+      String cleanUrl = rawUrl.trim().replaceAll('"', '').replaceAll(r'\/', '/');
+      if (cleanUrl.isEmpty) throw Exception('Invalid payment link returned from proxy');
+
+      if (!cleanUrl.startsWith('http')) {
+        cleanUrl = cleanUrl.contains('squadco.com') ? 'https://$cleanUrl' : Uri.parse('https://tms-local-api.justerrand.ie').resolve(cleanUrl).toString();
+      }
+
+      AppLogger.logInfo(_tag, 'Launching SquadCo URL: $cleanUrl');
+      final checkoutUri = Uri.parse(cleanUrl);
+
+      // 1. Create record in TMS before launching browser
+      final tmsResult = await _transactionRepository.createTransaction(_prepareTmsPayload(transactionRef, session, email));
+
+      // 2. Prepare model for display - PREVENT N/A values by merging local state with server response
+      final now = DateTime.now();
+      final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+      
+      final localModel = TransactionModel(
+        transactionReference: transactionRef,
+        customerName: payerNameController.text.trim(),
+        vehicleLicense: vehicle.vehicleLicense,
+        totalAmount: totalPayable,
+        amount: baseAmount,
+        serviceFee: totalFee,
+        paymentMethod: 'squad',
+        status: 'pending',
+        terminalId: session.terminalId!,
+        agentNumber: userId ?? '',
+        createdAt: dateStr,
+        originState: selectedOriginState ?? 'N/A',
+        originLga: selectedOriginLga ?? 'N/A',
+        destinationState: selectedDestinationState ?? 'N/A',
+        destinationLga: selectedDestinationLga ?? 'N/A',
+        transactionType: vehicle.transactionType,
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('Server returned error: ${response.statusCode}');
+      // Merge results if server returned a model
+      final displayModel = (tmsResult.success && tmsResult.data != null)
+          ? localModel.merge(tmsResult.data!)
+          : localModel;
+
+      // 3. Navigate to Success Screen FIRST so it is waiting in the background.
+      if (context.mounted) {
+        Navigator.pushNamed(
+          context,
+          AppRoutes.transactionSuccess,
+          arguments: displayModel,
+        );
       }
 
-      final responseBody = jsonDecode(response.body) as Map<String, dynamic>;
-      if (responseBody['success'] != true) {
-        throw Exception(responseBody['message'] ?? 'Failed to initialize transaction');
-      }
-
-      final data = responseBody['data'] as Map<String, dynamic>;
-      final checkoutUrl = data['checkout_url'] as String?;
-      final transactionRef = data['transaction_ref'] as String?;
-
-      if (checkoutUrl == null || transactionRef == null) {
-        throw Exception('Missing checkout URL or transaction reference');
-      }
-
-      // Create transaction in TMS as pending using Squad's reference
-      final tmsPayload = _prepareTmsPayload(transactionRef, session, email);
-      
-      final tmsResult = await _transactionRepository.createTransaction(tmsPayload);
-      if (!tmsResult.success) {
-        throw Exception('Failed to record transaction in TMS: ${tmsResult.failure?.message}');
-      }
-      
-      final createdTransaction = tmsResult.data!;
-
-      final uri = Uri.parse(checkoutUrl);
-      final launched = await launchUrl(
-        uri,
+      // 4. Launch external browser
+      final bool launched = await launchUrl(
+        checkoutUri, 
         mode: LaunchMode.externalApplication,
       );
 
-      if (launched) {
-        await _storeTransactionInFirebase(transactionRef, totalPayable.toInt(), userId);
+      if (!launched) throw Exception('Could not open browser. Please ensure Chrome or another browser is installed.');
 
-        if (context.mounted) {
-          Navigator.pushNamed(
-            context,
-            AppRoutes.transactionSuccess,
-            arguments: createdTransaction,
-          );
-        }
-      } else {
-        throw Exception('Could not launch payment page');
-      }
     } catch (e) {
       AppLogger.logError(_tag, 'SquadCo error', e);
-      errorMessage = e.toString();
+      errorMessage = e.toString().replaceFirst('Exception: ', '');
     } finally {
       isSquadCoProceeding = false;
       notifyListeners();
-    }
-  }
-
-  Future<void> _storeTransactionInFirebase(String transactionId, int amount, String userId) async {
-    try {
-      await FirebaseFirestore.instance.collection('transactions').add({
-        'id': transactionId,
-        'amount': amount,
-        'currency': 'NGN',
-        'payment_method': 'transfer',
-        'user_id': userId,
-        'vehicle_license': vehicle.vehicleLicense,
-        'created_at': FieldValue.serverTimestamp(),
-        'status': 'pending_verification',
-      });
-      AppLogger.logInfo(_tag, 'Transaction stored in Firebase: $transactionId');
-    } catch (e) {
-      AppLogger.logError(_tag, 'Error storing transaction in Firebase', e);
     }
   }
 

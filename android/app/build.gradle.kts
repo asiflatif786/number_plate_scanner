@@ -2,15 +2,14 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
-    // Add Google Services plugin
-    id("com.google.gms.google-services")
+    // Removed Google Services plugin
 }
 
 android {
     namespace = "com.example.vehicle"
     // Updated to 36 as required by new plugin versions (camera, lifecycle, google_sign_in)
     compileSdk = 36
-    ndkVersion = "27.0.12077973"
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

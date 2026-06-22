@@ -29,7 +29,7 @@ class _TransactionSuccessAnimatedBody extends StatefulWidget {
 
 class _TransactionSuccessAnimatedBodyState
     extends State<_TransactionSuccessAnimatedBody>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _controller;
   late final Animation<double> _panelFade;
   late final Animation<double> _checkScale;
@@ -43,6 +43,8 @@ class _TransactionSuccessAnimatedBodyState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1700),
@@ -89,50 +91,66 @@ class _TransactionSuccessAnimatedBodyState
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final vm = Provider.of<TransactionSuccessViewModel>(context, listen: false);
+      // Automatically verify status when returning from browser if still pending
+      final status = vm.transaction.status.toLowerCase();
+      if (status == 'pending' || status == 'created') {
+        vm.verifyTransaction();
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<TransactionSuccessViewModel>(
-      builder: (context, vm, _) => PopScope(
-        canPop: false,
-        child: Scaffold(
-          appBar: AppBar(
-            automaticallyImplyLeading: false,
-            title: const Text('Transaction Details'),
-            backgroundColor: vm.transaction.statusColor,
-            foregroundColor: Colors.white,
-            actions: [
-              IconButton(
-                icon: vm.isSharing
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.share),
-                tooltip: 'Share Receipt',
-                onPressed: vm.isSharing ? null : () => vm.shareReceipt(),
-              ),
-            ],
+      builder: (context, vm, _) {
+        final t = vm.transaction;
+        return PopScope(
+          canPop: false,
+          child: Scaffold(
+            appBar: AppBar(
+              automaticallyImplyLeading: false,
+              title: const Text('Transaction Details'),
+              backgroundColor: t.statusColor,
+              foregroundColor: Colors.white,
+              actions: [
+                IconButton(
+                  icon: vm.isSharing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.share),
+                  tooltip: 'Share Receipt',
+                  onPressed: vm.isSharing ? null : () => vm.shareReceipt(),
+                ),
+              ],
+            ),
+            body: _SuccessBody(
+              panelFade: _panelFade,
+              checkScale: _checkScale,
+              textFade: _textFade,
+              refFade: _refFade,
+              cardSlide: _cardSlide,
+              cardFade: _cardFade,
+              buttonsFade: _buttonsFade,
+              shareFade: _shareFade,
+            ),
           ),
-          body: _SuccessBody(
-            panelFade: _panelFade,
-            checkScale: _checkScale,
-            textFade: _textFade,
-            refFade: _refFade,
-            cardSlide: _cardSlide,
-            cardFade: _cardFade,
-            buttonsFade: _buttonsFade,
-            shareFade: _shareFade,
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -163,11 +181,23 @@ class _SuccessBody extends StatelessWidget {
     return Consumer<TransactionSuccessViewModel>(
       builder: (context, vm, _) {
         final t = vm.transaction;
-        final isSquad = t.paymentMethod.toLowerCase() == 'squad';
-        final isConfirmed = t.status == 'approved' ||
-            t.status == 'confirmed' ||
-            t.status == 'success';
-        final isDeclined = t.status == 'declined' || t.status == 'failed';
+        final status = t.status.toLowerCase();
+        
+        // Final state: User is done.
+        final isConfirmed = status == 'confirmed';
+        
+        // Verified state: Payment is in, OR we just returned from a successful payment redirect.
+        final isApproved = status == 'approved' || 
+                          status == 'paid' || 
+                          status == 'success' || 
+                          status == 'successful' ||
+                          vm.isPaymentRedirected;
+        
+        // Failure states.
+        final isDeclined = status == 'declined' || status == 'failed';
+        
+        // Initial state.
+        final isPending = (status == 'pending' || status == 'created') && !vm.isPaymentRedirected;
 
         return SingleChildScrollView(
           child: Column(
@@ -190,9 +220,11 @@ class _SuccessBody extends StatelessWidget {
                         child: Icon(
                           isConfirmed
                               ? Icons.check_circle
-                              : (isDeclined
-                                  ? Icons.cancel
-                                  : Icons.info_outline),
+                              : (isApproved
+                                  ? Icons.verified_user
+                                  : (isDeclined
+                                      ? Icons.cancel
+                                      : Icons.hourglass_empty)),
                           size: 80,
                           color: Colors.white,
                         ),
@@ -202,10 +234,12 @@ class _SuccessBody extends StatelessWidget {
                         opacity: textFade,
                         child: Text(
                           isConfirmed
-                              ? 'Transaction Successful!'
-                              : (isDeclined
-                                  ? 'Transaction Declined'
-                                  : 'Transaction Created'),
+                              ? 'Transaction Confirmed'
+                              : (isApproved
+                                  ? 'Payment Verified'
+                                  : (isDeclined
+                                      ? 'Transaction Declined'
+                                      : 'Waiting for Payment')),
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -245,198 +279,159 @@ class _SuccessBody extends StatelessWidget {
                   ),
                 ),
               ),
-              if (t.status == 'pending')
+              
+              // ACTION SECTION: Approve, Verify, Decline
+              if (!isConfirmed)
                 FadeTransition(
                   opacity: buttonsFade,
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: (isApproved ? Colors.green : Colors.indigo).withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: (isApproved ? Colors.green : Colors.indigo).withOpacity(0.15)),
+                    ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: vm.isApproving
-                                ? null
-                                : () => vm.approveTransaction(),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  isSquad ? Colors.indigo : Colors.green.shade600,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: vm.isApproving
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Text(
-                                    isSquad
-                                        ? 'Confirm Squad Payment'
-                                        : 'Approve Transaction',
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                        Text(
+                          isApproved ? 'ACTION REQUIRED' : 'PAYMENT ACTION',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isApproved ? Colors.green.shade800 : Colors.indigo.shade800,
+                            letterSpacing: 1.2,
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: OutlinedButton(
-                            onPressed: vm.isDeclining
-                                ? null
-                                : () => _confirmDecline(context, vm),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.red,
-                              side: const BorderSide(color: Colors.red),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: vm.isDeclining
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.red,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Decline Transaction',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                        const SizedBox(height: 12),
+                        
+                        // 1. APPROVE BUTTON - Visible if payment is verified OR returning from redirect
+                        if (isApproved) ...[
+                          _buildWideButton(
+                            label: 'Approve Transaction',
+                            icon: Icons.check_circle,
+                            color: Colors.green.shade700,
+                            isLoading: vm.isApproving,
+                            onPressed: () => vm.approveTransaction(),
                           ),
+                          const SizedBox(height: 10),
+                        ],
+
+                        // 2. VERIFY BUTTON - Visible while still waiting (not redirected yet)
+                        if (isPending) ...[
+                          _buildWideButton(
+                            label: 'Verify Payment Status',
+                            icon: Icons.sync,
+                            color: Colors.indigo.shade700,
+                            isLoading: vm.isVerifying,
+                            onPressed: () => vm.verifyTransaction(),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+
+                        // 3. DECLINE BUTTON - Always visible until confirmed
+                        _buildWideButton(
+                          label: 'Decline Transaction',
+                          icon: Icons.cancel_outlined,
+                          color: Colors.red,
+                          isOutlined: true,
+                          isLoading: vm.isDeclining,
+                          onPressed: () => _confirmDecline(context, vm),
                         ),
                       ],
                     ),
                   ),
                 ),
+
+              // DASHBOARD / STATUS MESSAGES
               FadeTransition(
                 opacity: buttonsFade,
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     children: [
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton.icon(
-                          onPressed: vm.isVerifying
-                              ? null
-                              : () => vm.verifyTransaction(),
-                          icon: vm.isVerifying
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(Icons.verified),
-                          label: Text(
-                            vm.isVerifying
-                                ? 'Verifying...'
-                                : 'Verify Transaction',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1A237E),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
                       if (vm.statusMessage != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          vm.statusMessage!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDeclined
-                                ? Colors.red
-                                : Colors.green.shade700,
-                            fontWeight: FontWeight.w600,
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDeclined ? Colors.red.shade50 : Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            vm.statusMessage!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDeclined ? Colors.red.shade800 : Colors.blue.shade800,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
+                        const SizedBox(height: 16),
                       ],
+                      _buildWideButton(
+                        label: 'Back to Dashboard',
+                        icon: Icons.dashboard,
+                        color: const Color(0xFF1A237E),
+                        isOutlined: true,
+                        onPressed: () => vm.goToDashboard(context),
+                      ),
                     ],
                   ),
                 ),
               ),
-              FadeTransition(
-                opacity: buttonsFade,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: OutlinedButton.icon(
-                      onPressed: () => vm.goToDashboard(context),
-                      icon: const Icon(Icons.dashboard),
-                      label: const Text(
-                        'Back to Dashboard',
-                        style: TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF1A237E),
-                        side: const BorderSide(color: Color(0xFF1A237E)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              FadeTransition(
-                opacity: shareFade,
-                child: TextButton.icon(
-                  onPressed: vm.isSharing ? null : () => vm.shareReceipt(),
-                  icon: vm.isSharing
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.share, size: 18),
-                  label: Text(
-                    vm.isSharing ? 'Sharing...' : 'Share Receipt',
-                  ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.grey,
-                  ),
-                ),
-              ),
+              
               const SizedBox(height: 32),
             ],
           ),
         );
       },
     );
+  }
+
+  Widget _buildWideButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback? onPressed,
+    bool isLoading = false,
+    bool isOutlined = false,
+  }) {
+    final style = isOutlined 
+      ? OutlinedButton.styleFrom(
+          foregroundColor: color,
+          side: BorderSide(color: color),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          minimumSize: const Size(double.infinity, 50),
+        )
+      : ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          minimumSize: const Size(double.infinity, 50),
+          elevation: 0,
+        );
+
+    final content = isLoading
+        ? const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+          )
+        : Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 20),
+              const SizedBox(width: 8),
+              Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            ],
+          );
+
+    return isOutlined 
+      ? OutlinedButton(onPressed: isLoading ? null : onPressed, style: style, child: content)
+      : ElevatedButton(onPressed: isLoading ? null : onPressed, style: style, child: content);
   }
 
   void _confirmDecline(BuildContext context, TransactionSuccessViewModel vm) {
@@ -470,8 +465,10 @@ class _SuccessBody extends StatelessWidget {
     String label;
     switch (status.toLowerCase()) {
       case 'approved':
+      case 'paid':
       case 'confirmed':
       case 'success':
+      case 'successful':
         chipColor = Colors.green;
         label = status.toUpperCase();
         break;
@@ -512,7 +509,7 @@ class _SuccessBody extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -587,7 +584,7 @@ class _SuccessBody extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  vm.isCopied ? 'Copied \u2713' : 'Copy',
+                  vm.isCopied ? 'Copied ✓' : 'Copy',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -667,7 +664,7 @@ class _SuccessBody extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A237E).withValues(alpha: 0.05),
+            color: const Color(0xFF1A237E).withOpacity(0.05),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(

@@ -27,12 +27,6 @@ dependencies:
   permission_handler: ^11.3.0
   image_picker: ^1.1.2
 
-  # Firebase
-  firebase_core: ^2.25.4
-  firebase_auth: ^4.17.4
-  cloud_firestore: ^4.14.0
-  google_sign_in: ^6.2.1
-
   # UI
   flutter_svg: ^2.0.17
   lottie: ^3.3.1

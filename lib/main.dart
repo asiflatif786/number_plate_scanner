@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 
 import 'app/routes.dart';
 import 'core/session/session_manager.dart';
 import 'core/theme/app_theme.dart';
-import 'core/utils/logger.dart';
 import 'features/agent/agent_dashboard_viewmodel.dart';
 import 'features/admin/admin_dashboard_viewmodel.dart';
 import 'features/auth/login_viewmodel.dart';
@@ -17,13 +15,6 @@ import 'features/splash/splash_viewmodel.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  try {
-    await Firebase.initializeApp();
-    AppLogger.logInfo('Main', 'Firebase initialized');
-  } catch (e) {
-    AppLogger.logWarning('Main', 'Firebase init skipped: $e');
-  }
 
   await (await SessionManager.instance).init();
 
@@ -51,11 +42,45 @@ class HaulageLevyApp extends StatelessWidget {
         title: 'Consolidated Haulage Levy',
         theme: AppTheme.light,
         initialRoute: AppRoutes.splash,
-        routes: AppRoutes.routes,
-        onUnknownRoute: (settings) => MaterialPageRoute(
-          builder: (_) =>
-              RouteNotFoundScreen(route: settings.name ?? 'unknown'),
-        ),
+        // Enhanced route handler to handle deep links with query parameters
+        onGenerateRoute: (settings) {
+          final String name = settings.name ?? '';
+          
+          // Handle cases where the path is just "/" but has query params like ?reference=...
+          if (name.contains('?reference=') || name.contains('&reference=')) {
+             return MaterialPageRoute(
+               builder: AppRoutes.routes[AppRoutes.paymentSuccess]!,
+               settings: settings,
+             );
+          }
+
+          final Uri uri = Uri.parse(name);
+          String path = uri.path;
+          
+          // Check host for custom schemes like chl://payment-success
+          if (uri.host == 'payment-success') {
+            path = AppRoutes.paymentSuccess;
+          }
+
+          // Strip trailing slashes and ensure base path matching
+          if (path.isEmpty || path == '/') {
+             // Default to splash or let standard logic handle it
+          }
+
+          final builder = AppRoutes.routes[path];
+          
+          if (builder != null) {
+            return MaterialPageRoute(
+              builder: builder,
+              settings: settings,
+            );
+          }
+
+          // Final fallback
+          return MaterialPageRoute(
+            builder: (_) => RouteNotFoundScreen(route: name),
+          );
+        },
       ),
     );
   }

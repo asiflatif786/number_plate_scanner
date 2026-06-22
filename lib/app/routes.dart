@@ -29,10 +29,12 @@ import '../features/vehicle/vehicle_not_found_screen.dart';
 import '../features/vehicle/scanner_view.dart';
 import '../features/transaction/transaction_creation_screen.dart';
 import '../features/transaction/transaction_success_screen.dart';
+import '../features/transaction/transaction_success_viewmodel.dart';
 
 class AppRoutes {
   AppRoutes._();
 
+  static const String root = '/';
   static const String splash = '/splash';
   static const String login = '/login';
   static const String corporateRegistration = '/corporate-registration';
@@ -47,6 +49,7 @@ class AppRoutes {
   static const String vehicleNotFound = '/vehicle-not-found';
   static const String transactionCreation = '/transaction-creation';
   static const String transactionSuccess = '/transaction-success';
+  static const String paymentSuccess = '/payment-success';
   static const String notifications = '/notifications';
   static const String scanner = '/scanner';
   static const String viewCompanies = '/view-companies';
@@ -56,6 +59,7 @@ class AppRoutes {
   static const String viewTerminals = '/view-terminals';
 
   static Map<String, WidgetBuilder> routes = {
+    root: (context) => const SplashScreen(),
     splash: (context) => const SplashScreen(),
     login: (context) => const LoginScreen(),
     corporateRegistration: (context) => const CorporateRegistrationScreen(),
@@ -73,6 +77,7 @@ class AppRoutes {
     vehicleNotFound: (context) => const VehicleNotFoundScreen(),
     transactionCreation: (context) => const TransactionCreationScreen(),
     transactionSuccess: (context) => const TransactionSuccessScreen(),
+    paymentSuccess: (context) => const PaymentSuccessLinkHandler(),
     notifications: (context) => const NotificationScreen(),
     scanner: (context) => const ScannerView(),
     viewCompanies: (context) => ChangeNotifierProvider(
@@ -99,4 +104,36 @@ class AppRoutes {
       child: const ViewTerminalsScreen(),
     ),
   };
+}
+
+class PaymentSuccessLinkHandler extends StatelessWidget {
+  const PaymentSuccessLinkHandler({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Signal the Success ViewModel that we've returned from a successful payment
+      TransactionSuccessViewModel.signalPaymentSuccess();
+      
+      // Close this link handler and return to the underlying screen
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+    });
+    
+    return const Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: Color(0xFF2E7D32)),
+            SizedBox(height: 16),
+            Text('Processing Payment Result...', 
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
 }

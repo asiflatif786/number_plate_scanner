@@ -45,14 +45,14 @@ class TransactionModel {
   });
 
   String get formattedTotal =>
-      NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2)
+      NumberFormat.currency(symbol: '₦', decimalDigits: 2)
           .format(totalAmount);
 
   String get formattedAmount =>
-      NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2).format(amount);
+      NumberFormat.currency(symbol: '₦', decimalDigits: 2).format(amount);
 
   String get formattedServiceFee =>
-      NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2)
+      NumberFormat.currency(symbol: '₦', decimalDigits: 2)
           .format(serviceFee);
 
   String get paymentMethodDisplay {
@@ -71,122 +71,74 @@ class TransactionModel {
   }
 
   Color get statusColor {
-    switch (status.toLowerCase()) {
-      case 'approved':
-      case 'confirmed':
-      case 'success':
-        return Colors.green;
-      case 'pending':
-        return Colors.amber;
-      case 'declined':
-      case 'failed':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
+    final s = status.toLowerCase();
+    if (s == 'confirmed') return Colors.green.shade700;
+    if (s == 'approved' || s == 'paid' || s == 'success' || s == 'successful') return const Color(0xFF1976D2);
+    if (s == 'pending' || s == 'created') return Colors.amber.shade800;
+    if (s == 'declined' || s == 'failed') return Colors.red.shade700;
+    return Colors.grey;
   }
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
     final details = json['transaction_details'] as Map<String, dynamic>? ?? {};
-    AppLogger.logDebug(_tag,
-        'fromJson: ref=${json['transaction_reference']} status=${json['status']}');
+    final meta = json['metadata'] as Map<String, dynamic>? ?? {};
+    
+    String getString(dynamic val, {String fallback = 'N/A'}) {
+      if (val == null) return fallback;
+      final s = val.toString().trim();
+      if (s.isEmpty || s.toLowerCase() == 'null' || s.toUpperCase() == 'N/A') return fallback;
+      return s;
+    }
+
     return TransactionModel(
-      transactionReference: json['transaction_reference'] as String? ?? '',
-      transactionId: json['transaction_id'] as String?,
+      transactionReference: getString(json['transaction_reference']) != 'N/A' ? getString(json['transaction_reference']) :
+                           (getString(json['reference']) != 'N/A' ? getString(json['reference']) :
+                           (getString(meta['transaction_reference']) != 'N/A' ? getString(meta['transaction_reference']) :
+                           getString(meta['reference']))),
+      transactionId: getString(json['transaction_id'], fallback: ''),
       status: (json['status'] as String? ?? 'pending').toLowerCase(),
       totalAmount: _parseDouble(
-          details['total'] ?? json['total'] ?? json['total_amount']),
-      customerName: json['customer_name'] as String? ??
-          json['payer_name'] as String? ??
-          'N/A',
-      vehicleLicense: json['vehicle_license'] as String? ??
-          (json['metadata'] is Map<String, dynamic>
-              ? json['metadata']['vehicle_license'] as String?
-              : null) ??
-          'N/A',
-      amount: _parseDouble(json['amount']),
-      serviceFee: _parseDouble(json['service_fee'] ?? json['fee']),
-      paymentMethod: json['payment_method'] as String? ?? 'card',
-      transactionType: json['transaction_type'] as String? ??
-          (json['metadata'] is Map<String, dynamic>
-              ? json['metadata']['transaction_type'] as String?
-              : null) ??
-          'single',
-      originState: json['origin_state'] as String? ??
-          (json['metadata'] is Map<String, dynamic>
-              ? json['metadata']['origin_state'] as String?
-              : null) ??
-          'N/A',
-      originLga: json['origin_lga'] as String? ??
-          (json['metadata'] is Map<String, dynamic>
-              ? json['metadata']['origin_lga'] as String?
-              : null) ??
-          'N/A',
-      destinationState: json['destination_state'] as String? ??
-          (json['metadata'] is Map<String, dynamic>
-              ? json['metadata']['destination_state'] as String?
-              : null) ??
-          'N/A',
-      destinationLga: json['destination_lga'] as String? ??
-          (json['metadata'] is Map<String, dynamic>
-              ? json['metadata']['destination_lga'] as String?
-              : null) ??
-          'N/A',
-      agentNumber: json['agent_number'] as String? ?? '',
-      terminalId: json['terminal_id'] as String? ?? '',
-      createdAt: json['created_at'] as String? ??
-          json['transaction_date'] as String? ??
-          '',
+          details['total'] ?? json['total'] ?? json['total_amount'] ?? meta['total_amount'] ?? json['total_paid'] ?? meta['total'] ?? json['amount_paid']),
+      customerName: getString(json['customer_name']) != 'N/A' ? getString(json['customer_name']) :
+                    (getString(json['payer_name']) != 'N/A' ? getString(json['payer_name']) :
+                    (getString(meta['payer_name']) != 'N/A' ? getString(meta['payer_name']) :
+                    getString(meta['customer_name']))),
+      vehicleLicense: getString(json['vehicle_license']) != 'N/A' ? getString(json['vehicle_license']) :
+                      (getString(meta['vehicle_license']) != 'N/A' ? getString(meta['vehicle_license']) :
+                      (getString(json['license_plate']) != 'N/A' ? getString(json['license_plate']) :
+                      getString(meta['license_plate']))),
+      amount: _parseDouble(json['amount'] ?? meta['amount'] ?? json['base_amount'] ?? meta['base_amount']),
+      serviceFee: _parseDouble(json['service_fee'] ?? json['fee'] ?? meta['fee'] ?? meta['service_fee'] ?? json['fee_amount'] ?? json['service_fee']),
+      paymentMethod: getString(json['payment_method'], fallback: 'card'),
+      transactionType: getString(json['transaction_type'], fallback: 'single'),
+      originState: getString(json['origin_state']) != 'N/A' ? getString(json['origin_state']) : getString(meta['origin_state']),
+      originLga: getString(json['origin_lga']) != 'N/A' ? getString(json['origin_lga']) : getString(meta['origin_lga']),
+      destinationState: getString(json['destination_state']) != 'N/A' ? getString(json['destination_state']) : getString(meta['destination_state']),
+      destinationLga: getString(json['destination_lga']) != 'N/A' ? getString(json['destination_lga']) : getString(meta['destination_lga']),
+      agentNumber: getString(json['agent_number'], fallback: ''),
+      terminalId: getString(json['terminal_id']) != 'N/A' ? getString(json['terminal_id']) : getString(meta['terminal_id'], fallback: ''),
+      createdAt: getString(json['created_at']) != 'N/A' ? getString(json['created_at']) :
+                 (getString(json['transaction_date']) != 'N/A' ? getString(json['transaction_date']) :
+                 getString(meta['transaction_date'], fallback: '')),
     );
   }
 
-  factory TransactionModel.fromDraftAndResponse(
-    TransactionDraftModel draft,
-    String paymentMethod,
-    Map<String, dynamic> responseData,
-    String agentNumber,
-    String terminalId,
-  ) {
-    final details =
-        responseData['transaction_details'] as Map<String, dynamic>? ?? {};
-    final now = DateTime.now();
-    final createdAt =
-        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
-
-    final ref = responseData['transaction_reference'] as String? ?? '';
-    AppLogger.logInfo(_tag,
-        'fromDraftAndResponse: ref=$ref plate=${draft.vehicle.vehicleLicense}');
-
-    return TransactionModel(
-      transactionReference: ref,
-      status: (responseData['status'] as String? ?? 'pending').toLowerCase(),
-      totalAmount: _parseDouble(details['total']),
-      customerName: draft.vehicle.customerName,
-      vehicleLicense: draft.vehicle.vehicleLicense,
-      amount: draft.vehicle.price.amount,
-      serviceFee: draft.vehicle.price.serviceFee,
-      paymentMethod: paymentMethod,
-      transactionType: draft.vehicle.transactionType,
-      originState: draft.originState,
-      originLga: draft.originLga,
-      destinationState: draft.destinationState,
-      destinationLga: draft.destinationLga,
-      agentNumber: agentNumber,
-      terminalId: terminalId,
-      createdAt: createdAt,
-    );
-  }
-
-  TransactionModel copyWith({String? status}) {
+  TransactionModel copyWith({
+    String? status,
+    String? customerName,
+    String? vehicleLicense,
+    double? amount,
+    double? serviceFee,
+    double? totalAmount,
+  }) {
     return TransactionModel(
       transactionReference: transactionReference,
       transactionId: transactionId,
-      customerName: customerName,
-      vehicleLicense: vehicleLicense,
-      amount: amount,
-      serviceFee: serviceFee,
-      totalAmount: totalAmount,
+      customerName: customerName ?? this.customerName,
+      vehicleLicense: vehicleLicense ?? this.vehicleLicense,
+      amount: amount ?? this.amount,
+      serviceFee: serviceFee ?? this.serviceFee,
+      totalAmount: totalAmount ?? this.totalAmount,
       paymentMethod: paymentMethod,
       transactionType: transactionType,
       status: status ?? this.status,
@@ -197,6 +149,31 @@ class TransactionModel {
       agentNumber: agentNumber,
       terminalId: terminalId,
       createdAt: createdAt,
+    );
+  }
+
+  /// Merges two models, protecting local data from being overwritten by "N/A"
+  TransactionModel merge(TransactionModel other) {
+    bool isInvalid(String val) => val == 'N/A' || val.trim().isEmpty;
+
+    return TransactionModel(
+      transactionReference: other.transactionReference.isNotEmpty && other.transactionReference != 'N/A' ? other.transactionReference : transactionReference,
+      transactionId: (other.transactionId != null && other.transactionId!.isNotEmpty) ? other.transactionId : transactionId,
+      status: other.status, 
+      customerName: !isInvalid(other.customerName) ? other.customerName : customerName,
+      vehicleLicense: !isInvalid(other.vehicleLicense) ? other.vehicleLicense : vehicleLicense,
+      amount: other.amount > 0 ? other.amount : amount,
+      serviceFee: other.serviceFee > 0 ? other.serviceFee : serviceFee,
+      totalAmount: other.totalAmount > 0 ? other.totalAmount : totalAmount,
+      paymentMethod: other.paymentMethod.toLowerCase() != 'card' ? other.paymentMethod : paymentMethod,
+      transactionType: other.transactionType.isNotEmpty && other.transactionType != 'N/A' ? other.transactionType : transactionType,
+      originState: !isInvalid(other.originState) ? other.originState : originState,
+      originLga: !isInvalid(other.originLga) ? other.originLga : originLga,
+      destinationState: !isInvalid(other.destinationState) ? other.destinationState : destinationState,
+      destinationLga: !isInvalid(other.destinationLga) ? other.destinationLga : destinationLga,
+      agentNumber: !isInvalid(other.agentNumber) ? other.agentNumber : agentNumber,
+      terminalId: !isInvalid(other.terminalId) ? other.terminalId : terminalId,
+      createdAt: !isInvalid(other.createdAt) ? other.createdAt : createdAt,
     );
   }
 
@@ -223,7 +200,11 @@ class TransactionModel {
   static double _parseDouble(dynamic value) {
     if (value == null) return 0.0;
     if (value is num) return value.toDouble();
-    if (value is String) return double.tryParse(value) ?? 0.0;
+    if (value is String) {
+      final s = value.trim();
+      if (s.isEmpty || s.toUpperCase() == 'N/A' || s.toLowerCase() == 'null') return 0.0;
+      return double.tryParse(s.replaceAll(',', '')) ?? 0.0;
+    }
     return 0.0;
   }
 }

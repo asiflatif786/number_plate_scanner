@@ -10,6 +10,9 @@ import '../../data/repositories/transaction_repository.dart';
 class TransactionSuccessViewModel extends ChangeNotifier {
   static const String _tag = 'TxSuccessVM';
 
+  /// Static reference to the active instance to allow global signaling
+  static TransactionSuccessViewModel? _activeInstance;
+
   TransactionModel transaction;
 
   bool isApproving = false;
@@ -17,11 +20,38 @@ class TransactionSuccessViewModel extends ChangeNotifier {
   bool isVerifying = false;
   bool isCopied = false;
   bool isSharing = false;
+  
+  /// Flag set when returning specifically from the payment success redirect
+  bool isPaymentRedirected = false; 
   String? statusMessage;
 
   TransactionSuccessViewModel({required this.transaction}) {
+    _activeInstance = this;
     AppLogger.logInfo(_tag,
         'Showing receipt: ${transaction.transactionReference} (${transaction.status})');
+  }
+
+  /// Global signal that the app has received a payment success redirect.
+  /// Called by the deep-link route handler.
+  static void signalPaymentSuccess() {
+    AppLogger.logInfo(_tag, 'Global payment success signal received');
+    _activeInstance?._handlePaymentRedirect();
+  }
+
+  void _handlePaymentRedirect() {
+    isPaymentRedirected = true;
+    statusMessage = 'Payment successful! Please click Approve to finalize.';
+    notifyListeners();
+    // Auto-verify to sync with server status immediately
+    verifyTransaction();
+  }
+
+  @override
+  void dispose() {
+    if (_activeInstance == this) {
+      _activeInstance = null;
+    }
+    super.dispose();
   }
 
   String _buildReceiptText() {
@@ -155,15 +185,21 @@ class TransactionSuccessViewModel extends ChangeNotifier {
       );
       if (response.success && response.data != null) {
         final verified = response.data!;
-        transaction = verified.transactionReference.isEmpty
-            ? transaction.copyWith(status: verified.status)
-            : verified;
-        statusMessage = 'Verified: ${transaction.status.toUpperCase()}';
-        AppLogger.logInfo(_tag, '[SUCCESS] Transaction verified');
+        // Use merge to preserve local form data and only update status/ref
+        transaction = transaction.merge(verified);
+        
+        final status = transaction.status.toLowerCase();
+        if (status == 'approved' || status == 'paid' || status == 'success' || status == 'successful') {
+          statusMessage = 'Payment Detected! You can now finalize the transaction.';
+        } else if (status == 'confirmed') {
+          statusMessage = 'Transaction has already been confirmed.';
+        } else {
+          statusMessage = 'Payment status: ${transaction.status.toUpperCase()}';
+        }
+        AppLogger.logInfo(_tag, '[SUCCESS] Transaction verified: ${transaction.status}');
       } else {
-        statusMessage = response.failure?.message ?? 'Verification failed.';
-        AppLogger.logError(
-            _tag, 'Verification failed: ${response.failure?.message}');
+        statusMessage = 'Payment not yet detected. Please wait a moment and try again.';
+        AppLogger.logWarning(_tag, 'Verification returned no data or failed');
       }
     } catch (e) {
       statusMessage = 'Verification error. Please try again.';
