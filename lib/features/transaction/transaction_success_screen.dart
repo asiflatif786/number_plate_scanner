@@ -183,15 +183,14 @@ class _SuccessBody extends StatelessWidget {
         final t = vm.transaction;
         final status = t.status.toLowerCase();
         
-        // Final state: User is done.
-        final isConfirmed = status == 'confirmed';
+        // Finalized states: Agent has approved or system confirmed
+        final isFinalized = status == 'confirmed' || status == 'approved';
         
-        // Verified state: Payment is in, OR we just returned from a successful payment redirect.
-        final isApproved = status == 'approved' || 
-                          status == 'paid' || 
-                          status == 'success' || 
-                          status == 'successful' ||
-                          vm.isPaymentRedirected;
+        // Paid state: Payment is in, but not yet finalized by the agent
+        final isPaid = status == 'paid' || 
+                       status == 'success' || 
+                       status == 'successful' || 
+                       vm.isPaymentRedirected;
         
         // Failure states.
         final isDeclined = status == 'declined' || status == 'failed';
@@ -218,9 +217,9 @@ class _SuccessBody extends StatelessWidget {
                       ScaleTransition(
                         scale: checkScale,
                         child: Icon(
-                          isConfirmed
+                          isFinalized
                               ? Icons.check_circle
-                              : (isApproved
+                              : (isPaid
                                   ? Icons.verified_user
                                   : (isDeclined
                                       ? Icons.cancel
@@ -233,9 +232,9 @@ class _SuccessBody extends StatelessWidget {
                       FadeTransition(
                         opacity: textFade,
                         child: Text(
-                          isConfirmed
-                              ? 'Transaction Confirmed'
-                              : (isApproved
+                          isFinalized
+                              ? (status == 'approved' ? 'Transaction Approved' : 'Transaction Confirmed')
+                              : (isPaid
                                   ? 'Payment Verified'
                                   : (isDeclined
                                       ? 'Transaction Declined'
@@ -281,33 +280,33 @@ class _SuccessBody extends StatelessWidget {
               ),
               
               // ACTION SECTION: Approve, Verify, Decline
-              if (!isConfirmed)
+              if (!isFinalized && !isDeclined)
                 FadeTransition(
                   opacity: buttonsFade,
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: (isApproved ? Colors.green : Colors.indigo).withOpacity(0.05),
+                      color: (isPaid ? Colors.green : Colors.indigo).withOpacity(0.05),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: (isApproved ? Colors.green : Colors.indigo).withOpacity(0.15)),
+                      border: Border.all(color: (isPaid ? Colors.green : Colors.indigo).withOpacity(0.15)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isApproved ? 'ACTION REQUIRED' : 'PAYMENT ACTION',
+                          isPaid ? 'ACTION REQUIRED' : 'PAYMENT ACTION',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: isApproved ? Colors.green.shade800 : Colors.indigo.shade800,
+                            color: isPaid ? Colors.green.shade800 : Colors.indigo.shade800,
                             letterSpacing: 1.2,
                           ),
                         ),
                         const SizedBox(height: 12),
                         
                         // 1. APPROVE BUTTON - Visible if payment is verified OR returning from redirect
-                        if (isApproved) ...[
+                        if (isPaid) ...[
                           _buildWideButton(
                             label: 'Approve Transaction',
                             icon: Icons.check_circle,
@@ -330,7 +329,7 @@ class _SuccessBody extends StatelessWidget {
                           const SizedBox(height: 10),
                         ],
 
-                        // 3. DECLINE BUTTON - Always visible until confirmed
+                        // 3. DECLINE BUTTON - Always visible until finalized
                         _buildWideButton(
                           label: 'Decline Transaction',
                           icon: Icons.cancel_outlined,

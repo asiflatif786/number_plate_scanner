@@ -72,8 +72,10 @@ class TransactionModel {
 
   Color get statusColor {
     final s = status.toLowerCase();
-    if (s == 'confirmed') return Colors.green.shade700;
-    if (s == 'approved' || s == 'paid' || s == 'success' || s == 'successful') return const Color(0xFF1976D2);
+    // Use green for all successful/finalized states
+    if (s == 'confirmed' || s == 'approved' || s == 'paid' || s == 'success' || s == 'successful') {
+      return Colors.green.shade700;
+    }
     if (s == 'pending' || s == 'created') return Colors.amber.shade800;
     if (s == 'declined' || s == 'failed') return Colors.red.shade700;
     return Colors.grey;

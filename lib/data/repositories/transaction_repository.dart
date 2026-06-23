@@ -128,6 +128,25 @@ class TransactionRepository {
     return ApiResponse.failure(response.failure!);
   }
 
+  Future<ApiResponse<Map<String, dynamic>>> getTransactionStats({
+    required String terminalId,
+  }) async {
+    AppLogger.logInfo(_tag, 'Fetching stats for terminal: $terminalId');
+
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGetAllTransaction,
+      fields: {
+        'terminal_id': terminalId,
+      },
+    );
+
+    if (response.success && response.data != null) {
+      return ApiResponse.success(response.data!, response.message);
+    }
+
+    return ApiResponse.failure(response.failure!);
+  }
+
   Future<ApiResponse<bool>> invalidateTransaction({
     required String transactionReference,
   }) async {

@@ -41,19 +41,17 @@ class AgentDashboardViewModel extends ChangeNotifier {
     greeting = _computeGreeting(DateTime.now().hour);
     notifyListeners();
     
-    await Future.wait([
-      _fetchTransactionStats(),
-      _fetchTerminalDetails(),
-    ]);
+    // First fetch terminal details to ensure we have the correct terminalId
+    await _fetchTerminalDetails();
+    // Then fetch stats using that terminalId
+    await _fetchTransactionStats();
   }
 
   Future<void> refresh() async {
     isRefreshing = true;
     notifyListeners();
-    await Future.wait([
-      _fetchTransactionStats(),
-      _fetchTerminalDetails(),
-    ]);
+    await _fetchTerminalDetails();
+    await _fetchTransactionStats();
     isRefreshing = false;
     notifyListeners();
   }
@@ -77,7 +75,7 @@ class AgentDashboardViewModel extends ChangeNotifier {
           await session.setTerminalId(terminalId);
           await session.setSerialNumber(serialNumber);
           
-          AppLogger.logInfo(_tag, 'Terminal details synced to session: $terminalId');
+          AppLogger.logInfo(_tag, 'Terminal details synced: $terminalId');
         }
       }
     } catch (e) {
@@ -87,25 +85,33 @@ class AgentDashboardViewModel extends ChangeNotifier {
   }
 
   Future<void> _fetchTransactionStats() async {
+    if (terminalId == 'N/A' || terminalId.isEmpty) {
+       AppLogger.logWarning(_tag, 'Cannot fetch stats: terminalId is empty');
+       return;
+    }
+
     try {
-      // Each call updates _txRepo.totalTransactions — save before next overwrites
-      await _txRepo.listTransactions(page: 1);
-      totalTransactions = _txRepo.totalTransactions;
-
-      await _txRepo.listTransactions(
-          page: 1, statusFilter: 'approved');
-      approvedCount = _txRepo.totalTransactions;
-
-      await _txRepo.listTransactions(
-          page: 1, statusFilter: 'pending');
-      pendingCount = _txRepo.totalTransactions;
-
-      await _txRepo.listTransactions(
-          page: 1, statusFilter: 'declined');
-      declinedCount = _txRepo.totalTransactions;
+      final response = await _txRepo.getTransactionStats(terminalId: terminalId);
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        totalTransactions = _parseInt(data['total_transactions']);
+        approvedCount = _parseInt(data['approved_transactions']);
+        declinedCount = _parseInt(data['declined_transactions']);
+        pendingCount = _parseInt(data['pending_transactions']);
+        
+        AppLogger.logInfo(_tag, 'Stats updated: T:$totalTransactions A:$approvedCount P:$pendingCount D:$declinedCount');
+      }
     } catch (e) {
       AppLogger.logError(_tag, 'fetchStats error', e);
     }
+    notifyListeners();
+  }
+
+  int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 
   String _computeGreeting(int hour) {

@@ -80,6 +80,7 @@ class ApiConstants {
   static const String actionGetAllAgents = 'get-all-agents';
   static const String actionViewTerminals = 'view-terminals';
   static const String actionGetTerminalDetail = 'get-terminal-detail';
+  static const String actionGetAllTransaction = 'get-all-transaction';
 
   static const String validateCustomer = validateVehicle;
   static const String getCompany = '/corporate/get-company';
@@ -90,6 +91,7 @@ class ApiConstants {
       '/terminal/enable-disable-terminal';
   static const String listTerminals = '/terminal/list-terminals';
   static const String getTerminalDetail = '/terminal/get-terminal-detail';
+  static const String getAllTransaction = '/transaction/get-all-transaction';
 
   // JRB payload category endpoint
   static const String jrbPayloadCategory =

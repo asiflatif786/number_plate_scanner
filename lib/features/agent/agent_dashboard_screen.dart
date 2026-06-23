@@ -233,7 +233,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Today's Activity",
+              const Text("Transaction History",
                   style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

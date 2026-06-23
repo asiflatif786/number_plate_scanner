@@ -134,7 +134,8 @@ class TransactionSuccessViewModel extends ChangeNotifier {
         transactionReference: transaction.transactionReference,
       );
       if (response.success) {
-        transaction = transaction.copyWith(status: 'confirmed');
+        // Updated to 'approved' as per user request
+        transaction = transaction.copyWith(status: 'approved');
         statusMessage = response.message ?? 'Transaction approved and confirmed successfully!';
         AppLogger.logInfo(_tag, '[SUCCESS] Transaction approved');
       } else {
