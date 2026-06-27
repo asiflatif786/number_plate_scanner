@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 
 import '../../data/models/transaction_model.dart';
 import 'transaction_success_viewmodel.dart';
@@ -100,7 +102,6 @@ class _TransactionSuccessAnimatedBodyState
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       final vm = Provider.of<TransactionSuccessViewModel>(context, listen: false);
-      // Automatically verify status when returning from browser if still pending
       final status = vm.transaction.status.toLowerCase();
       if (status == 'pending' || status == 'created') {
         vm.verifyTransaction();
@@ -123,6 +124,11 @@ class _TransactionSuccessAnimatedBodyState
               foregroundColor: Colors.white,
               actions: [
                 IconButton(
+                  icon: const Icon(Icons.print),
+                  tooltip: 'Print Receipt',
+                  onPressed: () => _showPrintOptions(context, vm),
+                ),
+                IconButton(
                   icon: vm.isSharing
                       ? const SizedBox(
                           width: 20,
@@ -139,6 +145,7 @@ class _TransactionSuccessAnimatedBodyState
               ],
             ),
             body: _SuccessBody(
+              vm: vm,
               panelFade: _panelFade,
               checkScale: _checkScale,
               textFade: _textFade,
@@ -153,9 +160,97 @@ class _TransactionSuccessAnimatedBodyState
       },
     );
   }
+
+  void _showPrintOptions(BuildContext context, TransactionSuccessViewModel vm) {
+    vm.getBluetoothDevices();
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => ChangeNotifierProvider.value(
+        value: vm,
+        child: Consumer<TransactionSuccessViewModel>(
+          builder: (context, vm, _) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Print Receipt',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      if (vm.isConnected)
+                        const Chip(
+                          label: Text('Connected', style: TextStyle(color: Colors.white, fontSize: 10)),
+                          backgroundColor: Colors.green,
+                        )
+                      else
+                        const Chip(
+                          label: Text('Disconnected', style: TextStyle(color: Colors.white, fontSize: 10)),
+                          backgroundColor: Colors.red,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (!vm.isConnected) ...[
+                    const Text('Select a printer to connect:'),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 150,
+                      child: vm.devices.isEmpty
+                          ? const Center(child: Text('No bonded devices found.'))
+                          : ListView.builder(
+                              itemCount: vm.devices.length,
+                              itemBuilder: (context, index) {
+                                final device = vm.devices[index];
+                                return ListTile(
+                                  leading: const Icon(Icons.print),
+                                  title: Text(device.name ?? 'Unknown Device'),
+                                  subtitle: Text(device.address ?? ''),
+                                  onTap: () => vm.connectToDevice(device),
+                                );
+                              },
+                            ),
+                    ),
+                  ] else ...[
+                    const Text('Printer ready.'),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: vm.isPrinting ? null : () {
+                        vm.printReceipt();
+                        Navigator.pop(ctx);
+                      },
+                      icon: const Icon(Icons.print),
+                      label: const Text('Confirm Print'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1A237E),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
 class _SuccessBody extends StatelessWidget {
+  final TransactionSuccessViewModel vm;
   final Animation<double> panelFade;
   final Animation<double> checkScale;
   final Animation<double> textFade;
@@ -166,6 +261,7 @@ class _SuccessBody extends StatelessWidget {
   final Animation<double> shareFade;
 
   const _SuccessBody({
+    required this.vm,
     required this.panelFade,
     required this.checkScale,
     required this.textFade,
@@ -178,215 +274,199 @@ class _SuccessBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TransactionSuccessViewModel>(
-      builder: (context, vm, _) {
-        final t = vm.transaction;
-        final status = t.status.toLowerCase();
-        
-        // Finalized states: Agent has approved or system confirmed
-        final isFinalized = status == 'confirmed' || status == 'approved';
-        
-        // Paid state: Payment is in, but not yet finalized by the agent
-        final isPaid = status == 'paid' || 
-                       status == 'success' || 
-                       status == 'successful' || 
-                       vm.isPaymentRedirected;
-        
-        // Failure states.
-        final isDeclined = status == 'declined' || status == 'failed';
-        
-        // Initial state.
-        final isPending = (status == 'pending' || status == 'created') && !vm.isPaymentRedirected;
+    final t = vm.transaction;
+    final status = t.status.toLowerCase();
+    
+    final isFinalized = status == 'confirmed' || status == 'approved';
+    final isPaid = status == 'paid' || 
+                   status == 'success' || 
+                   status == 'successful' || 
+                   vm.isPaymentRedirected;
+    final isDeclined = status == 'declined' || status == 'failed';
+    final isPending = (status == 'pending' || status == 'created') && !vm.isPaymentRedirected;
 
-        return SingleChildScrollView(
-          child: Column(
-            children: [
-              FadeTransition(
-                opacity: panelFade,
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-                  decoration: BoxDecoration(
-                    color: t.statusColor,
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(24),
-                      bottomRight: Radius.circular(24),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      ScaleTransition(
-                        scale: checkScale,
-                        child: Icon(
-                          isFinalized
-                              ? Icons.check_circle
-                              : (isPaid
-                                  ? Icons.verified_user
-                                  : (isDeclined
-                                      ? Icons.cancel
-                                      : Icons.hourglass_empty)),
-                          size: 80,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      FadeTransition(
-                        opacity: textFade,
-                        child: Text(
-                          isFinalized
-                              ? (status == 'approved' ? 'Transaction Approved' : 'Transaction Confirmed')
-                              : (isPaid
-                                  ? 'Payment Verified'
-                                  : (isDeclined
-                                      ? 'Transaction Declined'
-                                      : 'Waiting for Payment')),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      FadeTransition(
-                        opacity: refFade,
-                        child: Text(
-                          'Ref: ${t.transactionReference}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontFamily: 'monospace',
-                            color: Colors.white70,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      FadeTransition(
-                        opacity: refFade,
-                        child: _buildStatusChip(t.status),
-                      ),
-                    ],
-                  ),
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          FadeTransition(
+            opacity: panelFade,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+              decoration: BoxDecoration(
+                color: t.statusColor,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
                 ),
               ),
-              Transform.translate(
-                offset: const Offset(0, -24),
-                child: FadeTransition(
-                  opacity: cardFade,
-                  child: SlideTransition(
-                    position: cardSlide,
-                    child: _buildReceiptCard(context, vm),
-                  ),
-                ),
-              ),
-              
-              // ACTION SECTION: Approve, Verify, Decline
-              if (!isFinalized && !isDeclined)
-                FadeTransition(
-                  opacity: buttonsFade,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: (isPaid ? Colors.green : Colors.indigo).withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: (isPaid ? Colors.green : Colors.indigo).withOpacity(0.15)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isPaid ? 'ACTION REQUIRED' : 'PAYMENT ACTION',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isPaid ? Colors.green.shade800 : Colors.indigo.shade800,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        
-                        // 1. APPROVE BUTTON - Visible if payment is verified OR returning from redirect
-                        if (isPaid) ...[
-                          _buildWideButton(
-                            label: 'Approve Transaction',
-                            icon: Icons.check_circle,
-                            color: Colors.green.shade700,
-                            isLoading: vm.isApproving,
-                            onPressed: () => vm.approveTransaction(),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-
-                        // 2. VERIFY BUTTON - Visible while still waiting (not redirected yet)
-                        if (isPending) ...[
-                          _buildWideButton(
-                            label: 'Verify Payment Status',
-                            icon: Icons.sync,
-                            color: Colors.indigo.shade700,
-                            isLoading: vm.isVerifying,
-                            onPressed: () => vm.verifyTransaction(),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-
-                        // 3. DECLINE BUTTON - Always visible until finalized
-                        _buildWideButton(
-                          label: 'Decline Transaction',
-                          icon: Icons.cancel_outlined,
-                          color: Colors.red,
-                          isOutlined: true,
-                          isLoading: vm.isDeclining,
-                          onPressed: () => _confirmDecline(context, vm),
-                        ),
-                      ],
+              child: Column(
+                children: [
+                  ScaleTransition(
+                    scale: checkScale,
+                    child: Icon(
+                      isFinalized
+                          ? Icons.check_circle
+                          : (isPaid
+                              ? Icons.verified_user
+                              : (isDeclined
+                                  ? Icons.cancel
+                                  : Icons.hourglass_empty)),
+                      size: 80,
+                      color: Colors.white,
                     ),
                   ),
-                ),
-
-              // DASHBOARD / STATUS MESSAGES
-              FadeTransition(
-                opacity: buttonsFade,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Column(
-                    children: [
-                      if (vm.statusMessage != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isDeclined ? Colors.red.shade50 : Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            vm.statusMessage!,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isDeclined ? Colors.red.shade800 : Colors.blue.shade800,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      _buildWideButton(
-                        label: 'Back to Dashboard',
-                        icon: Icons.dashboard,
-                        color: const Color(0xFF1A237E),
-                        isOutlined: true,
-                        onPressed: () => vm.goToDashboard(context),
+                  const SizedBox(height: 12),
+                  FadeTransition(
+                    opacity: textFade,
+                    child: Text(
+                      isFinalized
+                          ? (status == 'approved' ? 'Transaction Approved' : 'Transaction Confirmed')
+                          : (isPaid
+                              ? 'Payment Verified'
+                              : (isDeclined
+                                  ? 'Transaction Declined'
+                                  : 'Waiting for Payment')),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  FadeTransition(
+                    opacity: refFade,
+                    child: Text(
+                      'Ref: ${t.transactionReference}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontFamily: 'monospace',
+                        color: Colors.white70,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  FadeTransition(
+                    opacity: refFade,
+                    child: _buildStatusChip(t.status),
+                  ),
+                ],
               ),
-              
-              const SizedBox(height: 32),
-            ],
+            ),
           ),
-        );
-      },
+          Transform.translate(
+            offset: const Offset(0, -24),
+            child: FadeTransition(
+              opacity: cardFade,
+              child: SlideTransition(
+                position: cardSlide,
+                child: _buildReceiptCard(context, vm),
+              ),
+            ),
+          ),
+          
+          if (!isFinalized && !isDeclined)
+            FadeTransition(
+              opacity: buttonsFade,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: (isPaid ? Colors.green : Colors.indigo).withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: (isPaid ? Colors.green : Colors.indigo).withOpacity(0.15)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isPaid ? 'ACTION REQUIRED' : 'PAYMENT ACTION',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isPaid ? Colors.green.shade800 : Colors.indigo.shade800,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    if (isPaid) ...[
+                      _buildWideButton(
+                        label: 'Approve Transaction',
+                        icon: Icons.check_circle,
+                        color: Colors.green.shade700,
+                        isLoading: vm.isApproving,
+                        onPressed: () => vm.approveTransaction(),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+
+                    if (isPending) ...[
+                      _buildWideButton(
+                        label: 'Verify Payment Status',
+                        icon: Icons.sync,
+                        color: Colors.indigo.shade700,
+                        isLoading: vm.isVerifying,
+                        onPressed: () => vm.verifyTransaction(),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+
+                    _buildWideButton(
+                      label: 'Decline Transaction',
+                      icon: Icons.cancel_outlined,
+                      color: Colors.red,
+                      isOutlined: true,
+                      isLoading: vm.isDeclining,
+                      onPressed: () => _confirmDecline(context, vm),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          FadeTransition(
+            opacity: buttonsFade,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: [
+                  if (vm.statusMessage != null) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDeclined ? Colors.red.shade50 : Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        vm.statusMessage!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDeclined ? Colors.red.shade800 : Colors.blue.shade800,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  _buildWideButton(
+                    label: 'Back to Dashboard',
+                    icon: Icons.dashboard,
+                    color: const Color(0xFF1A237E),
+                    isOutlined: true,
+                    onPressed: () => vm.goToDashboard(context),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 32),
+        ],
+      ),
     );
   }
 
@@ -540,7 +620,7 @@ class _SuccessBody extends StatelessWidget {
             const SizedBox(height: 4),
             _buildInfoRow('Terminal ID', t.terminalId, isMonospace: true),
             const Divider(),
-            _buildReceiptFooter(),
+            _buildReceiptFooter(t.transactionReference),
           ],
         ),
       ),
@@ -690,7 +770,8 @@ class _SuccessBody extends StatelessWidget {
     );
   }
 
-  Widget _buildReceiptFooter() {
+  Widget _buildReceiptFooter(String reference) {
+    final qrUrl = 'https://apidev.jrb-shf.com/validate-transaction?params=$reference';
     return Column(
       children: [
         Center(
@@ -699,12 +780,30 @@ class _SuccessBody extends StatelessWidget {
             style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
+        Center(
+          child: Column(
+            children: [
+              QrImageView(
+                data: qrUrl,
+                version: QrVersions.auto,
+                size: 100.0,
+                backgroundColor: Colors.white,
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Scan to Validate',
+                style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
         const Center(
           child: Text(
             'Thank you for using Consolidated Haulage Levy',
             style: TextStyle(
-                fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
+                fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey),
           ),
         ),
       ],

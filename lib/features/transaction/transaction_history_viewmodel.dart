@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 
 import '../../core/utils/logger.dart';
 import '../../data/models/transaction_model.dart';
@@ -18,6 +19,12 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   String? _selectedStatusFilter;
   String _searchQuery = '';
   String? _verifyingReference;
+  
+  // Bluetooth Printing
+  BlueThermalPrinter bluetooth = BlueThermalPrinter.instance;
+  List<BluetoothDevice> devices = [];
+  bool isConnected = false;
+  bool isPrinting = false;
 
   List<TransactionModel> get transactions => _transactions;
   bool get isLoading => _isLoading;
@@ -30,6 +37,109 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   String? get verifyingReference => _verifyingReference;
   bool get hasMorePages => _currentPage < _repository.totalPages;
   int get totalTransactions => _repository.totalTransactions;
+
+  TransactionHistoryViewModel() {
+    _initBluetooth();
+  }
+
+  Future<void> _initBluetooth() async {
+    try {
+      bool? isConnectedResult = await bluetooth.isConnected;
+      isConnected = isConnectedResult ?? false;
+      
+      bluetooth.onStateChanged().listen((state) {
+        switch (state) {
+          case BlueThermalPrinter.CONNECTED:
+            isConnected = true;
+            notifyListeners();
+            break;
+          case BlueThermalPrinter.DISCONNECTED:
+            isConnected = false;
+            notifyListeners();
+            break;
+          default:
+            break;
+        }
+      });
+    } catch (e) {
+      AppLogger.logError(_tag, 'Bluetooth init error', e);
+    }
+  }
+
+  Future<void> getBluetoothDevices() async {
+    try {
+      devices = await bluetooth.getBondedDevices();
+      notifyListeners();
+    } catch (e) {
+      AppLogger.logError(_tag, 'Error getting bluetooth devices', e);
+    }
+  }
+
+  Future<void> connectToDevice(BluetoothDevice device) async {
+    try {
+      await bluetooth.connect(device);
+      isConnected = true;
+      notifyListeners();
+    } catch (e) {
+      AppLogger.logError(_tag, 'Connection error', e);
+      _errorMessage = 'Failed to connect to printer';
+      notifyListeners();
+    }
+  }
+
+  Future<void> printReceipt(TransactionModel t) async {
+    if (!isConnected) return;
+
+    try {
+      isPrinting = true;
+      notifyListeners();
+
+      final tripType = t.transactionType == 'single' ? 'Single Trip' : 'Complete Trip';
+      
+      bluetooth.write('--------------------------------\n');
+      bluetooth.printCustom('CONSOLIDATED HAULAGE LEVY', 2, 1);
+      bluetooth.printCustom('OFFICIAL RECEIPT', 1, 1);
+      bluetooth.write('--------------------------------\n');
+      bluetooth.printLeftRight('REF:', t.transactionReference, 0);
+      bluetooth.printLeftRight('STATUS:', t.status.toUpperCase(), 0);
+      bluetooth.printLeftRight('DATE:', t.createdAt, 0);
+      bluetooth.write('--------------------------------\n');
+      bluetooth.printCustom('CUSTOMER DETAILS', 1, 0);
+      bluetooth.printLeftRight('NAME:', t.customerName, 0);
+      bluetooth.printLeftRight('VEHICLE:', t.vehicleLicense, 0);
+      bluetooth.printLeftRight('TRIP:', tripType, 0);
+      bluetooth.write('--------------------------------\n');
+      bluetooth.printCustom('ROUTE', 1, 0);
+      bluetooth.printCustom('FROM: ${t.originLga}, ${t.originState}', 0, 0);
+      bluetooth.printCustom('TO:   ${t.destinationLga}, ${t.destinationState}', 0, 0);
+      bluetooth.write('--------------------------------\n');
+      bluetooth.printCustom('PAYMENT', 1, 0);
+      bluetooth.printLeftRight('AMOUNT:', t.formattedAmount, 0);
+      bluetooth.printLeftRight('FEE:', t.formattedServiceFee, 0);
+      bluetooth.printLeftRight('TOTAL:', t.formattedTotal, 1);
+      bluetooth.printLeftRight('METHOD:', t.paymentMethodDisplay, 0);
+      bluetooth.write('--------------------------------\n');
+      bluetooth.printCustom('PROCESSED BY', 1, 0);
+      bluetooth.printLeftRight('AGENT:', t.agentNumber, 0);
+      bluetooth.printLeftRight('TERMINAL:', t.terminalId, 0);
+      bluetooth.write('--------------------------------\n');
+      
+      String qrUrl = 'https://apidev.jrb-shf.com/validate-transaction?params=${t.transactionReference}';
+      bluetooth.printQRcode(qrUrl, 200, 200, 1);
+      
+      bluetooth.printCustom('THANK YOU FOR YOUR PAYMENT', 0, 1);
+      bluetooth.printNewLine();
+      bluetooth.printNewLine();
+      bluetooth.paperCut();
+
+      AppLogger.logInfo(_tag, 'Receipt printed successfully');
+    } catch (e) {
+      AppLogger.logError(_tag, 'Printing error', e);
+    } finally {
+      isPrinting = false;
+      notifyListeners();
+    }
+  }
 
   List<TransactionModel> get filteredTransactions {
     if (_searchQuery.isEmpty) return _transactions;

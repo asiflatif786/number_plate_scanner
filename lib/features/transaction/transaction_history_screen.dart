@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 
 import '../../data/models/transaction_model.dart';
 import 'transaction_history_viewmodel.dart';
@@ -133,7 +135,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               label: Text(label, style: const TextStyle(fontSize: 12)),
               selected: selected,
               onSelected: (_) => vm.onStatusFilterChanged(value),
-              selectedColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+              selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
               backgroundColor: Colors.transparent,
               side: BorderSide(
                 color: selected ? Theme.of(context).primaryColor : Colors.grey.shade300,
@@ -206,10 +208,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   }
 
   Widget _buildShimmerList() {
-    return ShimmerLoader(
+    return const ShimmerLoader(
       itemCount: 5,
       itemHeight: 120,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     );
   }
 
@@ -407,8 +409,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: isSingle
-            ? Colors.blue.withValues(alpha: 0.1)
-            : Colors.purple.withValues(alpha: 0.1),
+            ? Colors.blue.withOpacity(0.1)
+            : Colors.purple.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -535,14 +537,14 @@ class _TransactionDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildReceipt(BuildContext context, t) {
+  Widget _buildReceipt(BuildContext context, TransactionModel t) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -562,13 +564,15 @@ class _TransactionDetailSheet extends StatelessWidget {
             _buildPaymentBreakdown(t),
             const Divider(),
             _buildProcessedBy(t),
+            const Divider(),
+            _buildReceiptFooter(t.transactionReference),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildReceiptHeader(BuildContext context, t) {
+  Widget _buildReceiptHeader(BuildContext context, TransactionModel t) {
     return Row(
       children: [
         const Icon(Icons.receipt_long, size: 20, color: Color(0xFF1A237E)),
@@ -576,6 +580,10 @@ class _TransactionDetailSheet extends StatelessWidget {
         const Expanded(
           child: Text('Transaction Receipt',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF212121))),
+        ),
+        IconButton(
+          icon: const Icon(Icons.print, size: 20, color: Colors.grey),
+          onPressed: () => _showPrintOptions(context, viewModel, t),
         ),
         InkWell(
           onTap: () => _shareReceipt(context, t),
@@ -601,14 +609,101 @@ class _TransactionDetailSheet extends StatelessWidget {
     );
   }
 
-  void _shareReceipt(BuildContext context, t) {
+  void _showPrintOptions(BuildContext context, TransactionHistoryViewModel vm, TransactionModel t) {
+    vm.getBluetoothDevices();
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => ChangeNotifierProvider.value(
+        value: vm,
+        child: Consumer<TransactionHistoryViewModel>(
+          builder: (context, vm, _) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Print Receipt',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      if (vm.isConnected)
+                        const Chip(
+                          label: Text('Connected', style: TextStyle(color: Colors.white, fontSize: 10)),
+                          backgroundColor: Colors.green,
+                        )
+                      else
+                        const Chip(
+                          label: Text('Disconnected', style: TextStyle(color: Colors.white, fontSize: 10)),
+                          backgroundColor: Colors.red,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (!vm.isConnected) ...[
+                    const Text('Select a printer to connect:'),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 150,
+                      child: vm.devices.isEmpty
+                          ? const Center(child: Text('No bonded devices found.'))
+                          : ListView.builder(
+                              itemCount: vm.devices.length,
+                              itemBuilder: (context, index) {
+                                final device = vm.devices[index];
+                                return ListTile(
+                                  leading: const Icon(Icons.print),
+                                  title: Text(device.name ?? 'Unknown Device'),
+                                  subtitle: Text(device.address ?? ''),
+                                  onTap: () => vm.connectToDevice(device),
+                                );
+                              },
+                            ),
+                    ),
+                  ] else ...[
+                    const Text('Printer ready.'),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: vm.isPrinting ? null : () {
+                        vm.printReceipt(t);
+                        Navigator.pop(ctx);
+                      },
+                      icon: const Icon(Icons.print),
+                      label: const Text('Confirm Print'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1A237E),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _shareReceipt(BuildContext context, TransactionModel t) {
     Share.share(
       _buildReceiptText(t),
       subject: 'Consolidated Haulage Levy Receipt - ${t.transactionReference}',
     );
   }
 
-  String _buildReceiptText(t) {
+  String _buildReceiptText(TransactionModel t) {
     final sb = StringBuffer();
     sb.writeln('══════════════════════════════════════');
     sb.writeln('   CONSOLIDATED HAULAGE LEVY — RECEIPT');
@@ -651,7 +746,7 @@ class _TransactionDetailSheet extends StatelessWidget {
     return sb.toString();
   }
 
-  Widget _buildInfoSection(BuildContext context, t) {
+  Widget _buildInfoSection(BuildContext context, TransactionModel t) {
     return Column(
       children: [
         DetailRow(label: 'Transaction Ref', value: t.transactionReference, isSelectable: true),
@@ -669,11 +764,11 @@ class _TransactionDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildRouteSection(t) {
+  Widget _buildRouteSection(TransactionModel t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(title: 'Route', fontSize: 11),
+        const SectionHeader(title: 'Route', fontSize: 11),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -706,7 +801,7 @@ class _TransactionDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildPaymentBreakdown(t) {
+  Widget _buildPaymentBreakdown(TransactionModel t) {
     return Column(
       children: [
         _buildFeeRow('Base Amount', t.formattedAmount),
@@ -720,7 +815,7 @@ class _TransactionDetailSheet extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A237E).withValues(alpha: 0.05),
+            color: const Color(0xFF1A237E).withOpacity(0.05),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -742,11 +837,11 @@ class _TransactionDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildProcessedBy(t) {
+  Widget _buildProcessedBy(TransactionModel t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(title: 'Processed By', fontSize: 11),
+        const SectionHeader(title: 'Processed By', fontSize: 11),
         const SizedBox(height: 8),
         _buildSmallRow('Agent Number', t.agentNumber),
         const SizedBox(height: 4),
@@ -755,7 +850,47 @@ class _TransactionDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusRow(t) {
+  Widget _buildReceiptFooter(String reference) {
+    final qrUrl = 'https://apidev.jrb-shf.com/validate-transaction?params=$reference';
+    return Column(
+      children: [
+        Center(
+          child: Text(
+            '- - - - - - - - - - - - - - - -',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: Column(
+            children: [
+              QrImageView(
+                data: qrUrl,
+                version: QrVersions.auto,
+                size: 80.0,
+                backgroundColor: Colors.white,
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Scan to Validate',
+                style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Center(
+          child: Text(
+            'Thank you for using Consolidated Haulage Levy',
+            style: TextStyle(
+                fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusRow(TransactionModel t) {
     return Row(
       children: [
         const SizedBox(
@@ -779,8 +914,8 @@ class _TransactionDetailSheet extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(
             color: isSingle
-                ? Colors.blue.withValues(alpha: 0.1)
-                : Colors.purple.withValues(alpha: 0.1),
+                ? Colors.blue.withOpacity(0.1)
+                : Colors.purple.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
@@ -808,7 +943,7 @@ class _TransactionDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildPaymentMethodRow(t) {
+  Widget _buildPaymentMethodRow(TransactionModel t) {
     IconData icon;
     switch (t.paymentMethod) {
       case 'card':
