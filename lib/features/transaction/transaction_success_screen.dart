@@ -504,7 +504,13 @@ class _SuccessBody extends StatelessWidget {
             children: [
               Icon(icon, size: 20),
               const SizedBox(width: 8),
-              Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              Flexible(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           );
 
@@ -620,7 +626,7 @@ class _SuccessBody extends StatelessWidget {
             const SizedBox(height: 4),
             _buildInfoRow('Terminal ID', t.terminalId, isMonospace: true),
             const Divider(),
-            _buildReceiptFooter(t.transactionReference),
+            _buildReceiptFooter(t.vehicleLicense),
           ],
         ),
       ),
@@ -642,6 +648,7 @@ class _SuccessBody extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(width: 4),
         InkWell(
           onTap: () => vm.copyReceipt(),
           borderRadius: BorderRadius.circular(8),
@@ -732,13 +739,6 @@ class _SuccessBody extends StatelessWidget {
   Widget _buildPaymentBreakdown(t) {
     return Column(
       children: [
-        _buildFeeRow('Base Amount', t.formattedAmount),
-        const SizedBox(height: 6),
-        _buildFeeRow('Service Fee', t.formattedServiceFee),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Divider(thickness: 1.5),
-        ),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -755,12 +755,16 @@ class _SuccessBody extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF212121))),
               ),
-              SelectableText(
-                t.formattedTotal,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A237E),
+              const SizedBox(width: 8),
+              Flexible(
+                child: SelectableText(
+                  t.formattedTotal,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A237E),
+                  ),
                 ),
               ),
             ],
@@ -770,8 +774,8 @@ class _SuccessBody extends StatelessWidget {
     );
   }
 
-  Widget _buildReceiptFooter(String reference) {
-    final qrUrl = 'https://apidev.jrb-shf.com/validate-transaction?params=$reference';
+  Widget _buildReceiptFooter(String licensePlate) {
+    final qrUrl = 'https://apidev.jrb-shf.com/validate-transaction?params=$licensePlate';
     return Column(
       children: [
         Center(

@@ -42,10 +42,8 @@ class TransactionCreationViewModel extends ChangeNotifier {
   bool get isCompleteTrip => vehicle.transactionType.trim().toLowerCase() == 'complete';
 
   double get baseAmount => vehicle.price.amount;
-  double get adminFee => baseAmount * AppConstants.adminFeePercent;
-  double get processingFee => AppConstants.flatTransactionFee;
-  double get totalFee => adminFee + processingFee;
-  double get totalPayable => baseAmount + totalFee;
+  double get totalFee => 0.0;
+  double get totalPayable => baseAmount;
 
   TransactionCreationViewModel({required this.vehicle}) {
     payerNameController.text =
@@ -71,8 +69,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
   }
 
   String get formattedBaseAmount => _formatAmount(baseAmount);
-  String get formattedAdminFee => _formatAmount(adminFee);
-  String get formattedProcessingFee => _formatAmount(processingFee);
   String get formattedTotalFee => _formatAmount(totalFee);
   String get formattedTotalPayable => _formatAmount(totalPayable);
 

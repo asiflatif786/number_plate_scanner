@@ -21,17 +21,11 @@ class VehicleFoundViewModel extends ChangeNotifier {
   VehicleFoundViewModel({required this.vehicle});
 
   double get baseAmount => vehicle.price.amount;
-  double get adminFee => baseAmount * AppConstants.adminFeePercent;
-  double get flatFee => AppConstants.flatTransactionFee;
-  double get totalFee => adminFee + flatFee;
-  double get totalPayable => baseAmount + totalFee;
+  double get totalFee => 0.0;
+  double get totalPayable => baseAmount;
 
   String get formattedBaseAmount =>
       NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2).format(baseAmount);
-  String get formattedAdminFee =>
-      NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2).format(adminFee);
-  String get formattedFlatFee =>
-      NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2).format(flatFee);
   String get formattedTotalFee =>
       NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2).format(totalFee);
   String get formattedTotalPayable =>

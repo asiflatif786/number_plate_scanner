@@ -122,8 +122,6 @@ class _TransactionDetailScreenState
     sb.writeln('──────────────────────────────────────');
     sb.writeln('PAYMENT');
     sb.writeln('──────────────────────────────────────');
-    sb.writeln('Base Amount:      ${t.formattedAmount}');
-    sb.writeln('Service Fee:      ${t.formattedServiceFee}');
     sb.writeln('Total Paid:       ${t.formattedTotal}');
     sb.writeln('Method:           ${t.paymentMethodDisplay}');
     sb.writeln();
@@ -183,11 +181,13 @@ class _TransactionDetailScreenState
         const SizedBox(width: 8),
         const Expanded(
           child: Text('Transaction Receipt',
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF212121))),
         ),
+        const SizedBox(width: 8),
         InkWell(
           onTap: () => _copyReceipt(t),
           borderRadius: BorderRadius.circular(8),
@@ -285,23 +285,30 @@ class _TransactionDetailScreenState
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF212121))),
                   Text(t.originState,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           fontSize: 11, color: Colors.grey)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward,
-                size: 20, color: Color(0xFF1A237E)),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.0),
+              child: Icon(Icons.arrow_forward,
+                  size: 20, color: Color(0xFF1A237E)),
+            ),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   SelectableText(t.destinationLga,
+                      textAlign: TextAlign.right,
                       style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF212121))),
                   Text(t.destinationState,
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           fontSize: 11, color: Colors.grey)),
                 ],
@@ -316,13 +323,6 @@ class _TransactionDetailScreenState
   Widget _buildPaymentBreakdown(t) {
     return Column(
       children: [
-        _buildFeeRow('Base Amount', t.formattedAmount),
-        const SizedBox(height: 6),
-        _buildFeeRow('Service Fee', t.formattedServiceFee),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Divider(thickness: 1.5),
-        ),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(
@@ -340,18 +340,22 @@ class _TransactionDetailScreenState
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF212121))),
               ),
-              SelectableText(
-                t.formattedTotal,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A237E),
+              const SizedBox(width: 8),
+              Flexible(
+                child: SelectableText(
+                  t.formattedTotal,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A237E),
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 12),
         _buildPaymentMethodRow(t),
       ],
     );
@@ -385,6 +389,7 @@ class _TransactionDetailScreenState
         const SizedBox(height: 8),
         const Center(
           child: Text('Thank you for using Consolidated Haulage Levy',
+              textAlign: TextAlign.center,
               style: TextStyle(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
@@ -446,20 +451,23 @@ class _TransactionDetailScreenState
           child: Text('Status',
               style: TextStyle(fontSize: 12, color: Colors.grey)),
         ),
-        Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-          decoration: BoxDecoration(
-            color: t.statusColor.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            t.status.toUpperCase(),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: t.statusColor,
-              letterSpacing: 1,
+        Flexible(
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: t.statusColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              t.status.toUpperCase(),
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: t.statusColor,
+                letterSpacing: 1,
+              ),
             ),
           ),
         ),
@@ -497,11 +505,15 @@ class _TransactionDetailScreenState
               style: const TextStyle(
                   fontSize: 13, color: Colors.grey)),
         ),
-        SelectableText(value,
-            style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF212121))),
+        const SizedBox(width: 8),
+        Flexible(
+          child: SelectableText(value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF212121))),
+        ),
       ],
     );
   }
@@ -530,11 +542,14 @@ class _TransactionDetailScreenState
         ),
         Icon(icon, size: 16, color: Colors.grey),
         const SizedBox(width: 4),
-        Text(t.paymentMethodDisplay,
-            style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF212121))),
+        Expanded(
+          child: Text(t.paymentMethodDisplay,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF212121))),
+        ),
       ],
     );
   }

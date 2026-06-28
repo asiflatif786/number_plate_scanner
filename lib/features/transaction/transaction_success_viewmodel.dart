@@ -124,8 +124,6 @@ class TransactionSuccessViewModel extends ChangeNotifier {
     sb.writeln('──────────────────────────────────────');
     sb.writeln('PAYMENT');
     sb.writeln('──────────────────────────────────────');
-    sb.writeln('Base Amount:      ${t.formattedAmount}');
-    sb.writeln('Service Fee:      ${t.formattedServiceFee}');
     sb.writeln('Total Paid:       ${t.formattedTotal}');
     sb.writeln('Method:           ${t.paymentMethodDisplay}');
     sb.writeln();
@@ -199,8 +197,6 @@ class TransactionSuccessViewModel extends ChangeNotifier {
       bluetooth.printCustom('TO:   ${t.destinationLga}, ${t.destinationState}', 0, 0);
       bluetooth.write('--------------------------------\n');
       bluetooth.printCustom('PAYMENT', 1, 0);
-      bluetooth.printLeftRight('AMOUNT:', t.formattedAmount, 0);
-      bluetooth.printLeftRight('FEE:', t.formattedServiceFee, 0);
       bluetooth.printLeftRight('TOTAL:', t.formattedTotal, 1); // Bold if supported
       bluetooth.printLeftRight('METHOD:', t.paymentMethodDisplay, 0);
       bluetooth.write('--------------------------------\n');
@@ -209,8 +205,8 @@ class TransactionSuccessViewModel extends ChangeNotifier {
       bluetooth.printLeftRight('TERMINAL:', t.terminalId, 0);
       bluetooth.write('--------------------------------\n');
       
-      // QR Code for validation
-      String qrUrl = 'https://apidev.jrb-shf.com/validate-transaction?params=${t.transactionReference}';
+      // QR Code for validation using Vehicle License Plate
+      String qrUrl = 'https://apidev.jrb-shf.com/validate-transaction?params=${t.vehicleLicense}';
       bluetooth.printQRcode(qrUrl, 200, 200, 1);
       
       bluetooth.printCustom('THANK YOU FOR YOUR PAYMENT', 0, 1);
