@@ -45,10 +45,8 @@ class _TransactionCreationBody extends StatelessWidget {
                 _buildPayerInfoCard(vm),
                 const SizedBox(height: 12),
                 _buildOriginCard(vm),
-                if (vm.isCompleteTrip) ...[
-                  const SizedBox(height: 12),
-                  _buildDestinationCard(vm),
-                ],
+                const SizedBox(height: 12),
+                _buildDestinationCard(vm),
                 const SizedBox(height: 12),
                 if (!vm.isCompleteTrip) ...[
                   _buildPayloadCategoryCard(vm),
@@ -87,8 +85,10 @@ class _TransactionCreationBody extends StatelessWidget {
           DetailRow(label: 'Vehicle Type', value: vehicle.vehicleType),
           const SizedBox(height: 6),
           _buildTripTypeChip(vehicle.transactionType),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           DetailRow(label: 'Base Amount', value: '₦${vm.formattedBaseAmount}'),
+          const SizedBox(height: 6),
+          DetailRow(label: 'Convenience Fee', value: '₦${vm.formattedTotalFee}'),
         ],
       ),
     );

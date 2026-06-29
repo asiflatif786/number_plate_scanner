@@ -32,11 +32,20 @@ class VehicleModel {
   });
 
   factory VehicleModel.fromJson(Map<String, dynamic> json) {
-    final priceData = json['price'] as Map<String, dynamic>? ?? {};
+    final dynamic priceRaw = json['price'];
+    
+    // Merge root json with price object to ensure we catch fees regardless of nesting
+    final Map<String, dynamic> priceData = Map<String, dynamic>.from(json);
+    if (priceRaw is Map) {
+      priceData.addAll(Map<String, dynamic>.from(priceRaw));
+    }
+
     return VehicleModel(
       customerName: json['customer_name'] as String? ?? 'N/A',
       vehicleLicense: json['vehicle_license'] as String? ?? 'N/A',
-      vehicleType: json['vehicle_type'] as String? ?? priceData['name'] as String? ?? 'N/A',
+      vehicleType: json['vehicle_type'] as String? ?? 
+                   (priceRaw is Map ? priceRaw['name'] as String? : null) ?? 
+                   'N/A',
       vehicleColor: json['vehicle_color'] as String? ?? 'N/A',
       vehicleMake: json['vehicle_make'] as String? ?? 'N/A',
       vehicleModel: json['vehicle_model'] as String? ?? 'N/A',
@@ -45,7 +54,9 @@ class VehicleModel {
       enumeratingLga: json['enumerating_lga'] as String?,
       issuingState: json['issuing_state'] as String?,
       phoneNumber: json['phone_number'] as String?,
-      transactionType: json['transaction_type'] as String? ?? priceData['type'] as String? ?? 'single',
+      transactionType: json['transaction_type'] as String? ?? 
+                       (priceRaw is Map ? priceRaw['type'] as String? : null) ?? 
+                       'single',
       price: PriceModel.fromJson(priceData),
     );
   }

@@ -731,7 +731,7 @@ class _TransactionDetailSheet extends StatelessWidget {
     sb.writeln('PAYMENT');
     sb.writeln('──────────────────────────────────────');
     sb.writeln('Base Amount:      ${t.formattedAmount}');
-    sb.writeln('Service Fee:      ${t.formattedServiceFee}');
+    sb.writeln('Convenience Fee:  ${t.formattedServiceFee}');
     sb.writeln('Total Paid:       ${t.formattedTotal}');
     sb.writeln('Method:           ${t.paymentMethodDisplay}');
     sb.writeln();
@@ -806,7 +806,7 @@ class _TransactionDetailSheet extends StatelessWidget {
       children: [
         _buildFeeRow('Base Amount', t.formattedAmount),
         const SizedBox(height: 6),
-        _buildFeeRow('Service Fee', t.formattedServiceFee),
+        _buildFeeRow('Convenience Fee', t.formattedServiceFee),
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 8),
           child: Divider(thickness: 1.5),

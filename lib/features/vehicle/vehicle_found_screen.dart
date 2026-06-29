@@ -139,7 +139,11 @@ class _VehicleFoundBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
+            const SectionHeader(title: 'Payment Breakdown'),
+            const Divider(),
+            _buildFeeRow('Base Amount', vm.formattedBaseAmount),
+            _buildFeeRow('Convenience Fee', vm.formattedTotalFee),
+            const Divider(),
             _buildTotalPayableRow(vm.formattedTotalPayable),
           ],
         ),
@@ -164,7 +168,7 @@ class _VehicleFoundBody extends StatelessWidget {
 
   Widget _buildFeeRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           Expanded(
@@ -184,27 +188,30 @@ class _VehicleFoundBody extends StatelessWidget {
   }
 
   Widget _buildTotalPayableRow(String formattedTotal) {
-    return Row(
-      children: [
-        const Expanded(
-          child: Text(
-            'Total Payable',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF212121),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'Total Payable',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF212121),
+              ),
             ),
           ),
-        ),
-        Text(
-          formattedTotal,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1A237E),
+          Text(
+            formattedTotal,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A237E),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

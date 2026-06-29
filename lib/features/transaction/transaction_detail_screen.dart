@@ -122,6 +122,8 @@ class _TransactionDetailScreenState
     sb.writeln('──────────────────────────────────────');
     sb.writeln('PAYMENT');
     sb.writeln('──────────────────────────────────────');
+    sb.writeln('Base Amount:      ${t.formattedAmount}');
+    sb.writeln('Convenience Fee:  ${t.formattedServiceFee}');
     sb.writeln('Total Paid:       ${t.formattedTotal}');
     sb.writeln('Method:           ${t.paymentMethodDisplay}');
     sb.writeln();
@@ -323,6 +325,13 @@ class _TransactionDetailScreenState
   Widget _buildPaymentBreakdown(t) {
     return Column(
       children: [
+        _buildFeeRow('Base Amount', t.formattedAmount),
+        const SizedBox(height: 6),
+        _buildFeeRow('Convenience Fee', t.formattedServiceFee),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Divider(thickness: 1.5),
+        ),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(

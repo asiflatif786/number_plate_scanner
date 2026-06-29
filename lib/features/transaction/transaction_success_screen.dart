@@ -626,7 +626,7 @@ class _SuccessBody extends StatelessWidget {
             const SizedBox(height: 4),
             _buildInfoRow('Terminal ID', t.terminalId, isMonospace: true),
             const Divider(),
-            _buildReceiptFooter(t.vehicleLicense),
+            _buildReceiptFooter(t.transactionReference),
           ],
         ),
       ),
@@ -774,8 +774,8 @@ class _SuccessBody extends StatelessWidget {
     );
   }
 
-  Widget _buildReceiptFooter(String licensePlate) {
-    final qrUrl = 'https://apidev.jrb-shf.com/validate-transaction?params=$licensePlate';
+  Widget _buildReceiptFooter(String reference) {
+    final qrUrl = 'https://apidev.jrb-shf.com/validate-transaction?params=$reference';
     return Column(
       children: [
         Center(

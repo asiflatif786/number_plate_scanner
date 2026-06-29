@@ -42,8 +42,13 @@ class TransactionCreationViewModel extends ChangeNotifier {
   bool get isCompleteTrip => vehicle.transactionType.trim().toLowerCase() == 'complete';
 
   double get baseAmount => vehicle.price.amount;
-  double get totalFee => 0.0;
-  double get totalPayable => baseAmount;
+  
+  // Use service fee from API if available, fallback to calculation
+  double get totalFee => vehicle.price.serviceFee > 0 
+      ? vehicle.price.serviceFee 
+      : (baseAmount * AppConstants.adminFeePercent + AppConstants.flatTransactionFee);
+      
+  double get totalPayable => baseAmount + totalFee;
 
   TransactionCreationViewModel({required this.vehicle}) {
     payerNameController.text =
@@ -202,7 +207,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-    if (isCompleteTrip && (selectedDestinationState == null || selectedDestinationLga == null)) {
+    if (selectedDestinationState == null || selectedDestinationLga == null) {
       errorMessage = 'Please select destination state and LGA';
       notifyListeners();
       return false;

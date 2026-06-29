@@ -23,8 +23,18 @@ class PriceModel {
 
   factory PriceModel.fromJson(Map<String, dynamic> json) {
     return PriceModel(
-      amount: _parseDouble(json['price'] ?? json['amount']),
-      serviceFee: _parseDouble(json['service_fee']),
+      amount: _parseDouble(json['amount'] ?? json['price'] ?? json['base_amount'] ?? json['baseAmount'] ?? json['total_paid']),
+      serviceFee: _parseDouble(
+        json['convenience_fee'] ?? 
+        json['convience_fee'] ?? 
+        json['service_fee'] ?? 
+        json['fee'] ?? 
+        json['fee_amount'] ?? 
+        json['admin_fee'] ?? 
+        json['serviceFee'] ?? 
+        json['total_fee'] ??
+        json['charge']
+      ),
       currency: json['currency'] as String? ?? 'NGN',
     );
   }
@@ -38,7 +48,11 @@ class PriceModel {
   static double _parseDouble(dynamic value) {
     if (value == null) return 0.0;
     if (value is num) return value.toDouble();
-    if (value is String) return double.tryParse(value) ?? 0.0;
+    if (value is String) {
+      final s = value.trim();
+      if (s.isEmpty || s.toUpperCase() == 'N/A' || s.toLowerCase() == 'null') return 0.0;
+      return double.tryParse(s.replaceAll(',', '')) ?? 0.0;
+    }
     return 0.0;
   }
 }

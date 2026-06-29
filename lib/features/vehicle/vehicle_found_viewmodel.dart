@@ -21,8 +21,13 @@ class VehicleFoundViewModel extends ChangeNotifier {
   VehicleFoundViewModel({required this.vehicle});
 
   double get baseAmount => vehicle.price.amount;
-  double get totalFee => 0.0;
-  double get totalPayable => baseAmount;
+  
+  // Use service fee from API if available (> 0), otherwise fallback to local calculation
+  double get totalFee => vehicle.price.serviceFee > 0 
+      ? vehicle.price.serviceFee 
+      : (baseAmount * AppConstants.adminFeePercent + AppConstants.flatTransactionFee);
+      
+  double get totalPayable => baseAmount + totalFee;
 
   String get formattedBaseAmount =>
       NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2).format(baseAmount);
