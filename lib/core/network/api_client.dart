@@ -217,23 +217,42 @@ class ApiClient {
   ApiResponse<Map<String, dynamic>> _handleResponse(
     http.Response httpResponse,
   ) {
-    final body = _parseBody(httpResponse);
-    final message = body['message'] as String? ?? 'Unknown error';
+    final responseBody = _parseBody(httpResponse);
+    
+    // Handle nested TMS response if present
+    Map<String, dynamic> tmsData = responseBody;
+    if (responseBody.containsKey('body') && responseBody['body'] is Map<String, dynamic>) {
+      tmsData = responseBody['body'];
+    }
+
+    // Extraction logic: try to find a descriptive message
+    String? message = tmsData['message'] as String? 
+        ?? responseBody['message'] as String?;
     
     // Support both 'data' and 'Data' keys
-    final rawData = body['data'] ?? body['Data'];
+    final rawData = tmsData['data'] ?? tmsData['Data'] ?? responseBody['data'] ?? responseBody['Data'];
+
+    // If message is generic (like "not found") and data is a string, use data as the message
+    if ((message == null || message.toLowerCase() == 'not found' || message.toLowerCase() == 'error') && 
+        rawData is String && rawData.isNotEmpty) {
+      message = rawData;
+    }
+
+    message ??= 'Unknown error';
 
     // Support both old (status: true/false) and new (status_code: "00") formats
-    final oldStatus = body['status'] as bool?;
-    final statusCode = body['status_code'] as String?;
+    final oldStatus = tmsData['status'] ?? responseBody['status'];
+    final statusCode = tmsData['status_code'] as String? ?? responseBody['status_code'] as String?;
 
-    final isSuccess = oldStatus == true || statusCode == '00';
+    final isSuccess = oldStatus == true || oldStatus == 'true' || statusCode == '00';
 
     Map<String, dynamic> data = {};
     if (rawData is Map<String, dynamic>) {
       data = rawData;
     } else if (rawData is List) {
       data = {'data_list': rawData};
+    } else if (rawData != null && rawData is! String) {
+       data = {'value': rawData};
     }
 
     AppLogger.logInfo(_tag, '${httpResponse.statusCode} → $message');
@@ -254,31 +273,51 @@ class ApiClient {
   }
 
   Failure _mapHttpError(int statusCode, String message) {
+    // If the message is generic, use standard HTTP status messages
+    final effectiveMessage = (message == 'Unknown error' || message.isEmpty || message.toLowerCase() == 'not found')
+        ? _getStandardErrorMessage(statusCode)
+        : message;
+
     switch (statusCode) {
       case 404:
-        return NotFoundFailure(message);
+        return NotFoundFailure(effectiveMessage);
       case 500:
-        return const ServerFailure('Internal server error. Please try again.');
+        return ServerFailure(effectiveMessage);
       case 503:
-        return const NetworkFailure(
-            'Service unavailable. Please try again later.');
+        return NetworkFailure(effectiveMessage);
       case 422:
-        return const ServerFailure('Validation failed. Check your input.');
+        return ServerFailure(effectiveMessage);
       case 401:
-        return const AuthFailure('Invalid API key. Please contact support.');
+        return AuthFailure(effectiveMessage);
       default:
-        return UnknownFailure(message);
+        return UnknownFailure(effectiveMessage);
+    }
+  }
+
+  String _getStandardErrorMessage(int statusCode) {
+    switch (statusCode) {
+      case 404:
+        return 'Resource not found.';
+      case 500:
+        return 'Internal server error. Please try again.';
+      case 503:
+        return 'Service unavailable. Please try again later.';
+      case 401:
+        return 'Unauthorized access.';
+      default:
+        return 'Something went wrong. Please try again.';
     }
   }
 
   Failure _mapBusinessError(String message, String? statusCode) {
     // Map by status_code first (new TMS format)
     switch (statusCode) {
+      case '01': // Added 01 for Not Found based on logs
+      case '04':
+        return NotFoundFailure(message);
       case '02':
       case '03':
         return const AuthFailure('Authentication error. Please re-login.');
-      case '04':
-        return NotFoundFailure(message);
       case '05':
         return DuplicateFailure(message);
     }

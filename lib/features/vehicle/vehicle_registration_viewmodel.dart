@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/routes.dart';
 import '../../core/utils/logger.dart';
 import '../../data/models/vehicle_registration_model.dart';
 import '../../data/repositories/location_repository.dart';
@@ -277,12 +278,19 @@ class VehicleRegistrationViewModel extends ChangeNotifier {
             content: const Text('Vehicle registered successfully'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  Navigator.of(context).pop(); // pop dialog
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    AppRoutes.agentDashboard,
+                    (route) => false,
+                  );
+                },
                 child: const Text('OK'),
               ),
             ],
           ),
-        ).then((_) => Navigator.of(context).pop());
+        );
       } else {
         AppLogger.logWarning(_tag, 'Registration failed: ${result.failure?.message}');
         errorMessage = _mapFailureMessage(result.failure!.runtimeType.toString());

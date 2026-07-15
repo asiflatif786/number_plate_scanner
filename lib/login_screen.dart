@@ -115,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Hero(
                         tag: 'logo',
                         child: Image.asset(
-                          'assets/images/logo.png',
+                          'assets/images/logo.jpeg',
                           height: 120,
                           errorBuilder: (context, error, stackTrace) =>
                               const Icon(Icons.directions_car,

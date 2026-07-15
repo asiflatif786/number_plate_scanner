@@ -209,8 +209,8 @@ class TransactionSuccessViewModel extends ChangeNotifier {
       bluetooth.printLeftRight('TERMINAL:', t.terminalId, 0);
       bluetooth.write('--------------------------------\n');
       
-      // QR Code for validation using Transaction Reference (replaced vehicle license)
-      String qrUrl = 'https://apidev.jrb-shf.com/validate-transaction?params=${t.transactionReference}';
+      // QR Code for validation using Vehicle License (RFID status check)
+      String qrUrl = 'https://apidev.jrb-shf.com/api/v3/vehicle/get-vehicle-rfid-status?params=${t.vehicleLicense}';
       bluetooth.printQRcode(qrUrl, 200, 200, 1);
       
       bluetooth.printCustom('THANK YOU FOR YOUR PAYMENT', 0, 1);

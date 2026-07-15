@@ -172,7 +172,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   Widget _buildLogo() {
     return Image.asset(
-      'assets/images/logo.png',
+      'assets/images/logo.jpeg',
       width: 100,
       height: 100,
       fit: BoxFit.contain,

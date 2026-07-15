@@ -166,17 +166,28 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF212121))),
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _actionCard(
-                  icon: Icons.search,
-                  label: 'Search Vehicle',
-                  color: const Color(0xFF1A237E),
-                  onTap: () => vm.navigateToVehicleSearch(context),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => vm.navigateToVehicleSearch(context),
+              icon: const Icon(Icons.payment, color: Colors.white),
+              label: const Text(
+                'Pay For Trips',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-            ],
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1A237E),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
+              ),
+            ),
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/routes.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/errors/failure.dart';
+import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
 import '../../data/repositories/vehicle_repository.dart';
 
@@ -70,11 +71,36 @@ class VehicleSearchViewModel extends ChangeNotifier {
         Navigator.pushNamed(context, AppRoutes.vehicleFound, arguments: result.data);
       } else if (result.failure != null) {
         if (result.failure is NotFoundFailure) {
-          AppLogger.logInfo(_tag, 'Vehicle not found: $plate');
+          AppLogger.logInfo(_tag, 'Vehicle not found: $plate. Fetching service metadata and RFID status...');
+
+          // Fetch metadata if vehicle not found
+          final session = await SessionManager.instance;
+          final serviceNumber = session.serviceNumberValidation ?? '';
+          
+          Map<String, dynamic>? metadata;
+          if (serviceNumber.isNotEmpty) {
+            final metaResult = await _repository.getServiceMetadata(serviceNumber);
+            if (metaResult.success) {
+              metadata = metaResult.data;
+            }
+          }
+
+          // Fetch External RFID status/details
+          Map<String, dynamic>? rfidData;
+          final rfidResult = await _repository.getVehicleRfidStatus(plate);
+          if (rfidResult.success) {
+            rfidData = rfidResult.data;
+          }
 
           if (!context.mounted) return;
           Navigator.pushNamed(
-              context, AppRoutes.vehicleNotFound, arguments: plate);
+              context, 
+              AppRoutes.vehicleNotFound, 
+              arguments: {
+                'licensePlate': plate,
+                'metadata': metadata,
+                'rfidData': rfidData,
+              });
         } else if (result.failure is NetworkFailure) {
           errorMessage = 'No internet connection. Check your network.';
           AppLogger.logWarning(

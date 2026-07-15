@@ -97,6 +97,14 @@ class ApiConstants {
   static const String jrbPayloadCategory =
       'https://api.jrb-shf.com/api/v3/enum/get-payload-category';
 
+  // External Enum endpoints
+  static const String getServiceEnums = 
+      'https://tmsdev.cyber1apps.com/api/v3/enum/get-service-enums';
+  
+  // External RFID Status endpoint
+  static const String getVehicleRfidStatus = 
+      'https://apidev.jrb-shf.com/api/v3/vehicle/get-vehicle-rfid-status';
+
   // Payment methods
   static const String paymentMethodCard = 'card';
   static const String paymentMethodWallet = 'wallet';
