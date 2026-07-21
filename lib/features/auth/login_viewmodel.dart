@@ -104,6 +104,8 @@ class LoginViewModel extends ChangeNotifier {
           role: user.role,
           agentNumber: user.agentNumber,
           companyNumber: user.companyNumber,
+          assignedState: user.assignedState,
+          serviceNumberIntraState: user.serviceNumberIntraState,
         );
         if (user.authToken != null) {
           await session.setAuthToken(user.authToken!);

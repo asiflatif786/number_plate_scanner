@@ -14,6 +14,8 @@ import '../../data/models/transaction_model.dart';
 import '../../data/repositories/location_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
 
+enum TransactionMode { interState, intraState }
+
 class TransactionCreationViewModel extends ChangeNotifier {
   static const String _tag = 'TxCreateVM';
 
@@ -24,16 +26,28 @@ class TransactionCreationViewModel extends ChangeNotifier {
   bool isLoading = false;
   bool isSquadCoProceeding = false;
   String? errorMessage;
+  
+  TransactionMode _transactionMode = TransactionMode.interState;
+  TransactionMode get transactionMode => _transactionMode;
+
   String? selectedOriginState;
   String? selectedOriginLga;
   String? selectedDestinationState;
   String? selectedDestinationLga;
+  
+  // Intra-state specific
+  final TextEditingController departureTownController = TextEditingController();
+  final TextEditingController destinationTownController = TextEditingController();
+
   List<String> states = [];
   List<String> originLgas = [];
   List<String> destinationLgas = [];
   final Map<String, String> _stateNameToId = {};
   
   String? _terminalId;
+  String? _assignedState;
+  String? get assignedState => _assignedState;
+  String? _intraStateServiceNumber;
 
   final TextEditingController payerNameController = TextEditingController();
   final TextEditingController payerPhoneController = TextEditingController();
@@ -58,15 +72,56 @@ class TransactionCreationViewModel extends ChangeNotifier {
   }
   
   Future<void> _init() async {
-    loadStates();
-    _fetchPayloadCategory();
-    
     final session = await SessionManager.instance;
     _terminalId = session.terminalId;
+    _assignedState = session.assignedState;
+    _intraStateServiceNumber = session.serviceNumberIntraState;
 
     if (_terminalId == null || _terminalId!.isEmpty) {
       AppLogger.logWarning(_tag, 'Terminal ID missing from session during init');
     }
+
+    await loadStates();
+    _fetchPayloadCategory();
+
+    if (_assignedState != null && _assignedState!.isNotEmpty) {
+      // Default to Intra-State and lock to assigned state
+      selectedOriginState = _assignedState;
+      selectedDestinationState = _assignedState;
+      _transactionMode = TransactionMode.intraState;
+      
+      // Load LGAs for the assigned state
+      await onOriginStateChanged(_assignedState!);
+      await onDestinationStateChanged(_assignedState!);
+    }
+    notifyListeners();
+  }
+
+  void setTransactionMode(TransactionMode mode) {
+    if (_transactionMode == mode) return;
+    _transactionMode = mode;
+    
+    if (_assignedState != null && _assignedState!.isNotEmpty) {
+      selectedOriginState = _assignedState;
+      if (mode == TransactionMode.intraState) {
+        selectedDestinationState = _assignedState;
+        onDestinationStateChanged(_assignedState!);
+      } else {
+        selectedDestinationState = null;
+        destinationLgas = [];
+        selectedDestinationLga = null;
+      }
+      onOriginStateChanged(_assignedState!);
+    } else {
+      // Reset if no assigned state to avoid confusion
+      selectedOriginState = null;
+      selectedOriginLga = null;
+      selectedDestinationState = null;
+      selectedDestinationLga = null;
+      originLgas = [];
+      destinationLgas = [];
+    }
+    notifyListeners();
   }
 
   String _formatAmount(double value) {
@@ -212,17 +267,29 @@ class TransactionCreationViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+
+    if (_transactionMode == TransactionMode.intraState) {
+      if (departureTownController.text.trim().isEmpty) {
+        errorMessage = 'Departure town is required';
+        notifyListeners();
+        return false;
+      }
+      if (destinationTownController.text.trim().isEmpty) {
+        errorMessage = 'Destination town is required';
+        notifyListeners();
+        return false;
+      }
+    }
     return true;
   }
 
-  Map<String, dynamic> _prepareTmsPayload(String ref, SessionManager session, String email) {
-    final txType = vehicle.transactionType.trim().toLowerCase();
-    final isSingle = txType == 'single';
-    final now = DateTime.now();
-    final transactionDate = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+  Map<String, dynamic> _prepareTmsPayload(String ref, SessionManager session, String email, {String paymentMethod = 'transfer'}) {
+    final txTypeRaw = vehicle.transactionType.trim().toLowerCase();
+    // Normalize to 'single' or 'complete' as per validation requirements
+    final transactionType = txTypeRaw.contains('single') ? 'single' : 'complete';
 
     Map<String, dynamic>? payloadObject;
-    if (isSingle && selectedPayloadCategory != null) {
+    if (transactionType == 'single' && selectedPayloadCategory != null) {
       payloadObject = {
         'subcategory': selectedSubCategory ?? selectedPayloadCategory!['name'],
         'haulage_category': selectedPayloadCategory!['name'],
@@ -230,43 +297,59 @@ class TransactionCreationViewModel extends ChangeNotifier {
       };
     }
 
-    final metadata = <String, dynamic>{
+    final serviceNumber = (_transactionMode == TransactionMode.intraState && _intraStateServiceNumber != null)
+        ? _intraStateServiceNumber
+        : session.serviceNumberTransaction;
+
+    final now = DateTime.now();
+    final transactionDate = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+
+    final metadata = {
       'channel': 'dealcity',
-      'terminal_id': session.terminalId,
+      'channel_type': 'pos',
+      'terminal_id': session.terminalId ?? '',
       'contact': payerPhoneController.text.trim(),
       'vehicle_type': vehicle.vehicleType,
-      'transaction_type': vehicle.transactionType,
+      'transaction_type': transactionType,
       'transaction_date': transactionDate,
-      'amount': _formatAmount(baseAmount),
+      'amount': baseAmount.toString(),
       'vehicle_license': vehicle.vehicleLicense,
       'transaction_reference': ref,
       'origin_state': selectedOriginState,
       'origin_lga': selectedOriginLga,
-      'destination_state': selectedDestinationState,
-      'destination_lga': selectedDestinationLga,
+      'destination_state': selectedDestinationState ?? selectedOriginState,
+      'destination_lga': selectedDestinationLga ?? selectedOriginLga,
+      'origin_location': _transactionMode == TransactionMode.intraState ? departureTownController.text.trim() : null,
+      'destination_location': _transactionMode == TransactionMode.intraState ? destinationTownController.text.trim() : null,
       'payload': payloadObject,
     };
 
     return <String, dynamic>{
-      'transaction_reference': ref,
       'payer_name': payerNameController.text.trim(),
       'payer_phone': payerPhoneController.text.trim(),
       'payer_email': email,
-      'amount': _formatAmount(baseAmount),
-      'fee': _formatAmount(totalFee),
-      'transaction_date': transactionDate,
-      'channel_number': session.channelNumber,
-      'payment_method': 'transfer',
-      'terminal_id': session.terminalId,
-      'service_number': session.serviceNumberTransaction,
+      'amount': baseAmount, // Numeric
+      'fee': totalFee, // Numeric
+      'payment_method': paymentMethod, // required|in:card,wallet,transfer
+      'terminal_id': session.terminalId ?? '',
       'vehicle_license': vehicle.vehicleLicense,
       'vehicle_type': vehicle.vehicleType,
-      'transaction_type': vehicle.transactionType,
+      'transaction_type': transactionType, // required|in:single,complete
       'origin_state': selectedOriginState,
       'origin_lga': selectedOriginLga,
       'destination_state': selectedDestinationState,
       'destination_lga': selectedDestinationLga,
+      'departure_lga': _transactionMode == TransactionMode.intraState ? selectedOriginLga : null,
+      'departure_town': _transactionMode == TransactionMode.intraState ? departureTownController.text.trim() : null,
+      'destination_town': _transactionMode == TransactionMode.intraState ? destinationTownController.text.trim() : null,
+      'payload': payloadObject,
       'metadata': metadata,
+      
+      // Additional internal fields for TMS processing
+      'transaction_reference': ref,
+      'service_number': serviceNumber,
+      'channel_number': session.channelNumber,
+      'transaction_date': transactionDate,
     };
   }
 
@@ -342,8 +425,9 @@ class TransactionCreationViewModel extends ChangeNotifier {
       AppLogger.logInfo(_tag, 'Launching SquadCo URL: $cleanUrl');
       final checkoutUri = Uri.parse(cleanUrl);
 
-      // 1. Create record in TMS before launching browser
-      final tmsResult = await _transactionRepository.createTransaction(_prepareTmsPayload(transactionRef, session, email));
+      // 1. Create record in TMS before launching browser. 
+      // Use 'card' as payment method for SquadCo transactions to satisfy backend validation.
+      final tmsResult = await _transactionRepository.createTransaction(_prepareTmsPayload(transactionRef, session, email, paymentMethod: 'card'));
 
       // 2. Prepare model for display - PREVENT N/A values by merging local state with server response
       final now = DateTime.now();
@@ -404,6 +488,8 @@ class TransactionCreationViewModel extends ChangeNotifier {
     payerNameController.dispose();
     payerPhoneController.dispose();
     payerEmailController.dispose();
+    departureTownController.dispose();
+    destinationTownController.dispose();
     super.dispose();
   }
 }

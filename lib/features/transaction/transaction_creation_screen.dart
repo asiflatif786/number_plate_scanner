@@ -42,6 +42,8 @@ class _TransactionCreationBody extends StatelessWidget {
               children: [
                 _buildSummaryCard(vm),
                 const SizedBox(height: 12),
+                _buildTransactionTypeCard(vm),
+                const SizedBox(height: 12),
                 _buildPayerInfoCard(vm),
                 const SizedBox(height: 12),
                 _buildOriginCard(vm),
@@ -89,6 +91,40 @@ class _TransactionCreationBody extends StatelessWidget {
           DetailRow(label: 'Base Amount', value: '₦${vm.formattedBaseAmount}'),
           const SizedBox(height: 6),
           DetailRow(label: 'Convenience Fee', value: '₦${vm.formattedTotalFee}'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionTypeCard(TransactionCreationViewModel vm) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(title: 'Transaction Type'),
+          const Divider(),
+          Row(
+            children: [
+              Expanded(
+                child: RadioListTile<TransactionMode>(
+                  title: const Text('Inter-State', style: TextStyle(fontSize: 14)),
+                  value: TransactionMode.interState,
+                  groupValue: vm.transactionMode,
+                  onChanged: (v) => v != null ? vm.setTransactionMode(v) : null,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              Expanded(
+                child: RadioListTile<TransactionMode>(
+                  title: const Text('Intra-State', style: TextStyle(fontSize: 14)),
+                  value: TransactionMode.intraState,
+                  groupValue: vm.transactionMode,
+                  onChanged: (v) => v != null ? vm.setTransactionMode(v) : null,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -145,9 +181,11 @@ class _TransactionCreationBody extends StatelessWidget {
             items: vm.states
                 .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                 .toList(),
-            onChanged: (v) {
-              if (v != null) vm.onOriginStateChanged(v);
-            },
+            onChanged: (vm.transactionMode == TransactionMode.intraState && vm.assignedState != null)
+                ? null 
+                : (v) {
+                    if (v != null) vm.onOriginStateChanged(v);
+                  },
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
@@ -164,6 +202,14 @@ class _TransactionCreationBody extends StatelessWidget {
             onChanged:
                 vm.selectedOriginState == null ? null : vm.onOriginLgaChanged,
           ),
+          if (vm.transactionMode == TransactionMode.intraState) ...[
+            const SizedBox(height: 12),
+            AppTextField(
+              controller: vm.departureTownController,
+              label: 'Departure Town *',
+              hint: 'Enter town name',
+            ),
+          ],
         ],
       ),
     );
@@ -187,9 +233,11 @@ class _TransactionCreationBody extends StatelessWidget {
             items: vm.states
                 .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                 .toList(),
-            onChanged: (v) {
-              if (v != null) vm.onDestinationStateChanged(v);
-            },
+            onChanged: (vm.transactionMode == TransactionMode.intraState && vm.assignedState != null)
+                ? null
+                : (v) {
+                    if (v != null) vm.onDestinationStateChanged(v);
+                  },
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
@@ -207,6 +255,14 @@ class _TransactionCreationBody extends StatelessWidget {
                 ? null
                 : vm.onDestinationLgaChanged,
           ),
+          if (vm.transactionMode == TransactionMode.intraState) ...[
+            const SizedBox(height: 12),
+            AppTextField(
+              controller: vm.destinationTownController,
+              label: 'Destination Town *',
+              hint: 'Enter town name',
+            ),
+          ],
         ],
       ),
     );

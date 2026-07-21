@@ -97,6 +97,16 @@ class SessionManager {
     AppLogger.logInfo(_tag, 'agentLastName saved');
   }
 
+  String? get assignedState => _p.getString('assigned_state');
+
+  Future<void> setAssignedState(String? value) async {
+    if (value == null) {
+      await _p.remove('assigned_state');
+    } else {
+      await _p.setString('assigned_state', value);
+    }
+  }
+
   String get agentFullName {
     final first = agentFirstName;
     final last = agentLastName;
@@ -182,6 +192,8 @@ class SessionManager {
     String? firstName,
     String? lastName,
     String? role,
+    String? assignedState,
+    String? serviceNumberIntraState,
   }) async {
     if (companyNumber != null) await setCompanyNumber(companyNumber);
     if (agentNumber != null) await setAgentNumber(agentNumber);
@@ -191,6 +203,8 @@ class SessionManager {
     if (firstName != null) await setAgentFirstName(firstName);
     if (lastName != null) await setAgentLastName(lastName);
     if (role != null) await setUserRole(role);
+    if (assignedState != null) await setAssignedState(assignedState);
+    if (serviceNumberIntraState != null) await setServiceNumberIntraState(serviceNumberIntraState);
     await setOnboarded(true);
 
     AppLogger.logInfo(_tag, 'onboarding complete — all fields saved');
@@ -239,6 +253,14 @@ class SessionManager {
     AppLogger.logInfo(_tag, 'serviceNumberTransaction saved');
   }
 
+  String? get serviceNumberIntraState {
+    return _p.getString('service_number_intra_state');
+  }
+
+  Future<void> setServiceNumberIntraState(String value) async {
+    await _p.setString('service_number_intra_state', value);
+  }
+
   // ──────────────────────────────────────────────
   // Clear Methods
   // ──────────────────────────────────────────────
@@ -257,6 +279,8 @@ class SessionManager {
     await _p.remove(ApiConstants.channelNumberKey);
     await _p.remove(ApiConstants.serviceNumberValidationKey);
     await _p.remove(ApiConstants.serviceNumberTransactionKey);
+    await _p.remove('assigned_state');
+    await _p.remove('service_number_intra_state');
     AppLogger.logWarning(_tag, 'session cleared — all data wiped');
   }
 

@@ -10,6 +10,8 @@ class UserModel {
   final String? channelNumber;
   final String? serviceNumberValidation;
   final String? serviceNumberTransaction;
+  final String? serviceNumberIntraState;
+  final String? assignedState;
 
   const UserModel({
     required this.id,
@@ -23,6 +25,8 @@ class UserModel {
     this.channelNumber,
     this.serviceNumberValidation,
     this.serviceNumberTransaction,
+    this.serviceNumberIntraState,
+    this.assignedState,
   });
 
   String get fullName => '$firstName $lastName';
@@ -42,6 +46,8 @@ class UserModel {
       channelNumber: json['channel_number'] as String?,
       serviceNumberValidation: json['service_number_validation'] as String? ?? json['service_number'] as String?,
       serviceNumberTransaction: json['service_number_transaction'] as String? ?? json['service_number'] as String?,
+      serviceNumberIntraState: json['service_number_intra_state'] as String?,
+      assignedState: json['assigned_state'] as String? ?? json['state'] as String?,
     );
   }
 
@@ -57,6 +63,8 @@ class UserModel {
         'channel_number': channelNumber,
         'service_number_validation': serviceNumberValidation,
         'service_number_transaction': serviceNumberTransaction,
+        'service_number_intra_state': serviceNumberIntraState,
+        'assigned_state': assignedState,
       };
 
   UserModel copyWith({
@@ -71,6 +79,8 @@ class UserModel {
     String? channelNumber,
     String? serviceNumberValidation,
     String? serviceNumberTransaction,
+    String? serviceNumberIntraState,
+    String? assignedState,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -84,6 +94,8 @@ class UserModel {
       channelNumber: channelNumber ?? this.channelNumber,
       serviceNumberValidation: serviceNumberValidation ?? this.serviceNumberValidation,
       serviceNumberTransaction: serviceNumberTransaction ?? this.serviceNumberTransaction,
+      serviceNumberIntraState: serviceNumberIntraState ?? this.serviceNumberIntraState,
+      assignedState: assignedState ?? this.assignedState,
     );
   }
 }
