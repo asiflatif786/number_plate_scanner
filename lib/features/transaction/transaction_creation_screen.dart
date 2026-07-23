@@ -14,10 +14,29 @@ class TransactionCreationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vehicle = ModalRoute.of(context)!.settings.arguments as VehicleModel;
+    final args = ModalRoute.of(context)!.settings.arguments;
+    
+    VehicleModel vehicle;
+    bool hasPenalty = false;
+    double penaltyAmount = 0.0;
+
+    if (args is VehicleModel) {
+      vehicle = args;
+    } else if (args is Map<String, dynamic>) {
+      vehicle = args['vehicle'] as VehicleModel;
+      hasPenalty = args['hasPenalty'] as bool? ?? false;
+      penaltyAmount = (args['penaltyAmount'] as num?)?.toDouble() ?? 0.0;
+    } else {
+      // Fallback
+      return const Scaffold(body: Center(child: Text('Invalid Arguments')));
+    }
 
     return ChangeNotifierProvider(
-      create: (_) => TransactionCreationViewModel(vehicle: vehicle),
+      create: (_) => TransactionCreationViewModel(
+        vehicle: vehicle,
+        hasPenalty: hasPenalty,
+        penaltyAmount: penaltyAmount,
+      ),
       child: const _TransactionCreationBody(),
     );
   }
@@ -91,6 +110,14 @@ class _TransactionCreationBody extends StatelessWidget {
           DetailRow(label: 'Base Amount', value: '₦${vm.formattedBaseAmount}'),
           const SizedBox(height: 6),
           DetailRow(label: 'Convenience Fee', value: '₦${vm.formattedTotalFee}'),
+          if (vm.hasPenalty) ...[
+            const SizedBox(height: 6),
+            DetailRow(
+              label: 'Penalty (50%)',
+              value: '₦${vm.formattedPenaltyAmount}',
+              valueColor: Colors.red,
+            ),
+          ],
         ],
       ),
     );
@@ -348,23 +375,40 @@ class _TransactionCreationBody extends StatelessWidget {
               color: const Color(0xFF1A237E).withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
+            child: Column(
               children: [
-                const Expanded(
-                  child: Text('Total Payable',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF212121))),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text('Total Payable',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF212121))),
+                    ),
+                    Text(
+                      '₦${vm.formattedTotalPayable}',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A237E),
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  '₦${vm.formattedTotalPayable}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A237E),
+                if (vm.hasPenalty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          '(Includes ₦${vm.formattedPenaltyAmount} Penalty)',
+                          style: const TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
           ),

@@ -5,6 +5,7 @@ class DetailRow extends StatelessWidget {
   final String value;
   final bool isMonospace;
   final bool isSelectable;
+  final Color? valueColor;
   final IconData? trailingIcon;
   final VoidCallback? onTrailingTap;
 
@@ -14,6 +15,7 @@ class DetailRow extends StatelessWidget {
     required this.value,
     this.isMonospace = false,
     this.isSelectable = false,
+    this.valueColor,
     this.trailingIcon,
     this.onTrailingTap,
   });
@@ -36,7 +38,7 @@ class DetailRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF212121),
+                      color: valueColor ?? const Color(0xFF212121),
                       fontFamily: isMonospace ? 'monospace' : null,
                       letterSpacing: isMonospace ? 1 : null,
                     ),
@@ -46,7 +48,7 @@ class DetailRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF212121),
+                      color: valueColor ?? const Color(0xFF212121),
                       fontFamily: isMonospace ? 'monospace' : null,
                       letterSpacing: isMonospace ? 1 : null,
                     ),

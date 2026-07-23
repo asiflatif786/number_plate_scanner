@@ -20,6 +20,9 @@ class TransactionCreationViewModel extends ChangeNotifier {
   static const String _tag = 'TxCreateVM';
 
   final VehicleModel vehicle;
+  final bool hasPenalty;
+  final double penaltyAmount;
+  
   final LocationRepository _locationRepository = LocationRepository();
   final TransactionRepository _transactionRepository = TransactionRepository();
 
@@ -62,9 +65,13 @@ class TransactionCreationViewModel extends ChangeNotifier {
       ? vehicle.price.serviceFee 
       : (baseAmount * AppConstants.adminFeePercent + AppConstants.flatTransactionFee);
       
-  double get totalPayable => baseAmount + totalFee;
+  double get totalPayable => baseAmount + totalFee + penaltyAmount;
 
-  TransactionCreationViewModel({required this.vehicle}) {
+  TransactionCreationViewModel({
+    required this.vehicle,
+    this.hasPenalty = false,
+    this.penaltyAmount = 0.0,
+  }) {
     payerNameController.text =
         vehicle.customerName != 'N/A' ? vehicle.customerName : '';
     payerPhoneController.text = vehicle.phoneNumber ?? '';
@@ -130,6 +137,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
 
   String get formattedBaseAmount => _formatAmount(baseAmount);
   String get formattedTotalFee => _formatAmount(totalFee);
+  String get formattedPenaltyAmount => _formatAmount(penaltyAmount);
   String get formattedTotalPayable => _formatAmount(totalPayable);
 
   List<Map<String, dynamic>> _payloadCategories = [];
@@ -322,13 +330,15 @@ class TransactionCreationViewModel extends ChangeNotifier {
       'origin_location': _transactionMode == TransactionMode.intraState ? departureTownController.text.trim() : null,
       'destination_location': _transactionMode == TransactionMode.intraState ? destinationTownController.text.trim() : null,
       'payload': payloadObject,
+      'penalty_applied': hasPenalty,
+      'penalty_amount': penaltyAmount,
     };
 
     return <String, dynamic>{
       'payer_name': payerNameController.text.trim(),
       'payer_phone': payerPhoneController.text.trim(),
       'payer_email': email,
-      'amount': baseAmount, // Numeric
+      'amount': baseAmount + penaltyAmount, // Total including penalty
       'fee': totalFee, // Numeric
       'payment_method': paymentMethod, // required|in:card,wallet,transfer
       'terminal_id': session.terminalId ?? '',
@@ -438,7 +448,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
         customerName: payerNameController.text.trim(),
         vehicleLicense: vehicle.vehicleLicense,
         totalAmount: totalPayable,
-        amount: baseAmount,
+        amount: baseAmount + penaltyAmount,
         serviceFee: totalFee,
         paymentMethod: 'squad',
         status: 'pending',

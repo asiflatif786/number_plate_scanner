@@ -18,7 +18,17 @@ class VehicleFoundViewModel extends ChangeNotifier {
   bool isSquadCoProceeding = false;
   String? errorMessage;
 
-  VehicleFoundViewModel({required this.vehicle});
+  bool _hasPenalty = false;
+  bool get hasPenalty => _hasPenalty;
+
+  VehicleFoundViewModel({required this.vehicle}) {
+    _checkRecentInvoices();
+  }
+
+  void togglePenalty(bool value) {
+    _hasPenalty = value;
+    notifyListeners();
+  }
 
   double get baseAmount => vehicle.price.amount;
   
@@ -27,14 +37,39 @@ class VehicleFoundViewModel extends ChangeNotifier {
       ? vehicle.price.serviceFee 
       : (baseAmount * AppConstants.adminFeePercent + AppConstants.flatTransactionFee);
       
-  double get totalPayable => baseAmount + totalFee;
+  double get penaltyAmount => _hasPenalty ? (baseAmount * 0.5) : 0.0;
+  
+  double get totalPayable => baseAmount + totalFee + penaltyAmount;
 
   String get formattedBaseAmount =>
       NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2).format(baseAmount);
   String get formattedTotalFee =>
       NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2).format(totalFee);
+  String get formattedPenaltyAmount =>
+      NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2).format(penaltyAmount);
   String get formattedTotalPayable =>
       NumberFormat.currency(symbol: '\u20A6', decimalDigits: 2).format(totalPayable);
+
+  Future<void> _checkRecentInvoices() async {
+    // Automated check: Scan vehicle number plate to find if there is any recent invoice issued within 24 or 48 hours.
+    // If NO recent invoice is found, we might want to suggest a penalty or flag it.
+    // For now, let's simulate the logic as per user request.
+    AppLogger.logInfo(_tag, 'Checking recent invoices for ${vehicle.vehicleLicense}');
+    
+    // In a real scenario, we would call an API like ApiConstants.listTransactions 
+    // with the vehicle license and filter for the last 48 hours.
+    
+    // Example placeholder for automated detection:
+    // try {
+    //   final hasRecent = await _repository.hasRecentInvoice(vehicle.vehicleLicense, hours: 48);
+    //   if (!hasRecent) {
+    //     _hasPenalty = true;
+    //     notifyListeners();
+    //   }
+    // } catch (e) {
+    //   AppLogger.logError(_tag, 'Error checking recent invoices', e);
+    // }
+  }
 
   void proceedToPayment(BuildContext context) {
     isProceeding = true;
@@ -43,10 +78,15 @@ class VehicleFoundViewModel extends ChangeNotifier {
 
     AppLogger.logInfo(_tag, 'Proceeding: ${vehicle.vehicleLicense}');
 
+    // Pass penalty information to the next screen if needed
     Navigator.pushNamed(
       context,
       AppRoutes.transactionCreation,
-      arguments: vehicle,
+      arguments: {
+        'vehicle': vehicle,
+        'hasPenalty': _hasPenalty,
+        'penaltyAmount': penaltyAmount,
+      },
     ).then((_) {
       isProceeding = false;
       notifyListeners();
@@ -93,6 +133,8 @@ class VehicleFoundViewModel extends ChangeNotifier {
         body: jsonEncode({
           'amount': (totalPayable * 100).toInt(), // Amount in kobo
           'email': email,
+          'penalty_applied': _hasPenalty,
+          'penalty_amount': penaltyAmount,
         }),
       );
 
@@ -130,6 +172,7 @@ class VehicleFoundViewModel extends ChangeNotifier {
               'vehicle': vehicle,
               'transactionRef': transactionRef,
               'method': 'SquadCo',
+              'amount': totalPayable,
             },
           );
         }

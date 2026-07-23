@@ -143,6 +143,23 @@ class _VehicleFoundBody extends StatelessWidget {
             const Divider(),
             _buildFeeRow('Base Amount', vm.formattedBaseAmount),
             _buildFeeRow('Convenience Fee', vm.formattedTotalFee),
+            
+            // Penalty Row
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Add Penalty (50%)',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+              subtitle: Text(
+                'For vehicles that left without paying. Fee: ${vm.formattedPenaltyAmount}',
+                style: const TextStyle(fontSize: 12),
+              ),
+              value: vm.hasPenalty,
+              onChanged: (val) => vm.togglePenalty(val),
+              activeColor: Colors.red,
+            ),
+            
             const Divider(),
             _buildTotalPayableRow(vm.formattedTotalPayable),
           ],
