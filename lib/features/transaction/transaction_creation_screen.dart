@@ -19,6 +19,7 @@ class TransactionCreationScreen extends StatelessWidget {
     VehicleModel vehicle;
     bool hasPenalty = false;
     double penaltyAmount = 0.0;
+    String? paymentType;
 
     if (args is VehicleModel) {
       vehicle = args;
@@ -26,8 +27,8 @@ class TransactionCreationScreen extends StatelessWidget {
       vehicle = args['vehicle'] as VehicleModel;
       hasPenalty = args['hasPenalty'] as bool? ?? false;
       penaltyAmount = (args['penaltyAmount'] as num?)?.toDouble() ?? 0.0;
+      paymentType = args['paymentType'] as String?;
     } else {
-      // Fallback
       return const Scaffold(body: Center(child: Text('Invalid Arguments')));
     }
 
@@ -36,6 +37,7 @@ class TransactionCreationScreen extends StatelessWidget {
         vehicle: vehicle,
         hasPenalty: hasPenalty,
         penaltyAmount: penaltyAmount,
+        paymentType: paymentType,
       ),
       child: const _TransactionCreationBody(),
     );
@@ -50,7 +52,7 @@ class _TransactionCreationBody extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Transaction'),
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
       ),
       body: Consumer<TransactionCreationViewModel>(
@@ -59,9 +61,11 @@ class _TransactionCreationBody extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             child: Column(
               children: [
+                if (vm.paymentType != null) ...[
+                  _buildPaymentTypeHeader(vm.paymentType!),
+                  const SizedBox(height: 12),
+                ],
                 _buildSummaryCard(vm),
-                const SizedBox(height: 12),
-                _buildTransactionTypeCard(vm),
                 const SizedBox(height: 12),
                 _buildPayerInfoCard(vm),
                 const SizedBox(height: 12),
@@ -89,8 +93,48 @@ class _TransactionCreationBody extends StatelessWidget {
     );
   }
 
+  Widget _buildPaymentTypeHeader(String type) {
+    String label = 'CHL Payment';
+    Color color = const Color(0xFF1A237E);
+    
+    if (type == 'chl-inter') {
+      label = 'CHL - Inter State';
+    } else if (type == 'chl-intra') {
+      label = 'CHL - Intra State';
+      color = Colors.green.shade700;
+    } else if (type == 'penalty-inter') {
+      label = 'Inter-State Penalty';
+      color = Colors.red.shade700;
+    } else if (type == 'penalty-intra') {
+      label = 'Intra-State Penalty';
+      color = Colors.orange.shade800;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info, color: color, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            'Processing: $label',
+            style: TextStyle(fontWeight: FontWeight.bold, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSummaryCard(TransactionCreationViewModel vm) {
     final vehicle = vm.vehicle;
+    final modeLabel = vm.transactionMode == TransactionMode.intraState ? 'Intra-State' : 'Inter-State';
+    
     return AppCard(
       elevation: 1,
       child: Column(
@@ -98,60 +142,24 @@ class _TransactionCreationBody extends StatelessWidget {
         children: [
           const SectionHeader(title: 'Transaction Summary'),
           const Divider(),
-          DetailRow(
-              label: 'License Plate',
-              value: vehicle.vehicleLicense,
-              isMonospace: true),
+          DetailRow(label: 'License Plate', value: vehicle.vehicleLicense, isMonospace: true),
           const SizedBox(height: 6),
           DetailRow(label: 'Vehicle Type', value: vehicle.vehicleType),
           const SizedBox(height: 6),
-          _buildTripTypeChip(vehicle.transactionType),
+          DetailRow(
+            label: 'Transaction Type', 
+            value: modeLabel, 
+            valueColor: Colors.indigo, 
+            fontWeight: FontWeight.bold
+          ),
           const SizedBox(height: 12),
           DetailRow(label: 'Base Amount', value: '₦${vm.formattedBaseAmount}'),
           const SizedBox(height: 6),
           DetailRow(label: 'Convenience Fee', value: '₦${vm.formattedTotalFee}'),
           if (vm.hasPenalty) ...[
             const SizedBox(height: 6),
-            DetailRow(
-              label: 'Penalty (50%)',
-              value: '₦${vm.formattedPenaltyAmount}',
-              valueColor: Colors.red,
-            ),
+            DetailRow(label: 'Penalty (50%)', value: '₦${vm.formattedPenaltyAmount}', valueColor: Colors.red),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTransactionTypeCard(TransactionCreationViewModel vm) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SectionHeader(title: 'Transaction Type'),
-          const Divider(),
-          Row(
-            children: [
-              Expanded(
-                child: RadioListTile<TransactionMode>(
-                  title: const Text('Inter-State', style: TextStyle(fontSize: 14)),
-                  value: TransactionMode.interState,
-                  groupValue: vm.transactionMode,
-                  onChanged: (v) => v != null ? vm.setTransactionMode(v) : null,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              Expanded(
-                child: RadioListTile<TransactionMode>(
-                  title: const Text('Intra-State', style: TextStyle(fontSize: 14)),
-                  value: TransactionMode.intraState,
-                  groupValue: vm.transactionMode,
-                  onChanged: (v) => v != null ? vm.setTransactionMode(v) : null,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -164,27 +172,11 @@ class _TransactionCreationBody extends StatelessWidget {
         children: [
           const SectionHeader(title: 'Payer Information'),
           const Divider(),
-          AppTextField(
-            controller: vm.payerNameController,
-            label: 'Payer Full Name *',
-            hint: 'Enter payer full name',
-            textCapitalization: TextCapitalization.words,
-          ),
+          AppTextField(controller: vm.payerNameController, label: 'Payer Full Name *', hint: 'Enter payer full name', textCapitalization: TextCapitalization.words),
           const SizedBox(height: 12),
-          AppTextField(
-            controller: vm.payerPhoneController,
-            label: 'Payer Phone *',
-            hint: 'Enter 11-digit phone number',
-            keyboardType: TextInputType.phone,
-            maxLength: 11,
-          ),
+          AppTextField(controller: vm.payerPhoneController, label: 'Payer Phone *', hint: 'Enter 11-digit phone number', keyboardType: TextInputType.phone, maxLength: 11),
           const SizedBox(height: 12),
-          AppTextField(
-            controller: vm.payerEmailController,
-            label: 'Payer Email',
-            hint: 'customer@example.com',
-            keyboardType: TextInputType.emailAddress,
-          ),
+          AppTextField(controller: vm.payerEmailController, label: 'Payer Email', hint: 'customer@example.com', keyboardType: TextInputType.emailAddress),
         ],
       ),
     );
@@ -199,43 +191,20 @@ class _TransactionCreationBody extends StatelessWidget {
           const Divider(),
           DropdownButtonFormField<String>(
             value: vm.selectedOriginState,
-            decoration: InputDecoration(
-              labelText: 'Origin State *',
-              isDense: true,
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            items: vm.states
-                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                .toList(),
-            onChanged: (vm.transactionMode == TransactionMode.intraState && vm.assignedState != null)
-                ? null 
-                : (v) {
-                    if (v != null) vm.onOriginStateChanged(v);
-                  },
+            decoration: InputDecoration(labelText: 'Origin State *', isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+            items: vm.states.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+            onChanged: (vm.transactionMode == TransactionMode.intraState && vm.assignedState != null) ? null : (v) { if (v != null) vm.onOriginStateChanged(v); },
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: vm.selectedOriginLga,
-            decoration: InputDecoration(
-              labelText: 'Origin LGA *',
-              isDense: true,
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            items: vm.originLgas
-                .map((l) => DropdownMenuItem(value: l, child: Text(l)))
-                .toList(),
-            onChanged:
-                vm.selectedOriginState == null ? null : vm.onOriginLgaChanged,
+            decoration: InputDecoration(labelText: 'Origin LGA *', isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+            items: vm.originLgas.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+            onChanged: vm.selectedOriginState == null ? null : vm.onOriginLgaChanged,
           ),
           if (vm.transactionMode == TransactionMode.intraState) ...[
             const SizedBox(height: 12),
-            AppTextField(
-              controller: vm.departureTownController,
-              label: 'Departure Town *',
-              hint: 'Enter town name',
-            ),
+            AppTextField(controller: vm.departureTownController, label: 'Departure Town *', hint: 'Enter town name'),
           ],
         ],
       ),
@@ -251,44 +220,20 @@ class _TransactionCreationBody extends StatelessWidget {
           const Divider(),
           DropdownButtonFormField<String>(
             value: vm.selectedDestinationState,
-            decoration: InputDecoration(
-              labelText: 'Destination State *',
-              isDense: true,
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            items: vm.states
-                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                .toList(),
-            onChanged: (vm.transactionMode == TransactionMode.intraState && vm.assignedState != null)
-                ? null
-                : (v) {
-                    if (v != null) vm.onDestinationStateChanged(v);
-                  },
+            decoration: InputDecoration(labelText: 'Destination State *', isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+            items: vm.states.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+            onChanged: (vm.transactionMode == TransactionMode.intraState && vm.assignedState != null) ? null : (v) { if (v != null) vm.onDestinationStateChanged(v); },
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: vm.selectedDestinationLga,
-            decoration: InputDecoration(
-              labelText: 'Destination LGA *',
-              isDense: true,
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            items: vm.destinationLgas
-                .map((l) => DropdownMenuItem(value: l, child: Text(l)))
-                .toList(),
-            onChanged: vm.selectedDestinationState == null
-                ? null
-                : vm.onDestinationLgaChanged,
+            decoration: InputDecoration(labelText: 'Destination LGA *', isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+            items: vm.destinationLgas.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+            onChanged: vm.selectedDestinationState == null ? null : vm.onDestinationLgaChanged,
           ),
           if (vm.transactionMode == TransactionMode.intraState) ...[
             const SizedBox(height: 12),
-            AppTextField(
-              controller: vm.destinationTownController,
-              label: 'Destination Town *',
-              hint: 'Enter town name',
-            ),
+            AppTextField(controller: vm.destinationTownController, label: 'Destination Town *', hint: 'Enter town name'),
           ],
         ],
       ),
@@ -302,59 +247,27 @@ class _TransactionCreationBody extends StatelessWidget {
         children: [
           const SectionHeader(title: 'Payload Category'),
           const Divider(),
-          if (!vm.hasPayloadCategories)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('Loading categories...',
-                  style: TextStyle(color: Colors.grey)),
-            )
+          if (!vm.hasPayloadCategories) const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('Loading categories...', style: TextStyle(color: Colors.grey)))
           else ...[
             DropdownButtonFormField<String>(
               value: vm.selectedPayloadCategory?['name']?.toString(),
-              decoration: InputDecoration(
-                labelText: 'Select Category *',
-                isDense: true,
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
+              decoration: InputDecoration(labelText: 'Select Category *', isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
               isExpanded: true,
-              items: vm.payloadCategories
-                  .map((c) => DropdownMenuItem(
-                        value: c['name']?.toString() ?? '',
-                        child: Text(c['name']?.toString() ?? '',
-                            overflow: TextOverflow.ellipsis),
-                      ))
-                  .toList(),
+              items: vm.payloadCategories.map((c) => DropdownMenuItem(value: c['name']?.toString() ?? '', child: Text(c['name']?.toString() ?? '', overflow: TextOverflow.ellipsis))).toList(),
               onChanged: (v) {
                 if (v == null) return;
-                final cat = vm.payloadCategories
-                    .cast<Map<String, dynamic>?>()
-                    .firstWhere((c) => c?['name']?.toString() == v,
-                        orElse: () => null);
+                final cat = vm.payloadCategories.cast<Map<String, dynamic>?>().firstWhere((c) => c?['name']?.toString() == v, orElse: () => null);
                 if (cat != null) vm.selectPayloadCategory(cat);
               },
             ),
-            if (vm.selectedPayloadCategory != null &&
-                vm.subCategories.isNotEmpty) ...[
+            if (vm.selectedPayloadCategory != null && vm.subCategories.isNotEmpty) ...[
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: vm.selectedSubCategory,
-                decoration: InputDecoration(
-                  labelText: 'Select Subcategory *',
-                  isDense: true,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
+                decoration: InputDecoration(labelText: 'Select Subcategory *', isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
                 isExpanded: true,
-                items: vm.subCategories
-                    .map((s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(s, overflow: TextOverflow.ellipsis),
-                        ))
-                    .toList(),
-                onChanged: (v) {
-                  if (v != null) vm.selectSubCategory(v);
-                },
+                items: vm.subCategories.map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis))).toList(),
+                onChanged: (v) { if (v != null) vm.selectSubCategory(v); },
               ),
             ],
           ],
@@ -365,54 +278,28 @@ class _TransactionCreationBody extends StatelessWidget {
 
   Widget _buildFeeSummaryCard(TransactionCreationViewModel vm) {
     return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A237E).withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+        decoration: BoxDecoration(color: const Color(0xFF1A237E).withOpacity(0.05), borderRadius: BorderRadius.circular(8)),
+        child: Column(
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text('Total Payable',
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF212121))),
-                    ),
-                    Text(
-                      '₦${vm.formattedTotalPayable}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A237E),
-                      ),
-                    ),
-                  ],
-                ),
-                if (vm.hasPenalty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          '(Includes ₦${vm.formattedPenaltyAmount} Penalty)',
-                          style: const TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-                  ),
+                const Expanded(child: Text('Total Payable', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF212121)))),
+                Text('₦${vm.formattedTotalPayable}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
               ],
             ),
-          ),
-        ],
+            if (vm.hasPenalty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [Text('(Includes ₦${vm.formattedPenaltyAmount} Penalty)', style: const TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w500))],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -421,25 +308,13 @@ class _TransactionCreationBody extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.red.shade200),
-      ),
+      decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.red.shade200)),
       child: Row(
         children: [
           Icon(Icons.error_outline, size: 20, color: Colors.red.shade700),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              vm.errorMessage!,
-              style: TextStyle(fontSize: 13, color: Colors.red.shade800),
-            ),
-          ),
-          InkWell(
-            onTap: vm.clearError,
-            child: Icon(Icons.close, size: 18, color: Colors.red.shade400),
-          ),
+          Expanded(child: Text(vm.errorMessage!, style: TextStyle(fontSize: 13, color: Colors.red.shade800))),
+          InkWell(onTap: vm.clearError, child: Icon(Icons.close, size: 18, color: Colors.red.shade400)),
         ],
       ),
     );
@@ -451,33 +326,10 @@ class _TransactionCreationBody extends StatelessWidget {
       height: 50,
       child: AppButton(
         label: vm.isSquadCoProceeding ? 'Proceeding...' : 'Confirm & Proceed With Squad',
-        onPressed: (vm.isLoading || vm.isSquadCoProceeding)
-            ? null
-            : () => vm.proceedWithSquadCo(context),
+        onPressed: (vm.isLoading || vm.isSquadCoProceeding) ? null : () => vm.proceedWithSquadCo(context),
         isLoading: vm.isSquadCoProceeding,
         icon: Icons.payment,
         color: Colors.indigo,
-      ),
-    );
-  }
-
-  Widget _buildTripTypeChip(String transactionType) {
-    final isSingle = transactionType.toLowerCase().contains('single');
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: isSingle
-            ? Colors.blue.withValues(alpha: 0.1)
-            : Colors.purple.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        isSingle ? 'Single Trip' : 'Complete Trip',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: isSingle ? Colors.blue : Colors.purple,
-        ),
       ),
     );
   }

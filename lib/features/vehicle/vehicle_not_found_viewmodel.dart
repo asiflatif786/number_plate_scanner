@@ -5,11 +5,13 @@ class VehicleNotFoundViewModel extends ChangeNotifier {
   final String licensePlate;
   final Map<String, dynamic>? metadata;
   final Map<String, dynamic>? rfidData;
+  final String? paymentType;
 
   VehicleNotFoundViewModel({
     required this.licensePlate,
     this.metadata,
     this.rfidData,
+    this.paymentType,
   });
 
   void searchAgain(BuildContext context) {
@@ -20,7 +22,10 @@ class VehicleNotFoundViewModel extends ChangeNotifier {
     Navigator.pushNamed(
       context,
       AppRoutes.addCustomer,
-      arguments: licensePlate,
+      arguments: {
+        'licensePlate': licensePlate,
+        'paymentType': paymentType,
+      },
     );
   }
 }

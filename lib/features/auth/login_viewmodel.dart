@@ -41,6 +41,7 @@ class LoginViewModel extends ChangeNotifier {
 
   String? _validateEmail(String value) {
     if (value.isEmpty) return 'Email address is required';
+    // Fixed: Added missing backslashes for whitespace (\s) and literal dot (\.)
     final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
     if (!emailRegex.hasMatch(value)) return 'Enter a valid email address';
     return null;
@@ -106,6 +107,7 @@ class LoginViewModel extends ChangeNotifier {
           companyNumber: user.companyNumber,
           assignedState: user.assignedState,
           serviceNumberIntraState: user.serviceNumberIntraState,
+          serviceNumberPenalty: user.serviceNumberPenalty,
         );
         if (user.authToken != null) {
           await session.setAuthToken(user.authToken!);

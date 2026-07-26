@@ -151,7 +151,7 @@ class AgentDashboardViewModel extends ChangeNotifier {
   }
 
   void navigateToVehicleSearch(BuildContext context) {
-    Navigator.pushNamed(context, AppRoutes.vehicleSearch);
+    Navigator.pushNamed(context, AppRoutes.paymentTypeSelection);
   }
 
   void navigateToScanner(BuildContext context) {

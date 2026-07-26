@@ -13,10 +13,22 @@ class VehicleFoundScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vehicle = ModalRoute.of(context)!.settings.arguments as VehicleModel;
+    final args = ModalRoute.of(context)!.settings.arguments;
+    
+    VehicleModel vehicle;
+    String? paymentType;
+
+    if (args is VehicleModel) {
+      vehicle = args;
+    } else if (args is Map<String, dynamic>) {
+      vehicle = args['vehicle'] as VehicleModel;
+      paymentType = args['paymentType'] as String?;
+    } else {
+      return const Scaffold(body: Center(child: Text('Invalid Arguments')));
+    }
 
     return ChangeNotifierProvider(
-      create: (_) => VehicleFoundViewModel(vehicle: vehicle),
+      create: (_) => VehicleFoundViewModel(vehicle: vehicle, paymentType: paymentType),
       child: const _VehicleFoundBody(),
     );
   }
@@ -39,7 +51,7 @@ class _VehicleFoundBody extends StatelessWidget {
           return SingleChildScrollView(
             child: Column(
               children: [
-                _buildStatusBanner(vehicle),
+                _buildStatusBanner(vehicle, vm.paymentType),
                 const SizedBox(height: 16),
                 _buildVehicleDetailsCard(vehicle),
                 const SizedBox(height: 12),
@@ -55,7 +67,12 @@ class _VehicleFoundBody extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBanner(VehicleModel vehicle) {
+  Widget _buildStatusBanner(VehicleModel vehicle, String? paymentType) {
+    String subTitle = 'This vehicle is registered in the Cyber1 database';
+    if (paymentType == 'penalty') {
+      subTitle = 'Penalty processing for registered vehicle';
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -77,9 +94,9 @@ class _VehicleFoundBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'This vehicle is registered in the Cyber1 database',
-            style: TextStyle(fontSize: 13, color: Colors.white70),
+          Text(
+            subTitle,
+            style: const TextStyle(fontSize: 13, color: Colors.white70),
           ),
           const SizedBox(height: 16),
           Container(

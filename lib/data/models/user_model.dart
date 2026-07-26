@@ -11,6 +11,7 @@ class UserModel {
   final String? serviceNumberValidation;
   final String? serviceNumberTransaction;
   final String? serviceNumberIntraState;
+  final String? serviceNumberPenalty;
   final String? assignedState;
 
   const UserModel({
@@ -26,6 +27,7 @@ class UserModel {
     this.serviceNumberValidation,
     this.serviceNumberTransaction,
     this.serviceNumberIntraState,
+    this.serviceNumberPenalty,
     this.assignedState,
   });
 
@@ -47,6 +49,7 @@ class UserModel {
       serviceNumberValidation: json['service_number_validation'] as String? ?? json['service_number'] as String?,
       serviceNumberTransaction: json['service_number_transaction'] as String? ?? json['service_number'] as String?,
       serviceNumberIntraState: json['service_number_intra_state'] as String?,
+      serviceNumberPenalty: json['service_number_penalty'] as String?,
       assignedState: json['assigned_state'] as String? ?? json['state'] as String?,
     );
   }
@@ -64,6 +67,7 @@ class UserModel {
         'service_number_validation': serviceNumberValidation,
         'service_number_transaction': serviceNumberTransaction,
         'service_number_intra_state': serviceNumberIntraState,
+        'service_number_penalty': serviceNumberPenalty,
         'assigned_state': assignedState,
       };
 
@@ -80,6 +84,7 @@ class UserModel {
     String? serviceNumberValidation,
     String? serviceNumberTransaction,
     String? serviceNumberIntraState,
+    String? serviceNumberPenalty,
     String? assignedState,
   }) {
     return UserModel(
@@ -95,6 +100,7 @@ class UserModel {
       serviceNumberValidation: serviceNumberValidation ?? this.serviceNumberValidation,
       serviceNumberTransaction: serviceNumberTransaction ?? this.serviceNumberTransaction,
       serviceNumberIntraState: serviceNumberIntraState ?? this.serviceNumberIntraState,
+      serviceNumberPenalty: serviceNumberPenalty ?? this.serviceNumberPenalty,
       assignedState: assignedState ?? this.assignedState,
     );
   }

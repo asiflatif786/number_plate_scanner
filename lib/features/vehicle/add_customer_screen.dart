@@ -12,10 +12,23 @@ class AddCustomerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final licensePlate = ModalRoute.of(context)!.settings.arguments as String;
+    final args = ModalRoute.of(context)!.settings.arguments;
+    
+    String licensePlate = '';
+    String? paymentType;
+
+    if (args is String) {
+      licensePlate = args;
+    } else if (args is Map<String, dynamic>) {
+      licensePlate = args['licensePlate'] as String? ?? '';
+      paymentType = args['paymentType'] as String?;
+    }
 
     return ChangeNotifierProvider(
-      create: (_) => AddCustomerViewModel(initialLicensePlate: licensePlate),
+      create: (_) => AddCustomerViewModel(
+        initialLicensePlate: licensePlate,
+        paymentType: paymentType,
+      ),
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F6FA),
         appBar: AppBar(
@@ -33,6 +46,10 @@ class AddCustomerScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
+                  if (vm.paymentType != null) ...[
+                    _buildPaymentTypeIndicator(vm.paymentType!),
+                    const SizedBox(height: 16),
+                  ],
                   AppCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,6 +116,44 @@ class AddCustomerScreen extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentTypeIndicator(String type) {
+    String label = 'Single Trip';
+    Color color = const Color(0xFF1A237E);
+    
+    if (type == 'chl-inter') {
+      label = 'CHL - Inter State';
+    } else if (type == 'chl-intra') {
+      label = 'CHL - Intra State';
+      color = Colors.green.shade700;
+    } else if (type == 'penalty') {
+      label = 'Penalty Payment';
+      color = Colors.red.shade700;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.payment, color: color, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            'Action: $label',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }

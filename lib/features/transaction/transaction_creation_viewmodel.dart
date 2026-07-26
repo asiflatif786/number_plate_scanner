@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/routes.dart';
@@ -14,7 +15,7 @@ import '../../data/models/transaction_model.dart';
 import '../../data/repositories/location_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
 
-enum TransactionMode { interState, intraState }
+enum TransactionMode { interState, intraState, penalty }
 
 class TransactionCreationViewModel extends ChangeNotifier {
   static const String _tag = 'TxCreateVM';
@@ -22,6 +23,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
   final VehicleModel vehicle;
   final bool hasPenalty;
   final double penaltyAmount;
+  final String? paymentType; // chl-inter, chl-intra, penalty-inter, penalty-intra
   
   final LocationRepository _locationRepository = LocationRepository();
   final TransactionRepository _transactionRepository = TransactionRepository();
@@ -38,7 +40,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
   String? selectedDestinationState;
   String? selectedDestinationLga;
   
-  // Intra-state specific
+  // Town locations
   final TextEditingController departureTownController = TextEditingController();
   final TextEditingController destinationTownController = TextEditingController();
 
@@ -51,6 +53,7 @@ class TransactionCreationViewModel extends ChangeNotifier {
   String? _assignedState;
   String? get assignedState => _assignedState;
   String? _intraStateServiceNumber;
+  String? _penaltyServiceNumber;
 
   final TextEditingController payerNameController = TextEditingController();
   final TextEditingController payerPhoneController = TextEditingController();
@@ -60,7 +63,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
 
   double get baseAmount => vehicle.price.amount;
   
-  // Use service fee from API if available, fallback to calculation
   double get totalFee => vehicle.price.serviceFee > 0 
       ? vehicle.price.serviceFee 
       : (baseAmount * AppConstants.adminFeePercent + AppConstants.flatTransactionFee);
@@ -71,10 +73,21 @@ class TransactionCreationViewModel extends ChangeNotifier {
     required this.vehicle,
     this.hasPenalty = false,
     this.penaltyAmount = 0.0,
+    this.paymentType,
   }) {
     payerNameController.text =
         vehicle.customerName != 'N/A' ? vehicle.customerName : '';
     payerPhoneController.text = vehicle.phoneNumber ?? '';
+    
+    // Auto-select mode based on payment type selection
+    if (paymentType == 'chl-intra' || paymentType == 'penalty-intra') {
+      _transactionMode = TransactionMode.intraState;
+    } else if (paymentType == 'penalty-inter') {
+      _transactionMode = TransactionMode.interState;
+    } else {
+      _transactionMode = TransactionMode.interState;
+    }
+    
     _init();
   }
   
@@ -83,23 +96,20 @@ class TransactionCreationViewModel extends ChangeNotifier {
     _terminalId = session.terminalId;
     _assignedState = session.assignedState;
     _intraStateServiceNumber = session.serviceNumberIntraState;
-
-    if (_terminalId == null || _terminalId!.isEmpty) {
-      AppLogger.logWarning(_tag, 'Terminal ID missing from session during init');
-    }
+    _penaltyServiceNumber = session.serviceNumberPenalty;
 
     await loadStates();
     _fetchPayloadCategory();
 
     if (_assignedState != null && _assignedState!.isNotEmpty) {
-      // Default to Intra-State and lock to assigned state
       selectedOriginState = _assignedState;
-      selectedDestinationState = _assignedState;
-      _transactionMode = TransactionMode.intraState;
       
-      // Load LGAs for the assigned state
+      if (_transactionMode == TransactionMode.intraState) {
+        selectedDestinationState = _assignedState;
+        await onDestinationStateChanged(_assignedState!);
+      }
+      
       await onOriginStateChanged(_assignedState!);
-      await onDestinationStateChanged(_assignedState!);
     }
     notifyListeners();
   }
@@ -119,22 +129,11 @@ class TransactionCreationViewModel extends ChangeNotifier {
         selectedDestinationLga = null;
       }
       onOriginStateChanged(_assignedState!);
-    } else {
-      // Reset if no assigned state to avoid confusion
-      selectedOriginState = null;
-      selectedOriginLga = null;
-      selectedDestinationState = null;
-      selectedDestinationLga = null;
-      originLgas = [];
-      destinationLgas = [];
     }
     notifyListeners();
   }
 
-  String _formatAmount(double value) {
-    return value.toStringAsFixed(2);
-  }
-
+  String _formatAmount(double value) => value.toStringAsFixed(2);
   String get formattedBaseAmount => _formatAmount(baseAmount);
   String get formattedTotalFee => _formatAmount(totalFee);
   String get formattedPenaltyAmount => _formatAmount(penaltyAmount);
@@ -149,20 +148,15 @@ class TransactionCreationViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> get payloadCategories => _payloadCategories;
 
   Future<void> _fetchPayloadCategory() async {
-    if (_payloadCategories.isNotEmpty) return;
     try {
-      final response = await http
-          .get(Uri.parse(ApiConstants.jrbPayloadCategory))
-          .timeout(const Duration(seconds: 10));
+      final response = await http.get(Uri.parse(ApiConstants.jrbPayloadCategory));
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         final List raw = (body is List) ? body : (body['data'] is List ? body['data'] : []);
         _payloadCategories = raw.map((e) => Map<String, dynamic>.from(e)).toList();
         notifyListeners();
       }
-    } catch (e) {
-      AppLogger.logWarning(_tag, 'Payload fetch failed: $e');
-    }
+    } catch (e) { AppLogger.logWarning(_tag, 'Payload fetch failed: $e'); }
   }
 
   void selectPayloadCategory(Map<String, dynamic> category) {
@@ -178,23 +172,16 @@ class TransactionCreationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadStates({int retries = 2}) async {
+  Future<void> loadStates() async {
     isLoading = true;
     notifyListeners();
-
-    for (int attempt = 0; attempt <= retries; attempt++) {
-      final result = await _locationRepository.getStates();
-      if (result.success && result.data != null) {
-        _stateNameToId.clear();
-        for (final s in result.data!) {
-          _stateNameToId[s.stateName] = s.stateId;
-        }
-        states = _stateNameToId.keys.toList();
-        isLoading = false;
-        notifyListeners();
-        return;
+    final result = await _locationRepository.getStates();
+    if (result.success && result.data != null) {
+      _stateNameToId.clear();
+      for (final s in result.data!) {
+        _stateNameToId[s.stateName] = s.stateId;
       }
-      if (attempt < retries) await Future.delayed(const Duration(seconds: 2));
+      states = _stateNameToId.keys.toList();
     }
     isLoading = false;
     notifyListeners();
@@ -205,7 +192,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
     selectedOriginLga = null;
     originLgas = [];
     notifyListeners();
-    if (state.isEmpty) return;
     final stateId = _stateNameToId[state];
     if (stateId == null) return;
     final result = await _locationRepository.getLgas(stateId);
@@ -220,7 +206,6 @@ class TransactionCreationViewModel extends ChangeNotifier {
     selectedDestinationLga = null;
     destinationLgas = [];
     notifyListeners();
-    if (state.isEmpty) return;
     final stateId = _stateNameToId[state];
     if (stateId == null) return;
     final result = await _locationRepository.getLgas(stateId);
@@ -230,72 +215,27 @@ class TransactionCreationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void onOriginLgaChanged(String? lga) {
-    selectedOriginLga = lga;
-    notifyListeners();
-  }
+  void onOriginLgaChanged(String? lga) { selectedOriginLga = lga; notifyListeners(); }
+  void onDestinationLgaChanged(String? lga) { selectedDestinationLga = lga; notifyListeners(); }
+  void clearError() { errorMessage = null; notifyListeners(); }
 
-  void onDestinationLgaChanged(String? lga) {
-    selectedDestinationLga = lga;
-    notifyListeners();
-  }
-
-  void clearError() {
-    errorMessage = null;
-    notifyListeners();
-  }
-
-  String generateTransactionReference() {
-    return 'TXN${DateTime.now().millisecondsSinceEpoch.toString()}';
-  }
+  String generateTransactionReference() => 'TXN${DateTime.now().millisecondsSinceEpoch}';
 
   bool _validate() {
-    if (payerNameController.text.trim().isEmpty) {
-      errorMessage = 'Payer name is required';
-      notifyListeners();
-      return false;
-    }
-    if (payerPhoneController.text.trim().length != 11) {
-      errorMessage = 'Phone number must be 11 digits';
-      notifyListeners();
-      return false;
-    }
-    if (selectedOriginState == null) {
-      errorMessage = 'Please select origin state';
-      notifyListeners();
-      return false;
-    }
-    if (selectedOriginLga == null) {
-      errorMessage = 'Please select origin LGA';
-      notifyListeners();
-      return false;
-    }
-    if (selectedDestinationState == null || selectedDestinationLga == null) {
-      errorMessage = 'Please select destination state and LGA';
-      notifyListeners();
-      return false;
-    }
-
-    if (_transactionMode == TransactionMode.intraState) {
-      if (departureTownController.text.trim().isEmpty) {
-        errorMessage = 'Departure town is required';
-        notifyListeners();
-        return false;
-      }
-      if (destinationTownController.text.trim().isEmpty) {
-        errorMessage = 'Destination town is required';
-        notifyListeners();
-        return false;
-      }
+    if (payerNameController.text.trim().isEmpty) { errorMessage = 'Payer name is required'; notifyListeners(); return false; }
+    if (payerPhoneController.text.trim().length != 11) { errorMessage = 'Phone number must be 11 digits'; notifyListeners(); return false; }
+    if (selectedOriginState == null) { errorMessage = 'Please select origin state'; notifyListeners(); return false; }
+    if (selectedOriginLga == null) { errorMessage = 'Please select origin LGA'; notifyListeners(); return false; }
+    if (selectedDestinationState == null || selectedDestinationLga == null) { errorMessage = 'Please select destination state and LGA'; notifyListeners(); return false; }
+    if (_transactionMode == TransactionMode.intraState && (departureTownController.text.trim().isEmpty || destinationTownController.text.trim().isEmpty)) {
+      errorMessage = 'Town names are required for intra-state'; notifyListeners(); return false;
     }
     return true;
   }
 
   Map<String, dynamic> _prepareTmsPayload(String ref, SessionManager session, String email, {String paymentMethod = 'transfer'}) {
-    final txTypeRaw = vehicle.transactionType.trim().toLowerCase();
-    // Normalize to 'single' or 'complete' as per validation requirements
-    final transactionType = txTypeRaw.contains('single') ? 'single' : 'complete';
-
+    final transactionType = vehicle.transactionType.trim().toLowerCase().contains('single') ? 'single' : 'complete';
+    
     Map<String, dynamic>? payloadObject;
     if (transactionType == 'single' && selectedPayloadCategory != null) {
       payloadObject = {
@@ -305,57 +245,44 @@ class TransactionCreationViewModel extends ChangeNotifier {
       };
     }
 
-    final serviceNumber = (_transactionMode == TransactionMode.intraState && _intraStateServiceNumber != null)
-        ? _intraStateServiceNumber
-        : session.serviceNumberTransaction;
+    String transactionState;
+    if (paymentType != null && paymentType!.startsWith('penalty')) {
+       transactionState = paymentType == 'penalty-intra' ? 'Intra State' : 'Inter State';
+    } else {
+       transactionState = _transactionMode == TransactionMode.intraState ? 'Intra State' : 'Inter State';
+    }
 
-    final now = DateTime.now();
-    final transactionDate = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+    String? serviceNumber;
+    if (hasPenalty) {
+      serviceNumber = _penaltyServiceNumber ?? session.serviceNumberTransaction;
+    } else if (_transactionMode == TransactionMode.intraState) {
+      serviceNumber = _intraStateServiceNumber ?? session.serviceNumberTransaction;
+    } else {
+      serviceNumber = session.serviceNumberTransaction;
+    }
 
-    final metadata = {
-      'channel': 'dealcity',
-      'channel_type': 'pos',
-      'terminal_id': session.terminalId ?? '',
-      'contact': payerPhoneController.text.trim(),
-      'vehicle_type': vehicle.vehicleType,
-      'transaction_type': transactionType,
-      'transaction_date': transactionDate,
-      'amount': baseAmount.toString(),
-      'vehicle_license': vehicle.vehicleLicense,
-      'transaction_reference': ref,
-      'origin_state': selectedOriginState,
-      'origin_lga': selectedOriginLga,
-      'destination_state': selectedDestinationState ?? selectedOriginState,
-      'destination_lga': selectedDestinationLga ?? selectedOriginLga,
-      'origin_location': _transactionMode == TransactionMode.intraState ? departureTownController.text.trim() : null,
-      'destination_location': _transactionMode == TransactionMode.intraState ? destinationTownController.text.trim() : null,
-      'payload': payloadObject,
-      'penalty_applied': hasPenalty,
-      'penalty_amount': penaltyAmount,
-    };
+    final transactionDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+    final totalAmountValue = baseAmount + penaltyAmount;
 
     return <String, dynamic>{
       'payer_name': payerNameController.text.trim(),
       'payer_phone': payerPhoneController.text.trim(),
       'payer_email': email,
-      'amount': baseAmount + penaltyAmount, // Total including penalty
-      'fee': totalFee, // Numeric
-      'payment_method': paymentMethod, // required|in:card,wallet,transfer
+      'amount': totalAmountValue,
+      'fee': totalFee,
+      'payment_method': paymentMethod,
       'terminal_id': session.terminalId ?? '',
       'vehicle_license': vehicle.vehicleLicense,
       'vehicle_type': vehicle.vehicleType,
-      'transaction_type': transactionType, // required|in:single,complete
+      'transaction_type': transactionType,
+      'transaction_state': transactionState,
       'origin_state': selectedOriginState,
       'origin_lga': selectedOriginLga,
       'destination_state': selectedDestinationState,
       'destination_lga': selectedDestinationLga,
-      'departure_lga': _transactionMode == TransactionMode.intraState ? selectedOriginLga : null,
-      'departure_town': _transactionMode == TransactionMode.intraState ? departureTownController.text.trim() : null,
-      'destination_town': _transactionMode == TransactionMode.intraState ? destinationTownController.text.trim() : null,
+      'origin_location': departureTownController.text.trim(),
+      'destination_location': destinationTownController.text.trim(),
       'payload': payloadObject,
-      'metadata': metadata,
-      
-      // Additional internal fields for TMS processing
       'transaction_reference': ref,
       'service_number': serviceNumber,
       'channel_number': session.channelNumber,
@@ -363,131 +290,52 @@ class TransactionCreationViewModel extends ChangeNotifier {
     };
   }
 
-  Future<void> submit(BuildContext context) async {
-    if (!_validate()) return;
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
-
-    final session = await SessionManager.instance;
-    final ref = generateTransactionReference();
-    final email = payerEmailController.text.trim().isNotEmpty ? payerEmailController.text.trim() : (session.agentEmail ?? 'customer@example.com');
-    
-    final result = await _transactionRepository.createTransaction(_prepareTmsPayload(ref, session, email));
-
-    if (result.success && result.data != null) {
-      isLoading = false;
-      notifyListeners();
-      if (context.mounted) Navigator.pushReplacementNamed(context, AppRoutes.transactionSuccess, arguments: result.data!);
-    } else {
-      errorMessage = result.failure?.message ?? 'Transaction failed';
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
   Future<void> proceedWithSquadCo(BuildContext context) async {
     if (!_validate()) return;
     isSquadCoProceeding = true;
-    errorMessage = null;
     notifyListeners();
 
     try {
       final session = await SessionManager.instance;
       final email = payerEmailController.text.trim().isNotEmpty ? payerEmailController.text.trim() : (session.agentEmail ?? 'customer@example.com');
-      final userId = session.agentNumber;
-
-      if (userId == null || session.terminalId == null) throw Exception("Session missing. Please log in again.");
-
-      final serverUrl = Uri.parse('https://tms-local-api.justerrand.ie/squadco/post-transaction');
-      final int amountInKobo = (totalPayable * 100).toInt();
-
-      AppLogger.logInfo(_tag, 'Initializing SquadCo Proxy: $serverUrl');
+      
       final response = await http.post(
-        serverUrl,
+        Uri.parse('https://tms-local-api.justerrand.ie/squadco/post-transaction'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'amount': amountInKobo, 
-          'email': email, 
-          'redirect_url': 'chl://payment-success/payment-success'
-        }),
+        body: jsonEncode({'amount': (totalPayable * 100).toInt(), 'email': email, 'redirect_url': 'chl://payment-success'}),
       ).timeout(const Duration(seconds: 25));
-
-      AppLogger.logDebug(_tag, 'SquadCo Proxy Response: ${response.body}');
-
-      if (response.statusCode != 200) throw Exception('Server error: ${response.statusCode}');
 
       final responseBody = jsonDecode(response.body);
       if (responseBody['success'] != true) throw Exception(responseBody['message'] ?? 'Init failed');
 
       final data = responseBody['data'];
-      String rawUrl = (data?['checkout_url'] ?? data?['url'] ?? data?['link'] ?? '').toString();
-      final String transactionRef = (data?['transaction_ref'] ?? data?['reference'] ?? '').toString();
+      final String checkoutUrl = (data['checkout_url'] ?? '').toString();
+      final String transactionRef = (data['transaction_ref'] ?? '').toString();
 
-      // Clean URL
-      String cleanUrl = rawUrl.trim().replaceAll('"', '').replaceAll(r'\/', '/');
-      if (cleanUrl.isEmpty) throw Exception('Invalid payment link returned from proxy');
+      await _transactionRepository.createTransaction(_prepareTmsPayload(transactionRef, session, email, paymentMethod: 'card'));
 
-      if (!cleanUrl.startsWith('http')) {
-        cleanUrl = cleanUrl.contains('squadco.com') ? 'https://$cleanUrl' : Uri.parse('https://tms-local-api.justerrand.ie').resolve(cleanUrl).toString();
-      }
-
-      AppLogger.logInfo(_tag, 'Launching SquadCo URL: $cleanUrl');
-      final checkoutUri = Uri.parse(cleanUrl);
-
-      // 1. Create record in TMS before launching browser. 
-      // Use 'card' as payment method for SquadCo transactions to satisfy backend validation.
-      final tmsResult = await _transactionRepository.createTransaction(_prepareTmsPayload(transactionRef, session, email, paymentMethod: 'card'));
-
-      // 2. Prepare model for display - PREVENT N/A values by merging local state with server response
-      final now = DateTime.now();
-      final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-      
-      final localModel = TransactionModel(
-        transactionReference: transactionRef,
-        customerName: payerNameController.text.trim(),
-        vehicleLicense: vehicle.vehicleLicense,
-        totalAmount: totalPayable,
-        amount: baseAmount + penaltyAmount,
-        serviceFee: totalFee,
-        paymentMethod: 'squad',
-        status: 'pending',
-        terminalId: session.terminalId!,
-        agentNumber: userId ?? '',
-        createdAt: dateStr,
-        originState: selectedOriginState ?? 'N/A',
-        originLga: selectedOriginLga ?? 'N/A',
-        destinationState: selectedDestinationState ?? 'N/A',
-        destinationLga: selectedDestinationLga ?? 'N/A',
-        transactionType: vehicle.transactionType,
-      );
-
-      // Merge results if server returned a model
-      final displayModel = (tmsResult.success && tmsResult.data != null)
-          ? localModel.merge(tmsResult.data!)
-          : localModel;
-
-      // 3. Navigate to Success Screen FIRST so it is waiting in the background.
       if (context.mounted) {
-        Navigator.pushNamed(
-          context,
-          AppRoutes.transactionSuccess,
-          arguments: displayModel,
-        );
+        Navigator.pushNamed(context, AppRoutes.transactionSuccess, arguments: TransactionModel(
+          transactionReference: transactionRef,
+          customerName: payerNameController.text.trim(),
+          vehicleLicense: vehicle.vehicleLicense,
+          totalAmount: totalPayable,
+          amount: baseAmount + penaltyAmount,
+          serviceFee: totalFee,
+          paymentMethod: 'squad',
+          status: 'pending',
+          terminalId: session.terminalId!,
+          agentNumber: session.agentNumber ?? '',
+          createdAt: DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
+          originState: selectedOriginState ?? 'N/A',
+          originLga: selectedOriginLga ?? 'N/A',
+          destinationState: selectedDestinationState ?? 'N/A',
+          destinationLga: selectedDestinationLga ?? 'N/A',
+          transactionType: vehicle.transactionType,
+        ));
+        await launchUrl(Uri.parse(checkoutUrl), mode: LaunchMode.externalApplication);
       }
-
-      // 4. Launch external browser
-      final bool launched = await launchUrl(
-        checkoutUri, 
-        mode: LaunchMode.externalApplication,
-      );
-
-      if (!launched) throw Exception('Could not open browser. Please ensure Chrome or another browser is installed.');
-
-    } catch (e) {
-      AppLogger.logError(_tag, 'SquadCo error', e);
-      errorMessage = e.toString().replaceFirst('Exception: ', '');
-    } finally {
+    } catch (e) { errorMessage = e.toString(); } finally {
       isSquadCoProceeding = false;
       notifyListeners();
     }

@@ -33,6 +33,8 @@ import '../features/vehicle/scanner_view.dart';
 import '../features/transaction/transaction_creation_screen.dart';
 import '../features/transaction/transaction_success_screen.dart';
 import '../features/transaction/transaction_success_viewmodel.dart';
+import '../features/transaction/payment_type_selection_screen.dart';
+import '../features/transaction/penalty_state_selection_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -47,6 +49,8 @@ class AppRoutes {
   static const String adminDashboard = '/admin-dashboard';
   static const String agentDashboard = '/agent-dashboard';
   static const String companyVerify = '/company-verify';
+  static const String paymentTypeSelection = '/payment-type-selection';
+  static const String penaltyStateSelection = '/penalty-state-selection';
   static const String vehicleSearch = '/vehicle-search';
   static const String vehicleFound = '/vehicle-found';
   static const String vehicleNotFound = '/vehicle-not-found';
@@ -77,6 +81,8 @@ class AppRoutes {
       create: (_) => CompanyVerifyViewModel(),
       child: const CompanyVerifyScreen(),
     ),
+    paymentTypeSelection: (context) => const PaymentTypeSelectionScreen(),
+    penaltyStateSelection: (context) => const PenaltyStateSelectionScreen(),
     vehicleSearch: (context) => const VehicleSearchScreen(),
     vehicleFound: (context) => const VehicleFoundScreen(),
     vehicleNotFound: (context) => const VehicleNotFoundScreen(),

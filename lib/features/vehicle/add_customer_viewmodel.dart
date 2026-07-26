@@ -8,6 +8,7 @@ class AddCustomerViewModel extends ChangeNotifier {
   final VehicleRepository _repository = VehicleRepository();
 
   final String initialLicensePlate;
+  final String? paymentType;
   final TextEditingController licensePlateController;
   
   bool isLoading = false;
@@ -20,7 +21,7 @@ class AddCustomerViewModel extends ChangeNotifier {
   String? selectedVehicleType;
   String? selectedIssuingState;
 
-  AddCustomerViewModel({required this.initialLicensePlate})
+  AddCustomerViewModel({required this.initialLicensePlate, this.paymentType})
       : licensePlateController = TextEditingController(text: initialLicensePlate.toUpperCase()) {
     _fetchEnums();
   }
@@ -92,19 +93,23 @@ class AddCustomerViewModel extends ChangeNotifier {
         issuingState: selectedIssuingState!,
       );
       
-      if (result.success) {
+      if (result.success && result.data != null) {
         successMessage = 'Customer created successfully!';
         notifyListeners();
         
-        AppLogger.logInfo(_tag, 'Success: customer created. Returning to agent dashboard...');
+        AppLogger.logInfo(_tag, 'Success: customer created. Proceeding to found screen...');
         
         await Future.delayed(const Duration(seconds: 1));
         
         if (context.mounted) {
-          Navigator.pushNamedAndRemoveUntil(
+          // Instead of going back to dashboard, go to Vehicle Found screen to continue the flow
+          Navigator.pushReplacementNamed(
             context,
-            AppRoutes.agentDashboard,
-            (route) => false,
+            AppRoutes.vehicleFound,
+            arguments: {
+              'vehicle': result.data!,
+              'paymentType': paymentType,
+            },
           );
         }
       } else {

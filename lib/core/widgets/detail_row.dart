@@ -6,6 +6,7 @@ class DetailRow extends StatelessWidget {
   final bool isMonospace;
   final bool isSelectable;
   final Color? valueColor;
+  final FontWeight? fontWeight;
   final IconData? trailingIcon;
   final VoidCallback? onTrailingTap;
 
@@ -16,12 +17,21 @@ class DetailRow extends StatelessWidget {
     this.isMonospace = false,
     this.isSelectable = false,
     this.valueColor,
+    this.fontWeight,
     this.trailingIcon,
     this.onTrailingTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final textStyle = TextStyle(
+      fontSize: 14,
+      fontWeight: fontWeight ?? FontWeight.w600,
+      color: valueColor ?? const Color(0xFF212121),
+      fontFamily: isMonospace ? 'monospace' : null,
+      letterSpacing: isMonospace ? 1 : null,
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -35,23 +45,11 @@ class DetailRow extends StatelessWidget {
             child: isSelectable
                 ? SelectableText(
                     value.isEmpty ? 'N/A' : value,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: valueColor ?? const Color(0xFF212121),
-                      fontFamily: isMonospace ? 'monospace' : null,
-                      letterSpacing: isMonospace ? 1 : null,
-                    ),
+                    style: textStyle,
                   )
                 : Text(
                     value.isEmpty ? 'N/A' : value,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: valueColor ?? const Color(0xFF212121),
-                      fontFamily: isMonospace ? 'monospace' : null,
-                      letterSpacing: isMonospace ? 1 : null,
-                    ),
+                    style: textStyle,
                     overflow: TextOverflow.ellipsis,
                   ),
           ),

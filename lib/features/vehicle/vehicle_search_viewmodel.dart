@@ -18,10 +18,18 @@ class VehicleSearchViewModel extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
   String selectedTransactionType = ApiConstants.transactionTypeSingle;
+  String? paymentType; // chl-inter, chl-intra, penalty
 
   final licensePlateController = TextEditingController();
 
   bool get isComplete => selectedTransactionType == ApiConstants.transactionTypeComplete;
+
+  void init(Map<String, dynamic>? args) {
+    if (args != null && args.containsKey('paymentType')) {
+      paymentType = args['paymentType'];
+      notifyListeners();
+    }
+  }
 
   void onTransactionTypeChanged(String type) {
     selectedTransactionType = type;
@@ -68,7 +76,17 @@ class VehicleSearchViewModel extends ChangeNotifier {
         AppLogger.logInfo(_tag, 'Vehicle found: $plate');
 
         if (!context.mounted) return;
-        Navigator.pushNamed(context, AppRoutes.vehicleFound, arguments: result.data);
+        
+        // Pass paymentType to next screen
+        final vehicle = result.data!;
+        Navigator.pushNamed(
+          context, 
+          AppRoutes.vehicleFound, 
+          arguments: {
+            'vehicle': vehicle,
+            'paymentType': paymentType,
+          }
+        );
       } else if (result.failure != null) {
         if (result.failure is NotFoundFailure) {
           AppLogger.logInfo(_tag, 'Vehicle not found: $plate. Fetching service metadata and RFID status...');
@@ -100,6 +118,7 @@ class VehicleSearchViewModel extends ChangeNotifier {
                 'licensePlate': plate,
                 'metadata': metadata,
                 'rfidData': rfidData,
+                'paymentType': paymentType,
               });
         } else if (result.failure is NetworkFailure) {
           errorMessage = 'No internet connection. Check your network.';

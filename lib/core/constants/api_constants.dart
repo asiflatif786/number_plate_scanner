@@ -54,6 +54,10 @@ class ApiConstants {
   static const String serviceNumberValidationKey = 'service_number_validation';
   static const String serviceNumberTransactionKey =
       'service_number_transaction';
+  static const String serviceNumberIntraStateKey = 
+      'service_number_intra_state';
+  static const String serviceNumberPenaltyKey = 
+      'service_number_penalty';
 
   // Legacy constant kept for inactive files.
   static const String baseUrl = laravelBaseUrl;

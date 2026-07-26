@@ -194,6 +194,7 @@ class SessionManager {
     String? role,
     String? assignedState,
     String? serviceNumberIntraState,
+    String? serviceNumberPenalty,
   }) async {
     if (companyNumber != null) await setCompanyNumber(companyNumber);
     if (agentNumber != null) await setAgentNumber(agentNumber);
@@ -205,6 +206,7 @@ class SessionManager {
     if (role != null) await setUserRole(role);
     if (assignedState != null) await setAssignedState(assignedState);
     if (serviceNumberIntraState != null) await setServiceNumberIntraState(serviceNumberIntraState);
+    if (serviceNumberPenalty != null) await setServiceNumberPenalty(serviceNumberPenalty);
     await setOnboarded(true);
 
     AppLogger.logInfo(_tag, 'onboarding complete — all fields saved');
@@ -254,11 +256,19 @@ class SessionManager {
   }
 
   String? get serviceNumberIntraState {
-    return _p.getString('service_number_intra_state');
+    return _p.getString(ApiConstants.serviceNumberIntraStateKey);
   }
 
   Future<void> setServiceNumberIntraState(String value) async {
-    await _p.setString('service_number_intra_state', value);
+    await _p.setString(ApiConstants.serviceNumberIntraStateKey, value);
+  }
+
+  String? get serviceNumberPenalty {
+    return _p.getString(ApiConstants.serviceNumberPenaltyKey);
+  }
+
+  Future<void> setServiceNumberPenalty(String value) async {
+    await _p.setString(ApiConstants.serviceNumberPenaltyKey, value);
   }
 
   // ──────────────────────────────────────────────
@@ -279,8 +289,9 @@ class SessionManager {
     await _p.remove(ApiConstants.channelNumberKey);
     await _p.remove(ApiConstants.serviceNumberValidationKey);
     await _p.remove(ApiConstants.serviceNumberTransactionKey);
+    await _p.remove(ApiConstants.serviceNumberIntraStateKey);
+    await _p.remove(ApiConstants.serviceNumberPenaltyKey);
     await _p.remove('assigned_state');
-    await _p.remove('service_number_intra_state');
     AppLogger.logWarning(_tag, 'session cleared — all data wiped');
   }
 

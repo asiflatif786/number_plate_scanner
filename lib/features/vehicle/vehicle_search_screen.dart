@@ -13,6 +13,7 @@ class VehicleSearchScreen extends StatefulWidget {
 
 class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
   final _focusNode = FocusNode();
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -20,6 +21,16 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      // We'll call init on the VM later inside the Consumer or via context.read
+      _isInitialized = true;
+    }
   }
 
   @override
@@ -31,7 +42,12 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => VehicleSearchViewModel(),
+      create: (_) {
+        final vm = VehicleSearchViewModel();
+        // Delaying init to avoid calling it during build if possible, 
+        // but here we can pass args if we had them.
+        return vm;
+      },
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F6FA),
         appBar: AppBar(
@@ -43,11 +59,23 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
           onTap: () => FocusScope.of(context).unfocus(),
           child: Consumer<VehicleSearchViewModel>(
             builder: (context, vm, _) {
+              // One-time initialization with route arguments
+              if (_isInitialized) {
+                final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+                if (args != null && vm.paymentType == null) {
+                   vm.init(args);
+                }
+              }
+
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (vm.paymentType != null) ...[
+                      _buildSelectedTypeHeader(vm.paymentType!),
+                      const SizedBox(height: 16),
+                    ],
                     _buildInfoCard(),
                     const SizedBox(height: 24),
                     _buildPlateField(vm),
@@ -65,6 +93,45 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
             },
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedTypeHeader(String type) {
+    String label = 'Single Trip';
+    Color color = const Color(0xFF1A237E);
+    
+    if (type == 'chl-inter') {
+      label = 'CHL - Inter State';
+      color = const Color(0xFF1A237E);
+    } else if (type == 'chl-intra') {
+      label = 'CHL - Intra State';
+      color = Colors.green.shade700;
+    } else if (type == 'penalty') {
+      label = 'Penalty Payment';
+      color = Colors.red.shade700;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle, color: color, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            'Payment Type: $label',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -118,7 +185,7 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
               fontWeight: FontWeight.bold,
               fontFamily: 'monospace',
               letterSpacing: 3,
-              color: const Color(0xFFBDBDBD).withValues(alpha: 0.5),
+              color: const Color(0xFFBDBDBD).withOpacity(0.5),
             ),
             suffixIcon: IconButton(
               icon: const Icon(Icons.qr_code_scanner, color: Color(0xFF1A237E)),
@@ -157,6 +224,8 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
   }
 
   Widget _buildTripTypeSection(VehicleSearchViewModel vm) {
+    // If it's a penalty, maybe trip type is less relevant or hidden?
+    // For now, keep it but we could hide it for 'penalty' if requested.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -210,7 +279,7 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF1A237E).withValues(alpha: 0.06)
+              ? const Color(0xFF1A237E).withOpacity(0.06)
               : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
@@ -248,10 +317,10 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFC62828).withValues(alpha: 0.08),
+        color: const Color(0xFFC62828).withOpacity(0.08),
         borderRadius: BorderRadius.circular(8),
         border:
-            Border.all(color: const Color(0xFFC62828).withValues(alpha: 0.3)),
+            Border.all(color: const Color(0xFFC62828).withOpacity(0.3)),
       ),
       child: Row(
         children: [
@@ -280,7 +349,7 @@ class _VehicleSearchScreenState extends State<VehicleSearchScreen> {
           backgroundColor: const Color(0xFF1A237E),
           foregroundColor: Colors.white,
           disabledBackgroundColor:
-              const Color(0xFF1A237E).withValues(alpha: 0.5),
+              const Color(0xFF1A237E).withOpacity(0.5),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
