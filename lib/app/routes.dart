@@ -17,6 +17,8 @@ import '../features/admin/agent_detail_screen.dart';
 import '../features/admin/agent_detail_viewmodel.dart';
 import '../features/admin/view_terminals_screen.dart';
 import '../features/admin/view_terminals_viewmodel.dart';
+import '../features/admin/add_bank_account_screen.dart';
+import '../features/admin/add_bank_account_viewmodel.dart';
 import '../features/onboarding/corporate_registration_screen.dart';
 import '../features/onboarding/agent_registration_screen.dart';
 import '../features/onboarding/terminal_profiling_screen.dart';
@@ -66,6 +68,7 @@ class AppRoutes {
   static const String viewAgents = '/view-agents';
   static const String agentDetail = '/agent-detail';
   static const String viewTerminals = '/view-terminals';
+  static const String addBankAccount = '/add-bank-account';
 
   static Map<String, WidgetBuilder> routes = {
     root: (context) => const SplashScreen(),
@@ -115,6 +118,10 @@ class AppRoutes {
     viewTerminals: (context) => ChangeNotifierProvider(
       create: (_) => ViewTerminalsViewModel(),
       child: const ViewTerminalsScreen(),
+    ),
+    addBankAccount: (context) => ChangeNotifierProvider(
+      create: (_) => AddBankAccountViewModel(),
+      child: const AddBankAccountScreen(),
     ),
   };
 }

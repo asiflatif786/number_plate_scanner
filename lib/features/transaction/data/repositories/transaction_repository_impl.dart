@@ -186,4 +186,42 @@ class TransactionRepositoryImpl implements TransactionRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<Map<String, dynamic>> processTransaction({
+    required String? walletNumber,
+    required String transactionReference,
+    required double amount,
+    required Map<String, dynamic> metadata,
+    required String transactionDate,
+  }) async {
+    AppLogger.info(_tag, 'Processing Cyber1 transaction: $transactionReference');
+
+    try {
+      final body = {
+        'wallet_number': walletNumber,
+        'transaction_reference': transactionReference,
+        'amount': amount,
+        'metadata': metadata,
+        'transaction_date': transactionDate,
+      };
+
+      // The NetworkClient.post uses laravelBaseUrl by default. 
+      // We need to bypass it for this specific external API or make NetworkClient more flexible.
+      // Looking at NetworkClient, it prepends ApiConstants.laravelBaseUrl.
+      // We might need to use http directly or adjust NetworkClient.
+      
+      // For now, let's assume we use the Cyber1 endpoint via the NetworkClient if possible,
+      // but NetworkClient seems locked to laravelBaseUrl.
+      // I'll check NetworkClient again.
+      
+      return await _networkClient.post(
+        ApiConstants.processTransaction,
+        body: body,
+      );
+    } catch (e) {
+      AppLogger.error(_tag, 'Failed to process Cyber1 transaction', e);
+      rethrow;
+    }
+  }
 }

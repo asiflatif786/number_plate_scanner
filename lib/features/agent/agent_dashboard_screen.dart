@@ -94,7 +94,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: Colors.white.withAlpha(38),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Center(
@@ -139,7 +139,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
+        color: Colors.white.withAlpha(38),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -194,47 +194,6 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     );
   }
 
-  Widget _actionCard({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      elevation: 1,
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 26),
-              ),
-              const SizedBox(height: 8),
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF424242))),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildTodayActivity(AgentDashboardViewModel vm) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -266,7 +225,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: Colors.black.withAlpha(10),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -344,7 +303,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: Colors.black.withAlpha(10),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -367,8 +326,8 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: isActive
-                            ? const Color(0xFF2E7D32).withValues(alpha: 0.1)
-                            : const Color(0xFFF57C00).withValues(alpha: 0.1),
+                            ? const Color(0xFF2E7D32).withAlpha(26)
+                            : const Color(0xFFF57C00).withAlpha(26),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(

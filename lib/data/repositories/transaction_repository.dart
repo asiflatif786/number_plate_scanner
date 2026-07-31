@@ -32,6 +32,30 @@ class TransactionRepository {
     return ApiResponse.failure(response.failure!);
   }
 
+  Future<ApiResponse<Map<String, dynamic>>> processCyber1Transaction({
+    required String? walletNumber,
+    required String transactionReference,
+    required double amount,
+    required Map<String, dynamic> metadata,
+    required String transactionDate,
+  }) async {
+    AppLogger.logInfo(_tag, 'Processing Cyber1 transaction: $transactionReference');
+
+    final response = await ApiClient.instance.post(
+      ApiConstants.processTransaction,
+      baseUrl: ApiConstants.cyber1BaseUrl,
+      body: {
+        'wallet_number': walletNumber,
+        'transaction_reference': transactionReference,
+        'amount': amount,
+        'metadata': metadata,
+        'transaction_date': transactionDate,
+      },
+    );
+
+    return response;
+  }
+
   Future<ApiResponse<bool>> approveTransaction({
     required String transactionReference,
   }) async {

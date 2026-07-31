@@ -312,7 +312,19 @@ class TransactionCreationViewModel extends ChangeNotifier {
       final String checkoutUrl = (data['checkout_url'] ?? '').toString();
       final String transactionRef = (data['transaction_ref'] ?? '').toString();
 
-      await _transactionRepository.createTransaction(_prepareTmsPayload(transactionRef, session, email, paymentMethod: 'card'));
+      final tmsPayload = _prepareTmsPayload(transactionRef, session, email, paymentMethod: 'card');
+      await _transactionRepository.createTransaction(tmsPayload);
+
+      // Cyber1 process-transaction call (Inter-state or Intra-state, no penalty)
+      if (!hasPenalty && (_transactionMode == TransactionMode.interState || _transactionMode == TransactionMode.intraState)) {
+        await _transactionRepository.processCyber1Transaction(
+          walletNumber: null,
+          transactionReference: transactionRef,
+          amount: totalPayable,
+          metadata: tmsPayload,
+          transactionDate: tmsPayload['transaction_date'],
+        );
+      }
 
       if (context.mounted) {
         Navigator.pushNamed(context, AppRoutes.transactionSuccess, arguments: TransactionModel(
@@ -337,6 +349,50 @@ class TransactionCreationViewModel extends ChangeNotifier {
       }
     } catch (e) { errorMessage = e.toString(); } finally {
       isSquadCoProceeding = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> proceedWithStandardPayment(BuildContext context) async {
+    if (!_validate()) return;
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final session = await SessionManager.instance;
+      final email = payerEmailController.text.trim().isNotEmpty 
+          ? payerEmailController.text.trim() 
+          : (session.agentEmail ?? 'customer@example.com');
+      
+      final transactionRef = generateTransactionReference();
+      final tmsPayload = _prepareTmsPayload(transactionRef, session, email, paymentMethod: 'transfer');
+
+      final result = await _transactionRepository.createTransaction(tmsPayload);
+
+      if (result.success && context.mounted) {
+        // Cyber1 process-transaction call (Inter-state or Intra-state, no penalty)
+        if (!hasPenalty && (_transactionMode == TransactionMode.interState || _transactionMode == TransactionMode.intraState)) {
+          await _transactionRepository.processCyber1Transaction(
+            walletNumber: null,
+            transactionReference: transactionRef,
+            amount: totalPayable,
+            metadata: tmsPayload,
+            transactionDate: tmsPayload['transaction_date'],
+          );
+        }
+
+        Navigator.pushNamed(
+          context, 
+          AppRoutes.transactionSuccess, 
+          arguments: result.data
+        );
+      } else {
+        errorMessage = result.failure?.message ?? 'Failed to create transaction';
+      }
+    } catch (e) {
+      errorMessage = e.toString();
+    } finally {
+      isLoading = false;
       notifyListeners();
     }
   }

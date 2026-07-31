@@ -74,6 +74,7 @@ class ApiClient {
   Future<ApiResponse<Map<String, dynamic>>> get(
     String endpoint, {
     Map<String, String>? queryParams,
+    String? baseUrl,
   }) async {
     final hasInternet = await _checkConnectivity();
     if (!hasInternet) {
@@ -83,10 +84,10 @@ class ApiClient {
       );
     }
 
-    final uri = Uri.parse('${ApiConstants.laravelBaseUrl}$endpoint')
-        .replace(queryParameters: queryParams);
+    final base = baseUrl ?? ApiConstants.laravelBaseUrl;
+    final uri = Uri.parse('$base$endpoint').replace(queryParameters: queryParams);
 
-    _logRequest('GET', endpoint, queryParams);
+    _logRequest('GET', '$base$endpoint', queryParams);
 
     try {
       final httpResponse = await _httpClient
@@ -117,6 +118,7 @@ class ApiClient {
   Future<ApiResponse<Map<String, dynamic>>> post(
     String endpoint, {
     Map<String, dynamic>? body,
+    String? baseUrl,
   }) async {
     final hasInternet = await _checkConnectivity();
     if (!hasInternet) {
@@ -126,9 +128,10 @@ class ApiClient {
       );
     }
 
-    final uri = Uri.parse('${ApiConstants.laravelBaseUrl}$endpoint');
+    final base = baseUrl ?? ApiConstants.laravelBaseUrl;
+    final uri = Uri.parse('$base$endpoint');
 
-    _logRequest('POST', endpoint, body);
+    _logRequest('POST', '$base$endpoint', body);
 
     try {
       final httpResponse = await _httpClient
@@ -160,6 +163,7 @@ class ApiClient {
   Future<ApiResponse<Map<String, dynamic>>> put(
     String endpoint, {
     Map<String, dynamic>? body,
+    String? baseUrl,
   }) async {
     final hasInternet = await _checkConnectivity();
     if (!hasInternet) {
@@ -169,9 +173,10 @@ class ApiClient {
       );
     }
 
-    final uri = Uri.parse('${ApiConstants.laravelBaseUrl}$endpoint');
+    final base = baseUrl ?? ApiConstants.laravelBaseUrl;
+    final uri = Uri.parse('$base$endpoint');
 
-    _logRequest('PUT', endpoint, body);
+    _logRequest('PUT', '$base$endpoint', body);
 
     try {
       final httpResponse = await _httpClient
@@ -218,7 +223,7 @@ class ApiClient {
     http.Response httpResponse,
   ) {
     final responseBody = _parseBody(httpResponse);
-    
+
     // Handle nested TMS response if present
     Map<String, dynamic> tmsData = responseBody;
     if (responseBody.containsKey('body') && responseBody['body'] is Map<String, dynamic>) {
@@ -226,14 +231,14 @@ class ApiClient {
     }
 
     // Extraction logic: try to find a descriptive message
-    String? message = tmsData['message'] as String? 
+    String? message = tmsData['message'] as String?
         ?? responseBody['message'] as String?;
-    
+
     // Support both 'data' and 'Data' keys
     final rawData = tmsData['data'] ?? tmsData['Data'] ?? responseBody['data'] ?? responseBody['Data'];
 
     // If message is generic (like "not found") and data is a string, use data as the message
-    if ((message == null || message.toLowerCase() == 'not found' || message.toLowerCase() == 'error') && 
+    if ((message == null || message.toLowerCase() == 'not found' || message.toLowerCase() == 'error') &&
         rawData is String && rawData.isNotEmpty) {
       message = rawData;
     }
@@ -244,7 +249,7 @@ class ApiClient {
     final oldStatus = tmsData['status'] ?? responseBody['status'];
     final statusCode = tmsData['status_code'] as String? ?? responseBody['status_code'] as String?;
 
-    final isSuccess = oldStatus == true || oldStatus == 'true' || statusCode == '00';
+    final isSuccess = oldStatus == true || oldStatus == 'true' || statusCode == '00' || httpResponse.statusCode == 200 || httpResponse.statusCode == 201;
 
     Map<String, dynamic> data = {};
     if (rawData is Map<String, dynamic>) {
@@ -257,7 +262,7 @@ class ApiClient {
 
     AppLogger.logInfo(_tag, '${httpResponse.statusCode} → $message');
 
-    if (httpResponse.statusCode != 200) {
+    if (httpResponse.statusCode != 200 && httpResponse.statusCode != 201) {
       final failure = _mapHttpError(httpResponse.statusCode, message);
       AppLogger.logError(_tag, 'HTTP ${httpResponse.statusCode}', failure);
       return ApiResponse.failure(failure);
@@ -351,8 +356,7 @@ class ApiClient {
     }
   }
 
-  void _logRequest(String method, String endpoint, dynamic body) {
-    final url = '${ApiConstants.laravelBaseUrl}$endpoint';
+  void _logRequest(String method, String url, dynamic body) {
     AppLogger.logInfo(_tag, '$method $url');
     if (body != null) {
       AppLogger.logDebug(_tag, 'Body: ${jsonEncode(body)}');

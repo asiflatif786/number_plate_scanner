@@ -197,7 +197,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Navigator.pushNamed(context, AppRoutes.viewTerminals),
               badge: vm.totalTerminals > 0 ? '${vm.totalTerminals}' : null,
             ),
-
+            _menuCard(
+              icon: Icons.account_balance,
+              label: 'Add Bank Account',
+              subtitle: 'Create customer profile',
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.addBankAccount),
+            ),
           ],
         ),
       ],
@@ -279,7 +285,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           Text('Consolidated Haulage Levy v1.0.0',
               style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text('Powered by Cyber1 Systems',
               style: TextStyle(fontSize: 11, color: Color(0xFFBDBDBD))),
         ],

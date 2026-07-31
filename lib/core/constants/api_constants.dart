@@ -19,6 +19,13 @@ class ApiConstants {
   /// The single TMS endpoint — all actions are POSTed here with key+action in body.
   static const String tmsEndpoint = '';
 
+  // Cyber1 Systems Network API
+  static const String cyber1BaseUrl = 'https://collectionsappdev.cyber1systemsnetwork.com/api/paas';
+  static const String createCustomerProfile = '/account/create-customer-profile';
+  static const String generateAccount = '/account/generate-account';
+  static const String regenerateOtp = '/account/regenerate-otp';
+  static const String getCustomerDetails = '/account/get-customer-details';
+  static const String processTransaction = '/transaction/process-transaction';
 
   // Official Laravel proxy endpoints used by the Flutter app.
   static const String validateVehicle = '/validation/validate-customer';
@@ -85,6 +92,8 @@ class ApiConstants {
   static const String actionViewTerminals = 'view-terminals';
   static const String actionGetTerminalDetail = 'get-terminal-detail';
   static const String actionGetAllTransaction = 'get-all-transaction';
+  static const String actionCreateBankAccount = 'create-bank-account';
+  static const String actionGetAgentsForBank = 'get-agents-for-bank';
 
   static const String validateCustomer = validateVehicle;
   static const String getCompany = '/corporate/get-company';

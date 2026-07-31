@@ -16,4 +16,12 @@ abstract class TransactionRepository {
     int page = 1,
     int limit = 20,
   });
+
+  Future<Map<String, dynamic>> processTransaction({
+    required String? walletNumber,
+    required String transactionReference,
+    required double amount,
+    required Map<String, dynamic> metadata,
+    required String transactionDate,
+  });
 }

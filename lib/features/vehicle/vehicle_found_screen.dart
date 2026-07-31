@@ -69,7 +69,7 @@ class _VehicleFoundBody extends StatelessWidget {
 
   Widget _buildStatusBanner(VehicleModel vehicle, String? paymentType) {
     String subTitle = 'This vehicle is registered in the Cyber1 database';
-    if (paymentType == 'penalty') {
+    if (paymentType != null && paymentType.startsWith('penalty')) {
       subTitle = 'Penalty processing for registered vehicle';
     }
 
@@ -161,21 +161,9 @@ class _VehicleFoundBody extends StatelessWidget {
             _buildFeeRow('Base Amount', vm.formattedBaseAmount),
             _buildFeeRow('Convenience Fee', vm.formattedTotalFee),
             
-            // Penalty Row
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'Add Penalty (50%)',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              subtitle: Text(
-                'For vehicles that left without paying. Fee: ${vm.formattedPenaltyAmount}',
-                style: const TextStyle(fontSize: 12),
-              ),
-              value: vm.hasPenalty,
-              onChanged: (val) => vm.togglePenalty(val),
-              activeColor: Colors.red,
-            ),
+            if (vm.hasPenalty) ...[
+              _buildFeeRow('Penalty (50%)', vm.formattedPenaltyAmount),
+            ],
             
             const Divider(),
             _buildTotalPayableRow(vm.formattedTotalPayable),
@@ -250,13 +238,13 @@ class _VehicleFoundBody extends StatelessWidget {
   }
 
   Widget _buildTripTypeChip(String transactionType) {
-    final isSingle = transactionType == 'single';
+    final isSingle = transactionType.toLowerCase() == 'single';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
           const SizedBox(
-            width: 140,
+            width: 120,
             child: Text('Trip Type', style: TextStyle(fontSize: 13, color: Colors.grey)),
           ),
           Container(

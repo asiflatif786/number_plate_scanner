@@ -83,7 +83,10 @@ class _TransactionCreationBody extends StatelessWidget {
                   _buildErrorBanner(vm),
                 ],
                 const SizedBox(height: 24),
-                _buildSquadCoButton(vm, context),
+                if (vm.hasPenalty)
+                  _buildSquadCoButton(vm, context)
+                else
+                  _buildStandardProceedButton(vm, context),
                 const SizedBox(height: 16),
               ],
             ),
@@ -330,6 +333,20 @@ class _TransactionCreationBody extends StatelessWidget {
         isLoading: vm.isSquadCoProceeding,
         icon: Icons.payment,
         color: Colors.indigo,
+      ),
+    );
+  }
+
+  Widget _buildStandardProceedButton(TransactionCreationViewModel vm, BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: AppButton(
+        label: vm.isLoading ? 'Processing...' : 'Confirm & Generate Invoice',
+        onPressed: (vm.isLoading || vm.isSquadCoProceeding) ? null : () => vm.proceedWithStandardPayment(context),
+        isLoading: vm.isLoading,
+        icon: Icons.check_circle,
+        color: Colors.green.shade700,
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'core/session/session_manager.dart';
 import 'core/theme/app_theme.dart';
 import 'features/agent/agent_dashboard_viewmodel.dart';
 import 'features/admin/admin_dashboard_viewmodel.dart';
+import 'features/admin/add_bank_account_viewmodel.dart';
 import 'features/auth/login_viewmodel.dart';
 import 'features/onboarding/agent_registration_viewmodel.dart';
 import 'features/onboarding/corporate_registration_viewmodel.dart';
@@ -36,17 +37,16 @@ class HaulageLevyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => OnboardingCompleteViewModel()),
         ChangeNotifierProvider(create: (_) => AdminDashboardViewModel()),
         ChangeNotifierProvider(create: (_) => AgentDashboardViewModel()),
+        ChangeNotifierProvider(create: (_) => AddBankAccountViewModel()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Consolidated Haulage Levy',
         theme: AppTheme.light,
         initialRoute: AppRoutes.splash,
-        // Enhanced route handler to handle deep links with query parameters
         onGenerateRoute: (settings) {
           final String name = settings.name ?? '';
           
-          // Handle cases where the path is just "/" but has query params like ?reference=...
           if (name.contains('?reference=') || name.contains('&reference=')) {
              return MaterialPageRoute(
                builder: AppRoutes.routes[AppRoutes.paymentSuccess]!,
@@ -57,14 +57,8 @@ class HaulageLevyApp extends StatelessWidget {
           final Uri uri = Uri.parse(name);
           String path = uri.path;
           
-          // Check host for custom schemes like chl://payment-success
           if (uri.host == 'payment-success') {
             path = AppRoutes.paymentSuccess;
-          }
-
-          // Strip trailing slashes and ensure base path matching
-          if (path.isEmpty || path == '/') {
-             // Default to splash or let standard logic handle it
           }
 
           final builder = AppRoutes.routes[path];
@@ -76,7 +70,6 @@ class HaulageLevyApp extends StatelessWidget {
             );
           }
 
-          // Final fallback
           return MaterialPageRoute(
             builder: (_) => RouteNotFoundScreen(route: name),
           );
@@ -88,16 +81,52 @@ class HaulageLevyApp extends StatelessWidget {
 
 class PlaceholderScreen extends StatelessWidget {
   final String title;
-  const PlaceholderScreen(this.title, {super.key});
+  final String? message;
+  
+  const PlaceholderScreen(this.title, {this.message, super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: Center(
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.headlineMedium,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 80, color: Colors.redAccent),
+              const SizedBox(height: 24),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                message ?? 'The server encountered an error (HTTP 500) while processing this request. This usually means there is a temporary issue with the backend service or invalid data was provided.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[700],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A237E),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Go Back and Try Again'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

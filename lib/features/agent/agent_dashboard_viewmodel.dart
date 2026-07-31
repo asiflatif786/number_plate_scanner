@@ -6,6 +6,7 @@ import '../../core/session/session_manager.dart';
 import '../../core/utils/logger.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/terminal_repository.dart';
+import '../../data/repositories/bank_repository.dart';
 import '../../data/models/terminal_model.dart';
 
 class AgentDashboardViewModel extends ChangeNotifier {
@@ -13,6 +14,7 @@ class AgentDashboardViewModel extends ChangeNotifier {
 
   final TransactionRepository _txRepo = TransactionRepository();
   final TerminalRepository _terminalRepo = TerminalRepository();
+  final BankRepository _bankRepo = BankRepository();
 
   String agentFullName = '';
   String agentNumber = '';
@@ -23,6 +25,14 @@ class AgentDashboardViewModel extends ChangeNotifier {
   String currentDate = '';
   String greeting = '';
 
+  // Bank Details
+  String bankName = '';
+  String accountNumber = '';
+  String accountName = '';
+  bool hasBankDetails = false;
+  bool isBankLoading = false;
+  String? bankErrorMessage;
+
   int totalTransactions = 0;
   int approvedCount = 0;
   int pendingCount = 0;
@@ -30,52 +40,58 @@ class AgentDashboardViewModel extends ChangeNotifier {
   bool isRefreshing = false;
 
   Future<void> loadSession() async {
-    final session = await SessionManager.instance;
-    agentFullName =
-        session.agentFullName.isNotEmpty ? session.agentFullName : 'Agent';
-    agentNumber = session.agentNumber ?? 'N/A';
-    terminalId = session.terminalId ?? 'N/A';
-    companyNumber = session.companyNumber ?? 'N/A';
-    serialNumber = session.serialNumber ?? 'N/A';
-    currentDate = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
-    greeting = _computeGreeting(DateTime.now().hour);
-    notifyListeners();
-    
-    // First fetch terminal details to ensure we have the correct terminalId
-    await _fetchTerminalDetails();
-    // Then fetch stats using that terminalId
-    await _fetchTransactionStats();
+    try {
+      final session = await SessionManager.instance;
+      agentFullName = session.agentFullName.isNotEmpty ? session.agentFullName : 'Agent';
+      agentNumber = session.agentNumber ?? 'N/A';
+      terminalId = session.terminalId ?? 'N/A';
+      companyNumber = session.companyNumber ?? 'N/A';
+      serialNumber = session.serialNumber ?? 'N/A';
+      currentDate = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
+      greeting = _computeGreeting(DateTime.now().hour);
+      notifyListeners();
+      
+      // Load details sequentially with individual error handling
+      await _fetchTerminalDetails();
+      await _fetchTransactionStats();
+      await _fetchBankDetails();
+    } catch (e) {
+      AppLogger.logError(_tag, 'loadSession error', e);
+    }
   }
 
   Future<void> refresh() async {
     isRefreshing = true;
     notifyListeners();
-    await _fetchTerminalDetails();
-    await _fetchTransactionStats();
-    isRefreshing = false;
-    notifyListeners();
+    try {
+      // Refreshing all details
+      await _fetchTerminalDetails();
+      await _fetchTransactionStats();
+      await _fetchBankDetails();
+    } catch (e) {
+      AppLogger.logError(_tag, 'refresh error', e);
+    } finally {
+      isRefreshing = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _fetchTerminalDetails() async {
     if (agentNumber == 'N/A' || agentNumber.isEmpty) return;
-
     try {
       final response = await _terminalRepo.getTerminalDetail(id: agentNumber);
       if (response.success && response.data != null) {
-        final data = response.data!;
-        final terminals = data['terminals'] as List?;
+        final terminals = response.data!['terminals'] as List?;
         if (terminals != null && terminals.isNotEmpty) {
           final terminal = TerminalModel.fromJson(terminals.first);
           terminalId = terminal.terminalId;
           serialNumber = terminal.serialNumber;
           terminalStatus = terminal.status;
           
-          // Persist to session so it's available for transactions
           final session = await SessionManager.instance;
           await session.setTerminalId(terminalId);
           await session.setSerialNumber(serialNumber);
-          
-          AppLogger.logInfo(_tag, 'Terminal details synced: $terminalId');
+          AppLogger.logDebug(_tag, 'Terminal synced: $terminalId');
         }
       }
     } catch (e) {
@@ -84,12 +100,56 @@ class AgentDashboardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _fetchTransactionStats() async {
-    if (terminalId == 'N/A' || terminalId.isEmpty) {
-       AppLogger.logWarning(_tag, 'Cannot fetch stats: terminalId is empty');
-       return;
+  Future<void> _fetchBankDetails() async {
+    final session = await SessionManager.instance;
+    final email = session.agentEmail;
+    
+    if (email == null || email.isEmpty) {
+      AppLogger.logWarning(_tag, 'Bank fetch aborted: email is empty in session');
+      hasBankDetails = false;
+      bankErrorMessage = 'Agent email not found. Please re-login.';
+      notifyListeners();
+      return;
     }
 
+    isBankLoading = true;
+    bankErrorMessage = null;
+    notifyListeners();
+
+    try {
+      AppLogger.logInfo(_tag, 'Fetching bank details for email: $email');
+      final response = await _bankRepo.getCustomerDetails(email: email);
+      
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        
+        // Robust mapping for different API response structures
+        bankName = (data['bank_name'] ?? data['BankName'])?.toString() ?? 'N/A';
+        accountNumber = (data['account_number'] ?? data['AccountNumber'])?.toString() ?? 'Not Generated';
+        accountName = (data['account_name'] ?? data['AccountName'] ?? data['name'])?.toString() ?? 'N/A';
+        
+        // We set hasBankDetails to true if we got a successful response with data
+        // even if account number isn't fully ready yet.
+        hasBankDetails = data.isNotEmpty;
+        
+        AppLogger.logInfo(_tag, 'Bank details loaded: $accountNumber ($bankName)');
+      } else {
+        bankErrorMessage = response.message ?? 'Bank account details not found.';
+        hasBankDetails = false;
+        AppLogger.logWarning(_tag, 'Bank API returned failure: ${response.message}');
+      }
+    } catch (e) {
+      AppLogger.logError(_tag, 'fetchBankDetails exception', e);
+      bankErrorMessage = 'Unable to load banking details.';
+      hasBankDetails = false;
+    } finally {
+      isBankLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _fetchTransactionStats() async {
+    if (terminalId == 'N/A' || terminalId.isEmpty) return;
     try {
       final response = await _txRepo.getTransactionStats(terminalId: terminalId);
       if (response.success && response.data != null) {
@@ -98,8 +158,6 @@ class AgentDashboardViewModel extends ChangeNotifier {
         approvedCount = _parseInt(data['approved_transactions']);
         declinedCount = _parseInt(data['declined_transactions']);
         pendingCount = _parseInt(data['pending_transactions']);
-        
-        AppLogger.logInfo(_tag, 'Stats updated: T:$totalTransactions A:$approvedCount P:$pendingCount D:$declinedCount');
       }
     } catch (e) {
       AppLogger.logError(_tag, 'fetchStats error', e);
@@ -129,14 +187,8 @@ class AgentDashboardViewModel extends ChangeNotifier {
         title: const Text('Logout'),
         content: const Text('Are you sure you want to logout?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Logout'),
-          ),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Logout')),
         ],
       ),
     );
@@ -144,7 +196,6 @@ class AgentDashboardViewModel extends ChangeNotifier {
     if (confirm == true) {
       final session = await SessionManager.instance;
       await session.clearSession();
-      AppLogger.logInfo(_tag, 'Agent logged out');
       if (!context.mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.login);
     }
@@ -152,9 +203,5 @@ class AgentDashboardViewModel extends ChangeNotifier {
 
   void navigateToVehicleSearch(BuildContext context) {
     Navigator.pushNamed(context, AppRoutes.paymentTypeSelection);
-  }
-
-  void navigateToScanner(BuildContext context) {
-    Navigator.pushNamed(context, AppRoutes.scanner);
   }
 }
