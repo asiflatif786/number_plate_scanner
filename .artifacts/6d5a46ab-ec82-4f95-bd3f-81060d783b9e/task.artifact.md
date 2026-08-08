@@ -1,0 +1,2 @@
+- [x] Implement `HttpOverrides` in `lib/main.dart` to bypass SSL certificate verification.
+- [ ] Verify the fix by attempting a login.

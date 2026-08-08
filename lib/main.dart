@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -14,8 +16,20 @@ import 'features/onboarding/onboarding_complete_viewmodel.dart';
 import 'features/onboarding/terminal_profiling_viewmodel.dart';
 import 'features/splash/splash_viewmodel.dart';
 
+class DevHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Bypass SSL certificate verification for development
+  HttpOverrides.global = DevHttpOverrides();
 
   await (await SessionManager.instance).init();
 
