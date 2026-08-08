@@ -24,15 +24,74 @@ class BankRepository {
     return ApiResponse.failure(response.failure!);
   }
 
-  Future<ApiResponse<Map<String, dynamic>>> createCustomerProfile({
-    required String bvn,
-    required String email,
-  }) async {
-    AppLogger.logInfo(_tag, 'Creating bank account profile via TMS action');
+  Future<ApiResponse<Map<String, dynamic>>> getVendorDetail(String rcNumber) async {
+    AppLogger.logInfo(_tag, 'Checking vendor detail for RC: $rcNumber');
+
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGetVendorDetail,
+      fields: {
+        'rc_number': rcNumber,
+      },
+    );
+
+    if (response.success) {
+      return ApiResponse.success(response.data ?? {}, response.message);
+    }
+
+    return ApiResponse.failure(response.failure!);
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> createVendorAccount(Map<String, dynamic> agentData) async {
+    AppLogger.logInfo(_tag, 'Creating vendor account profile via TMS action');
+
+    final String fullName = '${agentData['first_name'] ?? ''} ${agentData['last_name'] ?? ''}'.trim();
 
     final response = await ApiClient.instance.tmsPost(
       ApiConstants.actionCreateBankAccount,
       fields: {
+        'name': fullName,
+        'email': agentData['email'],
+        'rc_number': agentData['company_number'] ?? agentData['rc_number'] ?? '',
+        'phone_number': agentData['phone_number'],
+        'city': agentData['city'],
+        'state': agentData['state'],
+        'address': agentData['address'],
+        'lga': agentData['lga'],
+      },
+    );
+
+    if (response.success) {
+      return ApiResponse.success(response.data ?? {}, response.message);
+    }
+
+    return ApiResponse.failure(response.failure!);
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> addAgentBank(Map<String, dynamic> data) async {
+    AppLogger.logInfo(_tag, 'Adding agent to bank system via TMS action');
+
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionAddAgentBank,
+      fields: data,
+    );
+
+    if (response.success) {
+      return ApiResponse.success(response.data ?? {}, response.message);
+    }
+
+    return ApiResponse.failure(response.failure!);
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> createBankProfile({
+    required String bvn,
+    required String email,
+  }) async {
+    AppLogger.logInfo(_tag, 'Creating bank profile via Cyber1 API');
+
+    final response = await ApiClient.instance.post(
+      ApiConstants.createCustomerProfile,
+      baseUrl: ApiConstants.cyber1BaseUrl,
+      body: {
         'bvn': bvn,
         'email': email,
       },

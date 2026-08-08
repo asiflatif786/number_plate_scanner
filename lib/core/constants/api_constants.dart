@@ -92,8 +92,10 @@ class ApiConstants {
   static const String actionViewTerminals = 'view-terminals';
   static const String actionGetTerminalDetail = 'get-terminal-detail';
   static const String actionGetAllTransaction = 'get-all-transaction';
-  static const String actionCreateBankAccount = 'create-bank-account';
+  static const String actionCreateBankAccount = 'create-vendor-account';
   static const String actionGetAgentsForBank = 'get-agents-for-bank';
+  static const String actionGetVendorDetail = 'get-vendor-detail';
+  static const String actionAddAgentBank = 'add-agent-bank';
 
   static const String validateCustomer = validateVehicle;
   static const String getCompany = '/corporate/get-company';

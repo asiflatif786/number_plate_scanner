@@ -1,13 +1,52 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../app/routes.dart';
 import '../../core/widgets/app_card.dart';
 import '../../data/models/company_model.dart';
+import 'add_bank_account_viewmodel.dart';
 
 class CompanyDetailScreen extends StatelessWidget {
   final CompanyModel company;
 
   const CompanyDetailScreen({super.key, required this.company});
+
+  void _handleAddCompanyToPayment(BuildContext context) async {
+    final vm = context.read<AddBankAccountViewModel>();
+    
+    // Pre-populate VM with company details
+    vm.setFromCompany(company);
+    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    // Call the create-vendor-account API
+    final success = await vm.createVendorAccount();
+    
+    if (context.mounted) {
+      Navigator.pop(context); // Close loading dialog
+
+      if (success) {
+        // Navigate to bank account management screen to continue the flow
+        Navigator.pushNamed(
+          context, 
+          AppRoutes.addBankAccount,
+          // We don't pass company arg here because we already pre-filled and advanced the VM state
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(vm.errorMessage ?? 'Failed to add company to payment system'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +84,9 @@ class CompanyDetailScreen extends StatelessWidget {
             ]),
             const SizedBox(height: 32),
             _buildAddAgentButton(context),
+            const SizedBox(height: 12),
+            _buildAddCompanyToPaymentButton(context),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -183,6 +225,23 @@ class CompanyDetailScreen extends StatelessWidget {
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 0,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddCompanyToPaymentButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: () => _handleAddCompanyToPayment(context),
+        icon: const Icon(Icons.account_balance),
+        label: const Text('Add Company To Payment System'),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFF1A237E)),
+          foregroundColor: const Color(0xFF1A237E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );

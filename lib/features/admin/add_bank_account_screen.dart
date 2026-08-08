@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../data/models/company_model.dart';
 import 'add_bank_account_viewmodel.dart';
 
 class AddBankAccountScreen extends StatefulWidget {
@@ -10,68 +11,79 @@ class AddBankAccountScreen extends StatefulWidget {
 }
 
 class _AddBankAccountScreenState extends State<AddBankAccountScreen> {
-  final _profileFormKey = GlobalKey<FormState>();
-  final _accountFormKey = GlobalKey<FormState>();
+  final _bankProfileFormKey = GlobalKey<FormState>();
+  final _otpFormKey = GlobalKey<FormState>();
   final _lookupFormKey = GlobalKey<FormState>();
   
+  final _bvnController = TextEditingController();
   final _emailController = TextEditingController();
   final _otpController = TextEditingController();
   final _lookupEmailController = TextEditingController();
 
-  int _currentView = 0; // 0: Profile/Generate, 1: Lookup
+  int _currentView = 0; // 0: Management, 1: Lookup
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AddBankAccountViewModel>().fetchAgents();
+      final vm = context.read<AddBankAccountViewModel>();
+      vm.fetchAgents();
+      
+      // Check for passed arguments (from Company or Agent detail screens)
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null && args.containsKey('company')) {
+        vm.setFromCompany(args['company'] as CompanyModel);
+      }
     });
   }
 
   @override
   void dispose() {
+    _bvnController.dispose();
     _emailController.dispose();
     _otpController.dispose();
     _lookupEmailController.dispose();
     super.dispose();
   }
 
-  void _submitProfile() async {
+  void _submitConfirmVendor() async {
     final vm = context.read<AddBankAccountViewModel>();
-    
-    if (vm.selectedAgent == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an agent from the list')),
-      );
-      return;
-    }
-
-    final bvn = vm.selectedAgent!['bvn']?.toString() ?? '';
-    final email = vm.selectedAgent!['email']?.toString() ?? '';
-
-    if (bvn.isEmpty || email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selected agent is missing BVN or Email information')),
-      );
-      return;
-    }
-
-    final success = await vm.createCustomerProfile(
-      bvn: bvn,
-      email: email,
-    );
-
+    final success = await vm.confirmAccount();
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(vm.successMessage ?? 'Profile created. Now generate account.')),
+        SnackBar(content: Text(vm.successMessage ?? 'Vendor account verified.')),
       );
-      // Auto-fill the confirm email for the next step
-      _emailController.text = email;
     }
   }
 
-  void _submitGenerateAccount() async {
-    if (_accountFormKey.currentState!.validate()) {
+  void _submitCreateVendor() async {
+    final vm = context.read<AddBankAccountViewModel>();
+    final success = await vm.createVendorAccount();
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(vm.successMessage ?? 'Vendor account created.')),
+      );
+    }
+  }
+
+  void _submitCreateBankProfile() async {
+    if (_bankProfileFormKey.currentState!.validate()) {
+      final vm = context.read<AddBankAccountViewModel>();
+      final success = await vm.createBankProfile(
+        bvn: _bvnController.text.trim(),
+        email: _emailController.text.trim(),
+      );
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(vm.successMessage ?? 'Bank profile created. Please verify OTP.')),
+        );
+      }
+    }
+  }
+
+  void _submitVerifyOtp() async {
+    if (_otpFormKey.currentState!.validate()) {
       final vm = context.read<AddBankAccountViewModel>();
       final success = await vm.generateAccount(
         otp: _otpController.text.trim(),
@@ -80,9 +92,10 @@ class _AddBankAccountScreenState extends State<AddBankAccountScreen> {
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(vm.successMessage ?? 'Account generated successfully')),
+          SnackBar(content: Text(vm.successMessage ?? 'Bank account generated successfully')),
         );
         vm.reset();
+        _bvnController.clear();
         _emailController.clear();
         _otpController.clear();
       }
@@ -90,20 +103,19 @@ class _AddBankAccountScreenState extends State<AddBankAccountScreen> {
   }
 
   void _resendOtp() async {
-    if (_emailController.text.trim().isEmpty) {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
        ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Email is required to resend OTP'), backgroundColor: Colors.orange),
       );
       return;
     }
     final vm = context.read<AddBankAccountViewModel>();
-    final success = await vm.regenerateOtp(
-      email: _emailController.text.trim(),
-    );
+    final success = await vm.regenerateOtp(email: email);
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(vm.successMessage ?? 'OTP resent successfully')),
+        SnackBar(content: Text(vm.successMessage ?? 'OTP sent successfully')),
       );
     }
   }
@@ -121,7 +133,7 @@ class _AddBankAccountScreenState extends State<AddBankAccountScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bank Account Management'),
+        title: const Text('Agent Bank Account'),
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
         bottom: PreferredSize(
@@ -131,58 +143,10 @@ class _AddBankAccountScreenState extends State<AddBankAccountScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      context.read<AddBankAccountViewModel>().clearMessages();
-                      setState(() => _currentView = 0);
-                    },
-                    child: Container(
-                      height: 50,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: _currentView == 0 ? const Color(0xFF1A237E) : Colors.transparent,
-                            width: 3,
-                          ),
-                        ),
-                      ),
-                      child: Text(
-                        'CREATE/GENERATE',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _currentView == 0 ? const Color(0xFF1A237E) : Colors.grey,
-                        ),
-                      ),
-                    ),
-                  ),
+                  child: _buildTabButton('CREATE/GENERATE', 0),
                 ),
                 Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      context.read<AddBankAccountViewModel>().clearMessages();
-                      setState(() => _currentView = 1);
-                    },
-                    child: Container(
-                      height: 50,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: _currentView == 1 ? const Color(0xFF1A237E) : Colors.transparent,
-                            width: 3,
-                          ),
-                        ),
-                      ),
-                      child: Text(
-                        'LOOKUP CUSTOMER',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _currentView == 1 ? const Color(0xFF1A237E) : Colors.grey,
-                        ),
-                      ),
-                    ),
-                  ),
+                  child: _buildTabButton('LOOKUP AGENT', 1),
                 ),
               ],
             ),
@@ -195,40 +159,11 @@ class _AddBankAccountScreenState extends State<AddBankAccountScreen> {
             padding: const EdgeInsets.all(20.0),
             child: Column(
               children: [
-                if (vm.errorMessage != null)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline, color: Colors.red),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            vm.errorMessage!,
-                            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, size: 18, color: Colors.red),
-                          onPressed: () => vm.clearMessages(),
-                        )
-                      ],
-                    ),
-                  ),
+                if (vm.errorMessage != null) _buildErrorMessage(vm),
+                if (vm.successMessage != null && vm.errorMessage == null) _buildSuccessMessage(vm),
+                
                 _currentView == 0 
-                    ? AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: !vm.profileCreated 
-                            ? _buildProfileForm(vm) 
-                            : _buildGenerateAccountForm(vm),
-                      )
+                    ? _buildManagementFlow(vm)
                     : _buildLookupView(vm),
               ],
             ),
@@ -238,172 +173,269 @@ class _AddBankAccountScreenState extends State<AddBankAccountScreen> {
     );
   }
 
-  Widget _buildProfileForm(AddBankAccountViewModel vm) {
-    return Form(
-      key: _profileFormKey,
-      child: Column(
-        key: const ValueKey('profile_form'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Step 1: Create Customer Profile',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A237E),
+  Widget _buildTabButton(String label, int index) {
+    final isSelected = _currentView == index;
+    return InkWell(
+      onTap: () {
+        context.read<AddBankAccountViewModel>().clearMessages();
+        setState(() => _currentView = index);
+      },
+      child: Container(
+        height: 50,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: isSelected ? const Color(0xFF1A237E) : Colors.transparent,
+              width: 3,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Select an existing agent to create a bank profile.',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isSelected ? const Color(0xFF1A237E) : Colors.grey,
+            fontSize: 12,
           ),
-          const SizedBox(height: 24),
-          
-          // Agent Selection Dropdown
-          DropdownButtonFormField<Map<String, dynamic>>(
-            value: vm.selectedAgent,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Select Agent',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.person),
-            ),
-            items: vm.agentsList.map((agent) {
-              final firstName = agent['first_name'] ?? '';
-              final lastName = agent['last_name'] ?? '';
-              final email = agent['email'] ?? '';
-              final bvn = agent['bvn'] ?? 'No BVN';
-              return DropdownMenuItem(
-                value: agent,
-                child: Text(
-                  '$firstName $lastName ($email)',
-                  style: const TextStyle(fontSize: 13),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              );
-            }).toList(),
-            onChanged: vm.isLoading ? null : (value) {
-              vm.setSelectedAgent(value);
-            },
-            hint: vm.isLoading && vm.agentsList.isEmpty 
-                ? const Text('Loading agents...') 
-                : const Text('Choose an existing agent'),
-            validator: (value) => value == null ? 'Please select an agent' : null,
-          ),
-          
-          if (vm.selectedAgent != null) ...[
-            const SizedBox(height: 20),
-            Card(
-              color: Colors.blue.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Selected Agent Details:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Text('BVN: ${vm.selectedAgent!['bvn'] ?? 'N/A'}'),
-                    Text('Email: ${vm.selectedAgent!['email'] ?? 'N/A'}'),
-                    Text('Phone: ${vm.selectedAgent!['phone_number'] ?? 'N/A'}'),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        ),
+      ),
+    );
+  }
 
-          const SizedBox(height: 32),
-          SizedBox(
-            height: 50,
-            child: ElevatedButton(
-              onPressed: vm.isLoading ? null : _submitProfile,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1A237E),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: vm.isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('CREATE PROFILE', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ),
+  Widget _buildErrorMessage(AddBankAccountViewModel vm) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red),
+          const SizedBox(width: 12),
+          Expanded(child: Text(vm.errorMessage!, style: const TextStyle(color: Colors.red))),
+          IconButton(icon: const Icon(Icons.close, size: 18), onPressed: () => vm.clearMessages()),
         ],
       ),
     );
   }
 
-  Widget _buildGenerateAccountForm(AddBankAccountViewModel vm) {
+  Widget _buildSuccessMessage(AddBankAccountViewModel vm) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_outline, color: Colors.green),
+          const SizedBox(width: 12),
+          Expanded(child: Text(vm.successMessage!, style: const TextStyle(color: Colors.green))),
+          IconButton(icon: const Icon(Icons.close, size: 18), onPressed: () => vm.clearMessages()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManagementFlow(AddBankAccountViewModel vm) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: _buildStageContent(vm),
+    );
+  }
+
+  Widget _buildStageContent(AddBankAccountViewModel vm) {
+    switch (vm.stage) {
+      case BankAccountStage.agentSelection:
+        return _buildAgentSelection(vm);
+      case BankAccountStage.vendorConfirmation:
+        return _buildVendorCreation(vm);
+      case BankAccountStage.bankProfileCreation:
+        // Pre-fill if needed
+        if (_bvnController.text.isEmpty) _bvnController.text = vm.selectedAgent?['bvn']?.toString() ?? '';
+        if (_emailController.text.isEmpty) _emailController.text = vm.selectedAgent?['email']?.toString() ?? '';
+        return _buildBankProfileCreation(vm);
+      case BankAccountStage.otpVerification:
+        return _buildOtpVerification(vm);
+    }
+  }
+
+  Widget _buildAgentSelection(AddBankAccountViewModel vm) {
+    return Column(
+      key: const ValueKey('agent_selection'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('Step 1: Select Agent', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
+        const SizedBox(height: 24),
+        DropdownButtonFormField<Map<String, dynamic>>(
+          value: vm.selectedAgent,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Select Agent', border: OutlineInputBorder(), prefixIcon: Icon(Icons.person)),
+          items: vm.agentsList.map((agent) {
+            return DropdownMenuItem(
+              value: agent,
+              child: Text('${agent['first_name'] ?? ''} ${agent['last_name'] ?? ''} (${agent['email']})', style: const TextStyle(fontSize: 12)),
+            );
+          }).toList(),
+          onChanged: vm.isLoading ? null : (value) => vm.setSelectedAgent(value),
+          hint: const Text('Choose an existing agent'),
+        ),
+        if (vm.isLoading) ...[
+          const SizedBox(height: 20),
+          const Center(child: CircularProgressIndicator()),
+        ]
+      ],
+    );
+  }
+
+  Widget _buildVendorCreation(AddBankAccountViewModel vm) {
+    return Column(
+      key: const ValueKey('vendor_creation'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('Step 1: Vendor Account Verification', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
+        const SizedBox(height: 16),
+        _buildAgentInfoCard(vm),
+        const SizedBox(height: 32),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: vm.isLoading ? null : _submitConfirmVendor,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade800,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: vm.isLoading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('CONFIRM ACCOUNT', style: TextStyle(fontSize: 12)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: vm.isLoading ? null : _submitCreateVendor,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: vm.isLoading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('CREATE ACCOUNT', style: TextStyle(fontSize: 12)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        TextButton(onPressed: () => vm.reset(), child: const Text('Back to Agent Selection')),
+      ],
+    );
+  }
+
+  Widget _buildBankProfileCreation(AddBankAccountViewModel vm) {
     return Form(
-      key: _accountFormKey,
+      key: _bankProfileFormKey,
       child: Column(
-        key: const ValueKey('account_form'),
+        key: const ValueKey('bank_profile'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Step 2: Generate Account',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
-            ),
+          const Text('Step 2: Create Bank Profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _bvnController,
+            decoration: const InputDecoration(labelText: 'BVN', border: OutlineInputBorder(), prefixIcon: Icon(Icons.numbers)),
+            keyboardType: TextInputType.number,
+            validator: (value) => value == null || value.isEmpty ? 'BVN is required' : null,
           ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _emailController,
+            decoration: const InputDecoration(labelText: 'Email Address', border: OutlineInputBorder(), prefixIcon: Icon(Icons.email)),
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) => value == null || value.isEmpty ? 'Email is required' : null,
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: vm.isLoading ? null : _submitCreateBankProfile,
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
+            child: vm.isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('CREATE BANK PROFILE'),
+          ),
+          TextButton(onPressed: () => vm.reset(), child: const Text('Cancel')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOtpVerification(AddBankAccountViewModel vm) {
+    return Form(
+      key: _otpFormKey,
+      child: Column(
+        key: const ValueKey('otp_verification'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('Step 3: Verify OTP', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
           const SizedBox(height: 8),
-          const Text(
-            'Profile created successfully. Enter the OTP sent to the agent.',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
-          ),
+          Text('Enter the OTP sent to ${vm.lastEmail}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
           const SizedBox(height: 24),
           TextFormField(
             controller: _otpController,
             decoration: InputDecoration(
               labelText: 'OTP',
-              hintText: 'Enter OTP received',
               border: const OutlineInputBorder(),
               prefixIcon: const Icon(Icons.lock_outline),
-              suffixIcon: TextButton(
-                onPressed: vm.isLoading ? null : _resendOtp,
-                child: const Text('RESEND'),
-              ),
+              suffixIcon: TextButton(onPressed: vm.isLoading ? null : _resendOtp, child: const Text('RESEND')),
             ),
             keyboardType: TextInputType.number,
             validator: (value) => value == null || value.isEmpty ? 'OTP is required' : null,
           ),
-          const SizedBox(height: 20),
-          TextFormField(
-            controller: _emailController,
-            decoration: const InputDecoration(
-              labelText: 'Confirm Email',
-              hintText: 'Confirm customer email',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.email),
-            ),
-            keyboardType: TextInputType.emailAddress,
-            validator: (value) => value == null || value.isEmpty ? 'Email is required' : null,
-          ),
           const SizedBox(height: 32),
-          SizedBox(
-            height: 50,
-            child: ElevatedButton(
-              onPressed: vm.isLoading ? null : _submitGenerateAccount,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: vm.isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('GENERATE ACCOUNT', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
+          ElevatedButton(
+            onPressed: vm.isLoading ? null : _submitVerifyOtp,
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
+            child: vm.isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('GENERATE ACCOUNT'),
           ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: () => vm.reset(),
-            child: const Text('Back to Agent Selection'),
-          ),
+          TextButton(onPressed: () => vm.reset(), child: const Text('Cancel')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAgentInfoCard(AddBankAccountViewModel vm) {
+    if (vm.selectedAgent == null) return const SizedBox.shrink();
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.blue.shade200)),
+      color: Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            _agentDetailItem('Name', '${vm.selectedAgent!['first_name'] ?? ''} ${vm.selectedAgent!['last_name'] ?? ''}'),
+            _agentDetailItem('RC/Company No', vm.selectedAgent!['company_number'] ?? 'N/A'),
+            _agentDetailItem('Email', vm.selectedAgent!['email'] ?? 'N/A'),
+            _agentDetailItem('Address', vm.selectedAgent!['address'] ?? 'N/A'),
+            _agentDetailItem('City', vm.selectedAgent!['city'] ?? 'N/A'),
+            _agentDetailItem('State', vm.selectedAgent!['state'] ?? 'N/A'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _agentDetailItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 100, child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
         ],
       ),
     );
@@ -418,39 +450,19 @@ class _AddBankAccountScreenState extends State<AddBankAccountScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Lookup Customer Details',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A237E),
-                ),
-              ),
+              const Text('Lookup Agent Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
               const SizedBox(height: 24),
               TextFormField(
                 controller: _lookupEmailController,
-                decoration: const InputDecoration(
-                  labelText: 'Customer Email',
-                  hintText: 'Enter email to search',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.search),
-                ),
+                decoration: const InputDecoration(labelText: 'Agent Email', border: OutlineInputBorder(), prefixIcon: Icon(Icons.search)),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) => value == null || value.isEmpty ? 'Email is required' : null,
               ),
               const SizedBox(height: 20),
-              SizedBox(
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: vm.isLoading ? null : _lookupCustomer,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1A237E),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: vm.isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('SEARCH CUSTOMER'),
-                ),
+              ElevatedButton(
+                onPressed: vm.isLoading ? null : _lookupCustomer,
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
+                child: vm.isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('SEARCH AGENT'),
               ),
             ],
           ),
@@ -459,10 +471,7 @@ class _AddBankAccountScreenState extends State<AddBankAccountScreen> {
           const SizedBox(height: 32),
           const Divider(),
           const SizedBox(height: 16),
-          const Text(
-            'Customer Profile Details',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
+          const Text('Agent Bank Profile Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           _detailRow('Full Name', vm.customerDetails!['name'] ?? 'N/A'),
           _detailRow('Email', vm.customerDetails!['email'] ?? 'N/A'),
@@ -479,21 +488,9 @@ class _AddBankAccountScreenState extends State<AddBankAccountScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
+          SizedBox(width: 120, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey))),
+          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.bold))),
         ],
       ),
     );

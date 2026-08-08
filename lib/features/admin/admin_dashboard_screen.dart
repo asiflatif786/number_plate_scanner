@@ -197,13 +197,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Navigator.pushNamed(context, AppRoutes.viewTerminals),
               badge: vm.totalTerminals > 0 ? '${vm.totalTerminals}' : null,
             ),
-            _menuCard(
-              icon: Icons.account_balance,
-              label: 'Add Bank Account',
-              subtitle: 'Create customer profile',
-              onTap: () =>
-                  Navigator.pushNamed(context, AppRoutes.addBankAccount),
-            ),
           ],
         ),
       ],

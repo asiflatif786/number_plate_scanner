@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../app/routes.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/detail_row.dart';
 import '../../core/widgets/section_header.dart';
 import '../../core/widgets/shimmer_loader.dart';
 import '../../core/widgets/status_chip.dart';
 import '../../data/models/agent_model.dart';
+import 'add_bank_account_viewmodel.dart';
 import 'agent_detail_viewmodel.dart';
 
 class AgentDetailScreen extends StatefulWidget {
@@ -40,6 +42,64 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
   String _maskField(String value, {int showLast = 4}) {
     if (value.length <= showLast) return value;
     return '${'*' * (value.length - showLast)}${value.substring(value.length - showLast)}';
+  }
+
+  void _handleAddAgentToPayment(BuildContext context, AgentModel agent) async {
+    final vm = context.read<AddBankAccountViewModel>();
+    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    // Prepare data as requested
+    final Map<String, dynamic> payload = {
+      'title': agent.title,
+      'first_name': agent.firstName,
+      'last_name': agent.lastName,
+      'gender': agent.gender,
+      'marital_status': agent.maritalStatus,
+      'date_of_birth': agent.dateOfBirth,
+      'email': agent.email,
+      'phone': agent.phoneNumber, // Map phone_number to phone
+      'address': agent.address,
+      'city': agent.city,
+      'state': agent.state,
+      'lga': agent.lga,
+      'state_of_origin': agent.stateOfOrigin,
+      'lga_of_origin': agent.lgaOfOrigin,
+      'bvn': agent.bvn,
+      'nin': agent.nin,
+      'id_type': agent.idType,
+    };
+
+    // Call the add-agent-bank API
+    final success = await vm.addAgentBank(payload);
+    
+    if (mounted) {
+      Navigator.pop(context); // Close loading dialog
+
+      if (success) {
+        // Pre-populate VM for the next step (otp/generate)
+        vm.setFromAgent(agent); 
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(vm.successMessage ?? 'Agent added to payment system.')),
+        );
+        
+        // Navigate to bank account management screen to continue the flow
+        Navigator.pushNamed(context, AppRoutes.addBankAccount);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(vm.errorMessage ?? 'Failed to add agent to payment system'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -77,6 +137,8 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
               _buildBankingDetails(vm.agent),
               const SizedBox(height: 12),
               _buildCompanyAssociation(vm.agent),
+              const SizedBox(height: 32),
+              _buildAddAgentToPaymentButton(context, vm.agent),
               const SizedBox(height: 24),
             ],
           ),
@@ -338,6 +400,23 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildAddAgentToPaymentButton(BuildContext context, AgentModel agent) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: () => _handleAddAgentToPayment(context, agent),
+        icon: const Icon(Icons.account_balance),
+        label: const Text('Add Agent To Payment System'),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFF1A237E)),
+          foregroundColor: const Color(0xFF1A237E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
     );
   }
 }

@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../core/network/api_response.dart';
 import '../../core/utils/logger.dart';
+import '../../data/models/agent_model.dart';
+import '../../data/models/company_model.dart';
 import '../../data/repositories/bank_repository.dart';
+
+enum BankAccountStage {
+  agentSelection,
+  vendorConfirmation,
+  bankProfileCreation,
+  otpVerification
+}
 
 class AddBankAccountViewModel extends ChangeNotifier {
   static const String _tag = 'AddBankVM';
@@ -16,9 +25,11 @@ class AddBankAccountViewModel extends ChangeNotifier {
   String? _successMessage;
   String? get successMessage => _successMessage;
 
-  // Track if profile was created to show next step
-  bool _profileCreated = false;
-  bool get profileCreated => _profileCreated;
+  BankAccountStage _stage = BankAccountStage.agentSelection;
+  BankAccountStage get stage => _stage;
+
+  bool _vendorExists = false;
+  bool get vendorExists => _vendorExists;
 
   String? _lastEmail;
   String? get lastEmail => _lastEmail;
@@ -42,16 +53,13 @@ class AddBankAccountViewModel extends ChangeNotifier {
 
       if (response.success && response.data != null) {
         _agentsList = response.data!;
-        _isLoading = false;
-        notifyListeners();
       } else {
         _errorMessage = response.failure?.message ?? 'Failed to fetch agents';
-        _isLoading = false;
-        notifyListeners();
       }
     } catch (e) {
       AppLogger.logError(_tag, 'Error fetching agents', e);
       _errorMessage = 'An unexpected error occurred while fetching agents';
+    } finally {
       _isLoading = false;
       notifyListeners();
     }
@@ -59,41 +67,196 @@ class AddBankAccountViewModel extends ChangeNotifier {
 
   void setSelectedAgent(Map<String, dynamic>? agent) {
     _selectedAgent = agent;
+    _vendorExists = false;
+    _errorMessage = null;
+    _successMessage = null;
+    _customerDetails = null;
+    
+    if (agent != null) {
+      _stage = BankAccountStage.vendorConfirmation;
+    } else {
+      _stage = BankAccountStage.agentSelection;
+    }
     notifyListeners();
   }
 
-  Future<bool> createCustomerProfile({
+  void setFromCompany(CompanyModel company) {
+    _selectedAgent = {
+      'company_number': company.rcNumber,
+      'first_name': company.name,
+      'last_name': '',
+      'email': company.email,
+      'phone_number': company.phoneNumber,
+      'address': company.address,
+      'city': company.city,
+      'state': company.state,
+      'lga': company.lga,
+    };
+    _vendorExists = false;
+    _errorMessage = null;
+    _successMessage = null;
+    _customerDetails = null;
+    _stage = BankAccountStage.vendorConfirmation;
+    notifyListeners();
+  }
+
+  void setFromAgent(AgentModel agent) {
+    _selectedAgent = {
+      'company_number': agent.companyNumber,
+      'first_name': agent.firstName,
+      'last_name': agent.lastName,
+      'email': agent.email,
+      'phone_number': agent.phoneNumber,
+      'address': agent.address,
+      'city': agent.city,
+      'state': agent.state,
+      'lga': agent.lga,
+      'bvn': agent.bvn,
+    };
+    _vendorExists = false;
+    _errorMessage = null;
+    _successMessage = null;
+    _customerDetails = null;
+    _stage = BankAccountStage.vendorConfirmation;
+    notifyListeners();
+  }
+
+  Future<bool> confirmAccount() async {
+    if (_selectedAgent == null) return false;
+    
+    final rcNumber = _selectedAgent!['company_number']?.toString() ?? '';
+    if (rcNumber.isEmpty) {
+      _errorMessage = 'Selected record has no RC/Company number';
+      notifyListeners();
+      return false;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+
+    try {
+      final checkResponse = await _repository.getVendorDetail(rcNumber);
+
+      if (checkResponse.success) {
+        _vendorExists = true;
+        _customerDetails = checkResponse.data;
+        _successMessage = 'Vendor account verified. Proceed to bank profile.';
+        _stage = BankAccountStage.bankProfileCreation;
+        notifyListeners();
+        return true;
+      } else {
+        _vendorExists = false;
+        _errorMessage = checkResponse.failure?.message ?? 'Vendor account not found. Please create it.';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      AppLogger.logError(_tag, 'Error in confirmAccount', e);
+      _errorMessage = 'An unexpected error occurred while verifying account';
+      notifyListeners();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> createVendorAccount() async {
+    if (_selectedAgent == null) return false;
+
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+
+    try {
+      final createResponse = await _repository.createVendorAccount(_selectedAgent!);
+
+      if (createResponse.success) {
+        _vendorExists = true;
+        _customerDetails = createResponse.data;
+        _successMessage = createResponse.message ?? 'Vendor account created successfully';
+        _stage = BankAccountStage.bankProfileCreation;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = createResponse.failure?.message ?? 'Failed to create vendor account';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      AppLogger.logError(_tag, 'Error in createVendorAccount', e);
+      _errorMessage = 'An unexpected error occurred while creating account';
+      notifyListeners();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> addAgentBank(Map<String, dynamic> data) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _repository.addAgentBank(data);
+
+      if (response.success) {
+        _successMessage = response.message ?? 'Agent added to payment system successfully';
+        _stage = BankAccountStage.bankProfileCreation;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response.failure?.message ?? 'Failed to add agent to payment system';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      AppLogger.logError(_tag, 'Error in addAgentBank', e);
+      _errorMessage = 'An unexpected error occurred';
+      notifyListeners();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> createBankProfile({
     required String bvn,
     required String email,
   }) async {
     _isLoading = true;
     _errorMessage = null;
     _successMessage = null;
-    _profileCreated = false;
-    _customerDetails = null;
     notifyListeners();
 
     try {
-      final response = await _repository.createCustomerProfile(
+      final response = await _repository.createBankProfile(
         bvn: bvn,
         email: email,
       );
 
       if (response.success) {
-        _successMessage = response.message ?? 'Bank account profile created successfully';
-        _profileCreated = true;
+        _successMessage = response.message ?? 'Bank profile created. OTP sent.';
+        _stage = BankAccountStage.otpVerification;
         _lastEmail = email;
         _isLoading = false;
         notifyListeners();
         return true;
       } else {
-        _errorMessage = response.failure?.message ?? 'Failed to create bank account profile';
+        _errorMessage = response.failure?.message ?? 'Failed to create bank profile';
         _isLoading = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
-      AppLogger.logError(_tag, 'Error creating customer profile', e);
+      AppLogger.logError(_tag, 'Error creating bank profile', e);
       _errorMessage = 'An unexpected error occurred';
       _isLoading = false;
       notifyListeners();
@@ -185,12 +348,12 @@ class AddBankAccountViewModel extends ChangeNotifier {
 
       if (response.success) {
         _customerDetails = response.data;
-        _successMessage = response.message ?? 'Customer details retrieved successfully';
+        _successMessage = response.message ?? 'Details retrieved successfully';
         _isLoading = false;
         notifyListeners();
         return true;
       } else {
-        _errorMessage = response.failure?.message ?? 'Failed to retrieve customer details';
+        _errorMessage = response.failure?.message ?? 'Failed to retrieve details';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -211,7 +374,8 @@ class AddBankAccountViewModel extends ChangeNotifier {
   }
 
   void reset() {
-    _profileCreated = false;
+    _stage = BankAccountStage.agentSelection;
+    _vendorExists = false;
     _lastEmail = null;
     _customerDetails = null;
     _selectedAgent = null;
