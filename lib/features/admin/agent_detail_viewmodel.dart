@@ -12,10 +12,11 @@ class AgentDetailViewModel extends ChangeNotifier {
 
   AgentModel agent;
   String? agentStatus;
-  bool? kycComplete;
   List<TerminalModel> terminals = [];
   bool isLoadingStatus = false;
   bool isLoadingTerminals = false;
+  bool isLoadingExistence = false;
+  bool? agentExistsInPaymentSystem;
   String? errorMessage;
 
   AgentDetailViewModel({required this.agent}) {
@@ -28,19 +29,42 @@ class AgentDetailViewModel extends ChangeNotifier {
 
     try {
       final statusResult = await _repository.getAgentStatus(agentNumber: agent.agentNumber);
-      final kycResult = await _repository.getAgentKycStatus(agentNumber: agent.agentNumber);
-
       if (statusResult.success) {
         agentStatus = statusResult.data;
-      }
-      if (kycResult.success) {
-        kycComplete = kycResult.data;
       }
     } catch (e) {
       AppLogger.logWarning(_tag, 'Health check error: $e');
     }
 
     isLoadingStatus = false;
+    notifyListeners();
+  }
+
+  Future<void> checkAgentExistence() async {
+    if (agent.email.isEmpty) {
+      AppLogger.logWarning(_tag, 'Cannot check existence: Email is empty');
+      agentExistsInPaymentSystem = false;
+      notifyListeners();
+      return;
+    }
+    
+    isLoadingExistence = true;
+    notifyListeners();
+
+    try {
+      final result = await _repository.checkAgentExists(agent.email);
+      if (result.success) {
+        agentExistsInPaymentSystem = result.data;
+        AppLogger.logInfo(_tag, 'Agent existence check result: $agentExistsInPaymentSystem');
+      } else {
+        agentExistsInPaymentSystem = false;
+      }
+    } catch (e) {
+      AppLogger.logWarning(_tag, 'Error checking agent existence: $e');
+      agentExistsInPaymentSystem = false;
+    }
+
+    isLoadingExistence = false;
     notifyListeners();
   }
 
@@ -85,5 +109,6 @@ class AgentDetailViewModel extends ChangeNotifier {
     
     await loadAgentHealth();
     await loadTerminalDetails();
+    await checkAgentExistence();
   }
 }

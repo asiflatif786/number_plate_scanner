@@ -224,15 +224,27 @@ class ApiClient {
   ) {
     final responseBody = _parseBody(httpResponse);
 
+    // Log raw body for debugging
+    AppLogger.logDebug(_tag, 'RAW RESPONSE: ${httpResponse.body}');
+
     // Handle nested TMS response if present
     Map<String, dynamic> tmsData = responseBody;
-    if (responseBody.containsKey('body') && responseBody['body'] is Map<String, dynamic>) {
-      tmsData = responseBody['body'];
+    if (responseBody.containsKey('body')) {
+      final dynamic bodyValue = responseBody['body'];
+      if (bodyValue is Map<String, dynamic>) {
+        tmsData = bodyValue;
+      } else if (bodyValue is String && bodyValue.trim().startsWith('{')) {
+        try {
+          tmsData = jsonDecode(bodyValue) as Map<String, dynamic>;
+        } catch (e) {
+          AppLogger.logDebug(_tag, 'Could not parse nested body string: $e');
+        }
+      }
     }
 
     // Extraction logic: try to find a descriptive message
-    String? message = tmsData['message'] as String?
-        ?? responseBody['message'] as String?;
+    String? message = tmsData['message']?.toString()
+        ?? responseBody['message']?.toString();
 
     // Support both 'data' and 'Data' keys
     final rawData = tmsData['data'] ?? tmsData['Data'] ?? responseBody['data'] ?? responseBody['Data'];
@@ -245,11 +257,20 @@ class ApiClient {
 
     message ??= 'Unknown error';
 
-    // Support both old (status: true/false) and new (status_code: "00") formats
-    final oldStatus = tmsData['status'] ?? responseBody['status'];
-    final statusCode = tmsData['status_code'] as String? ?? responseBody['status_code'] as String?;
+    // Support both old (status: true/false/int) and new (status_code: "00") formats
+    final dynamic oldStatus = tmsData['status'] ?? responseBody['status'];
+    final String? statusCode = tmsData['status_code']?.toString() ?? responseBody['status_code']?.toString();
 
-    final isSuccess = oldStatus == true || oldStatus == 'true' || statusCode == '00' || httpResponse.statusCode == 200 || httpResponse.statusCode == 201;
+    // Determine success based on multiple patterns
+    final bool isSuccess = 
+        oldStatus == true || 
+        oldStatus == 'true' || 
+        oldStatus == 1 || 
+        oldStatus == 200 || 
+        oldStatus == 201 ||
+        statusCode == '00' || 
+        httpResponse.statusCode == 200 || 
+        httpResponse.statusCode == 201;
 
     Map<String, dynamic> data = {};
     if (rawData is Map<String, dynamic>) {
@@ -263,14 +284,20 @@ class ApiClient {
     AppLogger.logInfo(_tag, '${httpResponse.statusCode} → $message');
 
     if (httpResponse.statusCode != 200 && httpResponse.statusCode != 201) {
+      // CRITICAL: If nested success is detected despite HTTP error (some proxies/wrappers do this), treat as success
+      if (statusCode == '00' || oldStatus == true || oldStatus == 1) {
+        AppLogger.logInfo(_tag, 'Nested success detected in error response. Treating as success.');
+        return ApiResponse.success(data, message);
+      }
+      
       final failure = _mapHttpError(httpResponse.statusCode, message);
-      AppLogger.logError(_tag, 'HTTP ${httpResponse.statusCode}', failure);
+      AppLogger.logError(_tag, 'HTTP Error ${httpResponse.statusCode}', failure);
       return ApiResponse.failure(failure);
     }
 
     if (!isSuccess) {
       final failure = _mapBusinessError(message, statusCode);
-      AppLogger.logError(_tag, 'Business error: $message', failure);
+      AppLogger.logError(_tag, 'Business logic error: $message', failure);
       return ApiResponse.failure(failure);
     }
 

@@ -71,25 +71,23 @@ class ViewAgentsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>> checkAgentKyc(String agentNumber) async {
+  Future<Map<String, dynamic>> checkAgentStatus(String agentNumber) async {
     _selectedAgentForKyc = agentNumber;
     notifyListeners();
 
     try {
       final statusResult = await _repository.getAgentStatus(agentNumber: agentNumber);
-      final kycResult = await _repository.getAgentKycStatus(agentNumber: agentNumber);
 
       _selectedAgentForKyc = null;
       notifyListeners();
 
       return {
         'status': statusResult.success ? statusResult.data : 'unknown',
-        'kycComplete': kycResult.success ? kycResult.data : false,
       };
     } catch (e) {
       _selectedAgentForKyc = null;
       notifyListeners();
-      return {'status': 'unknown', 'kycComplete': false};
+      return {'status': 'unknown'};
     }
   }
 

@@ -113,24 +113,6 @@ class AgentRepository {
     return ApiResponse.failure(response.failure!);
   }
 
-  Future<ApiResponse<bool>> getAgentKycStatus({
-    required String agentNumber,
-  }) async {
-    AppLogger.logInfo(_tag, 'Getting KYC status for agent: $agentNumber');
-
-    final response = await ApiClient.instance.get(
-      ApiConstants.getAgentKycStatus,
-      queryParams: {'agent_number': agentNumber},
-    );
-
-    if (response.success && response.data != null) {
-      final complete = response.data!['kyc_complete'] as bool? ?? false;
-      return ApiResponse.success(complete, response.message);
-    }
-
-    return ApiResponse.failure(response.failure!);
-  }
-
   Future<ApiResponse<bool>> getCompanyKycStatus({
     required String companyNumber,
   }) async {
@@ -188,5 +170,33 @@ class AgentRepository {
 
     AppLogger.logWarning(_tag, 'Assignment failed: ${response.failure?.message}');
     return ApiResponse.failure(response.failure!);
+  }
+
+  Future<ApiResponse<bool>> checkAgentExists(String email) async {
+    AppLogger.logInfo(_tag, 'Checking if agent exists: $email');
+
+    // Directly call ApiClient to get the full response if possible, 
+    // or rely on its success determination plus data verification.
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionCheckAgentExist,
+      fields: {'email': email},
+    );
+
+    // If status was true (as in user's log), ApiClient.success will be true.
+    // If status_code was "00", ApiClient.success will be true.
+    // However, if the server returns 200 OK for "Agent not found" with status_code "01",
+    // ApiClient might still say success because of the 200 status code.
+    
+    // We check if success is true AND the data is not empty (as failure returns data: null).
+    bool exists = false;
+    if (response.success && response.data != null && response.data!.isNotEmpty) {
+      exists = true;
+    }
+
+    AppLogger.logInfo(_tag, 'Agent exists result for $email: $exists (Success: ${response.success}, Data Empty: ${response.data?.isEmpty})');
+
+    // We return success: true because the operation of checking finished correctly.
+    // The 'data' of this ApiResponse is the boolean result of existence.
+    return ApiResponse.success(exists, response.message);
   }
 }

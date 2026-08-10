@@ -30,6 +30,7 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
       final vm = context.read<AgentDetailViewModel>();
       vm.loadAgentHealth();
       vm.loadTerminalDetails();
+      vm.checkAgentExistence();
     });
   }
 
@@ -89,8 +90,11 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
           SnackBar(content: Text(vm.successMessage ?? 'Agent added to payment system.')),
         );
         
-        // Navigate to bank account management screen to continue the flow
-        Navigator.pushNamed(context, AppRoutes.addBankAccount);
+        // Refresh detail view state
+        context.read<AgentDetailViewModel>().checkAgentExistence();
+
+        // Navigate to bank verification screen to continue the flow
+        Navigator.pushNamed(context, AppRoutes.agentBankVerification, arguments: agent);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -138,7 +142,7 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
               const SizedBox(height: 12),
               _buildCompanyAssociation(vm.agent),
               const SizedBox(height: 32),
-              _buildAddAgentToPaymentButton(context, vm.agent),
+              _buildBottomActionButtons(context, vm),
               const SizedBox(height: 24),
             ],
           ),
@@ -155,7 +159,6 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
 
     final bool hasValidStatus = vm.agentStatus != null &&
         vm.agentStatus!.toLowerCase() != 'unknown';
-    final bool isKycComplete = vm.kycComplete == true;
 
     return Container(
       width: double.infinity,
@@ -201,38 +204,9 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
                 const ShimmerField(height: 24, width: 80)
               else if (hasValidStatus)
                 StatusChip(status: vm.agentStatus!),
-              
-              if (!vm.isLoadingStatus && hasValidStatus && isKycComplete)
-                const SizedBox(width: 12),
-
-              if (vm.isLoadingStatus)
-                const ShimmerField(height: 24, width: 100)
-              else if (isKycComplete)
-                _buildKycChip(vm),
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildKycChip(AgentDetailViewModel vm) {
-    if (vm.kycComplete != true) return const SizedBox.shrink();
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Text(
-        'KYC Complete',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: Colors.green,
-          letterSpacing: 1,
-        ),
       ),
     );
   }
@@ -403,12 +377,35 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
     );
   }
 
-  Widget _buildAddAgentToPaymentButton(BuildContext context, AgentModel agent) {
+  Widget _buildBottomActionButtons(BuildContext context, AgentDetailViewModel vm) {
+    if (vm.isLoadingExistence) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (vm.agentExistsInPaymentSystem == true) {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton.icon(
+          onPressed: () {
+            Navigator.pushNamed(context, AppRoutes.agentBankVerification, arguments: vm.agent);
+          },
+          icon: const Icon(Icons.arrow_forward),
+          label: const Text('Next'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1A237E),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: OutlinedButton.icon(
-        onPressed: () => _handleAddAgentToPayment(context, agent),
+        onPressed: () => _handleAddAgentToPayment(context, vm.agent),
         icon: const Icon(Icons.account_balance),
         label: const Text('Add Agent To Payment System'),
         style: OutlinedButton.styleFrom(

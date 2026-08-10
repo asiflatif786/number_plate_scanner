@@ -86,12 +86,11 @@ class BankRepository {
     required String bvn,
     required String email,
   }) async {
-    AppLogger.logInfo(_tag, 'Creating bank profile via Cyber1 API');
+    AppLogger.logInfo(_tag, 'Creating bank profile via TMS action');
 
-    final response = await ApiClient.instance.post(
-      ApiConstants.createCustomerProfile,
-      baseUrl: ApiConstants.cyber1BaseUrl,
-      body: {
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionCreateAgentProfile,
+      fields: {
         'bvn': bvn,
         'email': email,
       },
@@ -108,12 +107,11 @@ class BankRepository {
     required String otp,
     required String email,
   }) async {
-    AppLogger.logInfo(_tag, 'Generating bank account');
+    AppLogger.logInfo(_tag, 'Generating bank account via TMS action');
 
-    final response = await ApiClient.instance.post(
-      ApiConstants.generateAccount,
-      baseUrl: ApiConstants.cyber1BaseUrl,
-      body: {
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGenerateAccount,
+      fields: {
         'otp': otp,
         'email': email,
       },
@@ -129,12 +127,11 @@ class BankRepository {
   Future<ApiResponse<Map<String, dynamic>>> regenerateOtp({
     required String email,
   }) async {
-    AppLogger.logInfo(_tag, 'Regenerating OTP');
+    AppLogger.logInfo(_tag, 'Regenerating OTP via TMS action');
 
-    final response = await ApiClient.instance.post(
-      ApiConstants.regenerateOtp,
-      baseUrl: ApiConstants.cyber1BaseUrl,
-      body: {
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionRegenerateOtp,
+      fields: {
         'email': email,
       },
     );

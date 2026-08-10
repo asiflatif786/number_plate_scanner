@@ -19,6 +19,9 @@ import '../features/admin/view_terminals_screen.dart';
 import '../features/admin/view_terminals_viewmodel.dart';
 import '../features/admin/add_bank_account_screen.dart';
 import '../features/admin/add_bank_account_viewmodel.dart';
+import '../features/admin/agent_bank_verification_screen.dart';
+import '../features/admin/agent_otp_verification_screen.dart';
+import '../features/admin/agent_regenerate_otp_screen.dart';
 import '../features/onboarding/corporate_registration_screen.dart';
 import '../features/onboarding/agent_registration_screen.dart';
 import '../features/onboarding/terminal_profiling_screen.dart';
@@ -69,6 +72,9 @@ class AppRoutes {
   static const String agentDetail = '/agent-detail';
   static const String viewTerminals = '/view-terminals';
   static const String addBankAccount = '/add-bank-account';
+  static const String agentBankVerification = '/agent-bank-verification';
+  static const String agentOtpVerification = '/agent-otp-verification';
+  static const String agentRegenerateOtp = '/agent-regenerate-otp';
 
   static Map<String, WidgetBuilder> routes = {
     root: (context) => const SplashScreen(),
@@ -123,6 +129,18 @@ class AppRoutes {
       create: (_) => AddBankAccountViewModel(),
       child: const AddBankAccountScreen(),
     ),
+    agentBankVerification: (context) {
+      final agent = ModalRoute.of(context)!.settings.arguments as AgentModel;
+      return AgentBankVerificationScreen(agent: agent);
+    },
+    agentOtpVerification: (context) {
+      final agent = ModalRoute.of(context)!.settings.arguments as AgentModel;
+      return AgentOtpVerificationScreen(agent: agent);
+    },
+    agentRegenerateOtp: (context) {
+      final agent = ModalRoute.of(context)!.settings.arguments as AgentModel;
+      return AgentRegenerateOtpScreen(agent: agent);
+    },
   };
 }
 
