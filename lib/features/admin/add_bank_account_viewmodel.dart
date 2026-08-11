@@ -142,8 +142,8 @@ class AddBankAccountViewModel extends ChangeNotifier {
       if (checkResponse.success) {
         _vendorExists = true;
         _customerDetails = checkResponse.data;
-        _successMessage = 'Vendor account verified. Proceed to bank profile.';
-        _stage = BankAccountStage.bankProfileCreation;
+        _successMessage = 'Vendor account verified.';
+        // We stay on the current stage as per user request to only show success message
         notifyListeners();
         return true;
       } else {
@@ -178,7 +178,7 @@ class AddBankAccountViewModel extends ChangeNotifier {
         _vendorExists = true;
         _customerDetails = createResponse.data;
         _successMessage = createResponse.message ?? 'Vendor account created successfully';
-        _stage = BankAccountStage.bankProfileCreation;
+        // Stay on current stage - don't automatically jump to bank profile creation
         notifyListeners();
         return true;
       } else {
@@ -208,7 +208,7 @@ class AddBankAccountViewModel extends ChangeNotifier {
 
       if (response.success) {
         _successMessage = response.message ?? 'Agent added to payment system successfully';
-        _stage = BankAccountStage.bankProfileCreation;
+        // Stay on current screen/stage
         notifyListeners();
         return true;
       } else {
@@ -244,7 +244,6 @@ class AddBankAccountViewModel extends ChangeNotifier {
 
       if (response.success) {
         _successMessage = response.message ?? 'Bank profile created. OTP sent.';
-        _stage = BankAccountStage.otpVerification;
         _lastEmail = email;
         _isLoading = false;
         notifyListeners();

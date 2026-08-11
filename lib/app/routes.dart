@@ -11,6 +11,7 @@ import '../features/admin/admin_dashboard_screen.dart';
 import '../features/admin/view_companies_screen.dart';
 import '../features/admin/view_companies_viewmodel.dart';
 import '../features/admin/company_detail_screen.dart';
+import '../features/admin/company_detail_viewmodel.dart';
 import '../features/admin/view_agents_screen.dart';
 import '../features/admin/view_agents_viewmodel.dart';
 import '../features/admin/agent_detail_screen.dart';
@@ -108,7 +109,10 @@ class AppRoutes {
     ),
     companyDetail: (context) {
       final company = ModalRoute.of(context)!.settings.arguments as CompanyModel;
-      return CompanyDetailScreen(company: company);
+      return ChangeNotifierProvider(
+        create: (_) => CompanyDetailViewModel(company: company),
+        child: CompanyDetailScreen(company: company),
+      );
     },
     viewAgents: (context) => ChangeNotifierProvider(
       create: (_) => ViewAgentsViewModel(),

@@ -5,17 +5,23 @@ import '../../app/routes.dart';
 import '../../core/widgets/app_card.dart';
 import '../../data/models/company_model.dart';
 import 'add_bank_account_viewmodel.dart';
+import 'company_detail_viewmodel.dart';
 
-class CompanyDetailScreen extends StatelessWidget {
+class CompanyDetailScreen extends StatefulWidget {
   final CompanyModel company;
 
   const CompanyDetailScreen({super.key, required this.company});
 
+  @override
+  State<CompanyDetailScreen> createState() => _CompanyDetailScreenState();
+}
+
+class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   void _handleAddCompanyToPayment(BuildContext context) async {
     final vm = context.read<AddBankAccountViewModel>();
     
     // Pre-populate VM with company details
-    vm.setFromCompany(company);
+    vm.setFromCompany(widget.company);
     
     // Show loading dialog
     showDialog(
@@ -27,16 +33,21 @@ class CompanyDetailScreen extends StatelessWidget {
     // Call the create-vendor-account API
     final success = await vm.createVendorAccount();
     
-    if (context.mounted) {
+    if (mounted) {
       Navigator.pop(context); // Close loading dialog
 
       if (success) {
-        // Navigate to bank account management screen to continue the flow
-        Navigator.pushNamed(
-          context, 
-          AppRoutes.addBankAccount,
-          // We don't pass company arg here because we already pre-filled and advanced the VM state
+        // Refresh existence status in the detail viewmodel
+        context.read<CompanyDetailViewModel>().checkCompanyExistence();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(vm.successMessage ?? 'Company added to payment system successfully'),
+            backgroundColor: Colors.green,
+          ),
         );
+        
+        // Navigation removed as per user request ("i dont want this ... i want to show only message")
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -50,44 +61,53 @@ class CompanyDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      appBar: AppBar(
-        title: const Text('Company Details'),
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            _buildHeaderCard(),
-            const SizedBox(height: 20),
-            _buildInfoSection('Basic Information', [
-              _infoRow('RC Number', company.rcNumber),
-              _infoRow('Company Number', company.companyNumber),
-              _infoRow('TIN', company.tin),
-              _infoRow('Status', company.status, isStatus: true),
-            ]),
-            const SizedBox(height: 16),
-            _buildInfoSection('Contact Details', [
-              _infoRow('Email', company.email),
-              _infoRow('Phone', company.phoneNumber),
-            ]),
-            const SizedBox(height: 16),
-            _buildInfoSection('Location', [
-              _infoRow('Address', company.address),
-              _infoRow('Contact Address', company.contactAddress),
-              _infoRow('City', company.city),
-              _infoRow('State', company.state),
-              _infoRow('LGA', company.lga),
-            ]),
-            const SizedBox(height: 32),
-            _buildAddAgentButton(context),
-            const SizedBox(height: 12),
-            _buildAddCompanyToPaymentButton(context),
-            const SizedBox(height: 20),
+    return Consumer<CompanyDetailViewModel>(
+      builder: (context, vm, _) => Scaffold(
+        backgroundColor: const Color(0xFFF5F6FA),
+        appBar: AppBar(
+          title: const Text('Company Details'),
+          backgroundColor: const Color(0xFF1A237E),
+          foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () => vm.checkCompanyExistence(),
+              tooltip: 'Check Status',
+            ),
           ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              _buildHeaderCard(),
+              const SizedBox(height: 20),
+              _buildInfoSection('Basic Information', [
+                _infoRow('RC Number', widget.company.rcNumber),
+                _infoRow('Company Number', widget.company.companyNumber),
+                _infoRow('TIN', widget.company.tin),
+                _infoRow('Status', widget.company.status, isStatus: true),
+              ]),
+              const SizedBox(height: 16),
+              _buildInfoSection('Contact Details', [
+                _infoRow('Email', widget.company.email),
+                _infoRow('Phone', widget.company.phoneNumber),
+              ]),
+              const SizedBox(height: 16),
+              _buildInfoSection('Location', [
+                _infoRow('Address', widget.company.address),
+                _infoRow('Contact Address', widget.company.contactAddress),
+                _infoRow('City', widget.company.city),
+                _infoRow('State', widget.company.state),
+                _infoRow('LGA', widget.company.lga),
+              ]),
+              const SizedBox(height: 32),
+              _buildAddAgentButton(context),
+              const SizedBox(height: 12),
+              _buildPaymentActions(context, vm),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -113,7 +133,7 @@ class CompanyDetailScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  company.name,
+                  widget.company.name,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -122,7 +142,7 @@ class CompanyDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'RC: ${company.rcNumber}',
+                  'RC: ${widget.company.rcNumber}',
                   style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                 ),
               ],
@@ -215,7 +235,7 @@ class CompanyDetailScreen extends StatelessWidget {
           Navigator.pushNamed(
             context,
             AppRoutes.companyVerify,
-            arguments: {'rc_number': company.rcNumber},
+            arguments: {'rc_number': widget.company.rcNumber},
           );
         },
         icon: const Icon(Icons.person_add),
@@ -230,7 +250,21 @@ class CompanyDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAddCompanyToPaymentButton(BuildContext context) {
+  Widget _buildPaymentActions(BuildContext context, CompanyDetailViewModel vm) {
+    if (vm.isCheckingExistence) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 10),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (vm.vendorExists) {
+      // If company exists in payment system, don't show the "Add" button
+      return const SizedBox.shrink();
+    }
+
     return SizedBox(
       width: double.infinity,
       height: 52,

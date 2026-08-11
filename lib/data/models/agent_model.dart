@@ -1,3 +1,5 @@
+import '../../core/utils/logger.dart';
+
 class AgentModel {
   final int? id;
   final String agentNumber;
@@ -7,6 +9,7 @@ class AgentModel {
   final String email;
   final String phoneNumber;
   final String companyNumber;
+  final String rcNumber;
   final String gender;
   final String maritalStatus;
   final String dateOfBirth;
@@ -26,6 +29,7 @@ class AgentModel {
   final String idType;
   final String identityNumber;
   final String? tin;
+  final int mapToCompany;
 
   const AgentModel({
     this.id,
@@ -36,6 +40,7 @@ class AgentModel {
     required this.email,
     required this.phoneNumber,
     required this.companyNumber,
+    this.rcNumber = '',
     required this.gender,
     required this.maritalStatus,
     required this.dateOfBirth,
@@ -55,41 +60,87 @@ class AgentModel {
     required this.idType,
     required this.identityNumber,
     this.tin,
+    this.mapToCompany = 1, // Default to 1 to not show button if not present
   });
 
   String get fullName => '$title $firstName $lastName';
 
   factory AgentModel.fromJson(Map<String, dynamic> json) {
+    // 1. Resolve where the actual agent data is
+    Map<String, dynamic> data = json;
+    
+    // Handle various response wrappers
+    if (json.containsKey('agent_data') && json['agent_data'] is Map) {
+      data = json['agent_data'] as Map<String, dynamic>;
+    } else if (json.containsKey('data') && json['data'] is Map) {
+      final inner = json['data'] as Map<String, dynamic>;
+      if (inner.containsKey('agent_data') && inner['agent_data'] is Map) {
+        data = inner['agent_data'] as Map<String, dynamic>;
+      } else if (inner.containsKey('email') || inner.containsKey('agent_number')) {
+        data = inner;
+      }
+    }
+
+    // 2. Helper to safely extract string values and handle 'null' strings
+    String s(dynamic val) {
+      if (val == null) return '';
+      final str = val.toString().trim();
+      if (str.toLowerCase() == 'null') return '';
+      return str;
+    }
+
+    // 3. Robust RC Number extraction
+    String rc = s(data['rc_number']);
+    if (rc.isEmpty) {
+      rc = s(json['rc_number']);
+    }
+    if (rc.isEmpty) {
+      // Check nested objects
+      final comp = data['company'] ?? json['company'] ?? json['data']?['company'];
+      if (comp is Map) {
+        rc = s(comp['rc_number']);
+      }
+    }
+
+    int mtc = 1;
+    if (data.containsKey('map_to_company')) {
+      mtc = int.tryParse(data['map_to_company'].toString()) ?? 1;
+    } else if (json.containsKey('map_to_company')) {
+       mtc = int.tryParse(json['map_to_company'].toString()) ?? 1;
+    }
+
     return AgentModel(
-      id: json['id'] is int
-          ? json['id'] as int
-          : int.tryParse(json['id'].toString()),
-      agentNumber: json['agent_number'] as String? ?? '',
-      title: json['title'] as String? ?? '',
-      firstName: json['first_name'] as String? ?? '',
-      lastName: json['last_name'] as String? ?? '',
-      email: json['email'] as String? ?? '',
-      phoneNumber: json['phone_number'] as String? ?? '',
-      companyNumber: json['company_number'] as String? ?? '',
-      gender: json['gender'] as String? ?? '',
-      maritalStatus: json['marital_status'] as String? ?? '',
-      dateOfBirth: json['date_of_birth'] as String? ?? '',
-      address: json['address'] as String? ?? '',
-      city: json['city'] as String? ?? '',
-      state: json['state'] as String? ?? '',
-      lga: json['lga'] as String? ?? '',
-      stateOfOrigin: json['state_of_origin'] as String? ?? '',
-      lgaOfOrigin: json['lga_of_origin'] as String? ?? '',
-      nationality: json['nationality'] as String? ?? '',
-      bvn: json['bvn'] as String? ?? '',
-      nin: json['nin'] as String? ?? '',
-      bankName: json['bank_name'] as String? ?? '',
-      accountNumber: json['account_number'] as String? ?? '',
-      accountName: json['account_name'] as String? ?? '',
-      sortCode: json['sort_code'] as String?,
-      idType: json['id_type'] as String? ?? '',
-      identityNumber: json['identity_number'] as String? ?? '',
-      tin: json['tin'] as String?,
+      id: data['id'] is int
+          ? data['id'] as int
+          : int.tryParse(data['id']?.toString() ?? ''),
+      agentNumber: s(data['agent_number'] ?? data['id']),
+      title: s(data['title']),
+      firstName: s(data['first_name']),
+      lastName: s(data['last_name']),
+      email: s(data['email']),
+      phoneNumber: s(data['phone_number'] ?? data['phone']),
+      companyNumber: s(data['company_number'] ?? data['corporate_id']),
+      rcNumber: rc,
+      gender: s(data['gender']),
+      maritalStatus: s(data['marital_status']),
+      dateOfBirth: s(data['date_of_birth']),
+      address: s(data['address']),
+      city: s(data['city']),
+      state: s(data['state']),
+      lga: s(data['lga']),
+      stateOfOrigin: s(data['state_of_origin']),
+      lgaOfOrigin: s(data['lga_of_origin']),
+      nationality: s(data['nationality'] ?? 'Nigerian'),
+      bvn: s(data['bvn']),
+      nin: s(data['nin']),
+      bankName: s(data['bank_name']),
+      accountNumber: s(data['account_number']),
+      accountName: s(data['account_name']),
+      sortCode: data['sort_code']?.toString(),
+      idType: s(data['id_type'] ?? data['identity_type']),
+      identityNumber: s(data['identity_number']),
+      tin: data['tin']?.toString(),
+      mapToCompany: mtc,
     );
   }
 
@@ -102,6 +153,7 @@ class AgentModel {
         'email': email,
         'phone_number': phoneNumber,
         'company_number': companyNumber,
+        'rc_number': rcNumber,
         'gender': gender,
         'marital_status': maritalStatus,
         'date_of_birth': dateOfBirth,
@@ -121,6 +173,7 @@ class AgentModel {
         'id_type': idType,
         'identity_number': identityNumber,
         'tin': tin,
+        'map_to_company': mapToCompany,
       };
 
   AgentModel copyWith({
@@ -132,6 +185,7 @@ class AgentModel {
     String? email,
     String? phoneNumber,
     String? companyNumber,
+    String? rcNumber,
     String? gender,
     String? maritalStatus,
     String? dateOfBirth,
@@ -151,6 +205,7 @@ class AgentModel {
     String? idType,
     String? identityNumber,
     String? tin,
+    int? mapToCompany,
   }) {
     return AgentModel(
       id: id ?? this.id,
@@ -161,6 +216,7 @@ class AgentModel {
       email: email ?? this.email,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       companyNumber: companyNumber ?? this.companyNumber,
+      rcNumber: rcNumber ?? this.rcNumber,
       gender: gender ?? this.gender,
       maritalStatus: maritalStatus ?? this.maritalStatus,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
@@ -180,6 +236,7 @@ class AgentModel {
       idType: idType ?? this.idType,
       identityNumber: identityNumber ?? this.identityNumber,
       tin: tin ?? this.tin,
+      mapToCompany: mapToCompany ?? this.mapToCompany,
     );
   }
 }

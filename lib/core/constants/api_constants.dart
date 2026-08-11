@@ -77,6 +77,7 @@ class ApiConstants {
   static const String actionGetAgentDetails = 'get-agent-details';
   static const String actionGetAgentStatus = 'get-agent-status';
   static const String actionAssignAgentToCompany = 'assign-agent-to-company';
+  static const String actionMapAgentToCompany = 'map-agent-to-company';
   static const String actionCreateTerminal = 'create-terminal';
   static const String actionValidateCustomer = 'validate-customer';
   static const String actionCreateTransaction = 'create-transaction';
@@ -95,11 +96,12 @@ class ApiConstants {
   static const String actionCreateBankAccount = 'create-vendor-account';
   static const String actionGetAgentsForBank = 'get-agents-for-bank';
   static const String actionGetVendorDetail = 'get-vendor-detail';
-  static const String actionAddAgentBank = 'register_agent_bank';
+  static const String actionAddAgentBank = 'add-agent-bank';
   static const String actionCheckAgentExist = 'check-agent-exist';
   static const String actionCreateAgentProfile = 'create-agent-profile';
   static const String actionGenerateAccount = 'generate-account';
   static const String actionRegenerateOtp = 'regenerate-otp';
+  static const String actionCheckVendorExist = 'check-vendor-exist';
 
   static const String validateCustomer = validateVehicle;
   static const String getCompany = '/corporate/get-company';

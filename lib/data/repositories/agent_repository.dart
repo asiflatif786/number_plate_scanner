@@ -172,31 +172,43 @@ class AgentRepository {
     return ApiResponse.failure(response.failure!);
   }
 
-  Future<ApiResponse<bool>> checkAgentExists(String email) async {
+  Future<ApiResponse<Map<String, dynamic>>> checkAgentExists(String email) async {
     AppLogger.logInfo(_tag, 'Checking if agent exists: $email');
 
-    // Directly call ApiClient to get the full response if possible, 
-    // or rely on its success determination plus data verification.
     final response = await ApiClient.instance.tmsPost(
       ApiConstants.actionCheckAgentExist,
       fields: {'email': email},
     );
 
-    // If status was true (as in user's log), ApiClient.success will be true.
-    // If status_code was "00", ApiClient.success will be true.
-    // However, if the server returns 200 OK for "Agent not found" with status_code "01",
-    // ApiClient might still say success because of the 200 status code.
-    
-    // We check if success is true AND the data is not empty (as failure returns data: null).
-    bool exists = false;
-    if (response.success && response.data != null && response.data!.isNotEmpty) {
-      exists = true;
+    if (response.success && response.data != null) {
+      AppLogger.logInfo(_tag, 'Agent existence result for $email: true');
+      return ApiResponse.success(response.data!, response.message);
     }
 
-    AppLogger.logInfo(_tag, 'Agent exists result for $email: $exists (Success: ${response.success}, Data Empty: ${response.data?.isEmpty})');
+    AppLogger.logInfo(_tag, 'Agent not found for $email');
+    return ApiResponse.failure(response.failure!);
+  }
 
-    // We return success: true because the operation of checking finished correctly.
-    // The 'data' of this ApiResponse is the boolean result of existence.
-    return ApiResponse.success(exists, response.message);
+  Future<ApiResponse<bool>> mapAgentToCompany({
+    required String email,
+    required String rcNumber,
+  }) async {
+    AppLogger.logInfo(_tag, 'Mapping agent $email to company RC $rcNumber');
+
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionMapAgentToCompany,
+      fields: {
+        'email': email,
+        'rc_number': rcNumber,
+      },
+    );
+
+    if (response.success) {
+      AppLogger.logInfo(_tag, 'Mapping successful');
+      return ApiResponse.success(true, response.message);
+    }
+
+    AppLogger.logWarning(_tag, 'Mapping failed: ${response.failure?.message}');
+    return ApiResponse.failure(response.failure!);
   }
 }

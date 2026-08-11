@@ -45,6 +45,41 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
     return '${'*' * (value.length - showLast)}${value.substring(value.length - showLast)}';
   }
 
+  void _handleMapAgentToCompany(BuildContext context) async {
+    final vm = context.read<AgentDetailViewModel>();
+    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final success = await vm.mapAgentToCompany();
+    
+    if (mounted) {
+      Navigator.pop(context); // Close loading dialog
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(vm.successMessage ?? 'Agent mapped to company successfully.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Refresh detail view
+        vm.loadTerminalDetails();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(vm.errorMessage ?? 'Failed to map agent to company'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _handleAddAgentToPayment(BuildContext context, AgentModel agent) async {
     final vm = context.read<AddBankAccountViewModel>();
     
@@ -87,14 +122,16 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
         vm.setFromAgent(agent); 
         
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(vm.successMessage ?? 'Agent added to payment system.')),
+          SnackBar(
+            content: Text(vm.successMessage ?? 'Agent added to payment system successfully.'),
+            backgroundColor: Colors.green,
+          ),
         );
         
-        // Refresh detail view state
+        // Refresh detail view state to show the "Next" button
         context.read<AgentDetailViewModel>().checkAgentExistence();
-
-        // Navigate to bank verification screen to continue the flow
-        Navigator.pushNamed(context, AppRoutes.agentBankVerification, arguments: agent);
+        
+        // We STAY on this screen as requested. The button will change to "Next".
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -357,6 +394,8 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
       accentColor: Colors.purple,
       children: [
         DetailRow(label: 'Company Number', value: a.companyNumber),
+        DetailRow(label: 'RC Number', value: a.rcNumber.isNotEmpty ? a.rcNumber : 'N/A'),
+        DetailRow(label: 'Map To Company', value: a.mapToCompany.toString()),
         DetailRow(
           label: 'Agent Number',
           value: a.agentNumber,
@@ -378,8 +417,25 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
   }
 
   Widget _buildBottomActionButtons(BuildContext context, AgentDetailViewModel vm) {
-    if (vm.isLoadingExistence) {
+    if (vm.isLoadingExistence || vm.isLoadingTerminals) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    if (vm.agent.mapToCompany == 0) {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton.icon(
+          onPressed: () => _handleMapAgentToCompany(context),
+          icon: const Icon(Icons.link),
+          label: const Text('Map To Company'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange.shade800,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      );
     }
 
     if (vm.agentExistsInPaymentSystem == true) {
