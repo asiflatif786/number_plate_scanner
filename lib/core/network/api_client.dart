@@ -246,11 +246,29 @@ class ApiClient {
     String? message = tmsData['message']?.toString()
         ?? responseBody['message']?.toString();
 
+    // Check for validation errors object
+    if (tmsData.containsKey('errors') && tmsData['errors'] is Map) {
+      final errors = tmsData['errors'] as Map;
+      if (errors.isNotEmpty) {
+        final List<String> allErrors = [];
+        errors.forEach((key, value) {
+          if (value is List && value.isNotEmpty) {
+            allErrors.add(value.first.toString());
+          } else if (value is String) {
+            allErrors.add(value);
+          }
+        });
+        if (allErrors.isNotEmpty) {
+          message = allErrors.join(', ');
+        }
+      }
+    }
+
     // Support both 'data' and 'Data' keys
     final rawData = tmsData['data'] ?? tmsData['Data'] ?? responseBody['data'] ?? responseBody['Data'];
 
     // If message is generic (like "not found") and data is a string, use data as the message
-    if ((message == null || message.toLowerCase() == 'not found' || message.toLowerCase() == 'error') &&
+    if ((message == null || message.toLowerCase() == 'not found' || message.toLowerCase() == 'error' || message.toLowerCase() == 'validation failed') &&
         rawData is String && rawData.isNotEmpty) {
       message = rawData;
     }
@@ -262,15 +280,21 @@ class ApiClient {
     final String? statusCode = tmsData['status_code']?.toString() ?? responseBody['status_code']?.toString();
 
     // Determine success based on multiple patterns
-    final bool isSuccess = 
-        oldStatus == true || 
-        oldStatus == 'true' || 
-        oldStatus == 1 || 
-        oldStatus == 200 || 
-        oldStatus == 201 ||
-        statusCode == '00' || 
-        httpResponse.statusCode == 200 || 
-        httpResponse.statusCode == 201;
+    bool isSuccess = httpResponse.statusCode == 200 || httpResponse.statusCode == 201;
+
+    // If there is an explicit status field, it MUST be true for success
+    if (oldStatus != null) {
+      // Use fuzzy matching for truthy values
+      final truthy = (oldStatus == true || oldStatus == 'true' || oldStatus == 1 || 
+                     oldStatus == '1' || oldStatus == 200 || oldStatus == 201 ||
+                     oldStatus.toString().toLowerCase() == 'success');
+      isSuccess = isSuccess && truthy;
+    }
+    
+    // If there is an explicit status_code field, it MUST be '00' for success
+    if (statusCode != null) {
+      isSuccess = isSuccess && (statusCode == '00' || statusCode == '200');
+    }
 
     Map<String, dynamic> data = {};
     if (rawData is Map<String, dynamic>) {

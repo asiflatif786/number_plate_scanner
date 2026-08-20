@@ -32,6 +32,27 @@ class TransactionRepository {
     return ApiResponse.failure(response.failure!);
   }
 
+  Future<ApiResponse<TransactionModel>> createCcaTransaction(
+    Map<String, dynamic> payload,
+  ) async {
+    AppLogger.logInfo(
+        _tag, 'Creating CCA transaction for: ${payload['vehicle_license']}');
+
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionCreateCcaTransaction,
+      fields: payload,
+    );
+
+    if (response.success && response.data != null) {
+      final transaction = TransactionModel.fromJson(response.data!);
+      AppLogger.logInfo(_tag, 'CCA Created: ${transaction.transactionReference}');
+      return ApiResponse.success(transaction, response.message);
+    }
+
+    AppLogger.logWarning(_tag, 'CCA Creation failed: ${response.failure?.message}');
+    return ApiResponse.failure(response.failure!);
+  }
+
   Future<ApiResponse<Map<String, dynamic>>> processCyber1Transaction({
     required String? walletNumber,
     required String transactionReference,

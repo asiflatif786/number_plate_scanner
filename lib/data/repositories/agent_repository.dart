@@ -211,4 +211,19 @@ class AgentRepository {
     AppLogger.logWarning(_tag, 'Mapping failed: ${response.failure?.message}');
     return ApiResponse.failure(response.failure!);
   }
+
+  Future<ApiResponse<Map<String, dynamic>>> getCustomerDetails(String email) async {
+    AppLogger.logInfo(_tag, 'Getting customer details for: $email via action-based payload');
+
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGetCustomerDetail,
+      fields: {'email': email},
+    );
+
+    if (response.success && response.data != null) {
+      return ApiResponse.success(response.data!, response.message);
+    }
+
+    return ApiResponse.failure(response.failure!);
+  }
 }

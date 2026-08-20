@@ -7,6 +7,7 @@ import '../../core/utils/logger.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/terminal_repository.dart';
 import '../../data/repositories/bank_repository.dart';
+import '../../data/repositories/agent_repository.dart';
 import '../../data/models/terminal_model.dart';
 
 class AgentDashboardViewModel extends ChangeNotifier {
@@ -15,6 +16,7 @@ class AgentDashboardViewModel extends ChangeNotifier {
   final TransactionRepository _txRepo = TransactionRepository();
   final TerminalRepository _terminalRepo = TerminalRepository();
   final BankRepository _bankRepo = BankRepository();
+  final AgentRepository _agentRepo = AgentRepository();
 
   String agentFullName = '';
   String agentNumber = '';
@@ -29,6 +31,7 @@ class AgentDashboardViewModel extends ChangeNotifier {
   String bankName = '';
   String accountNumber = '';
   String accountName = '';
+  String paymentStatus = 'INACTIVE';
   bool hasBankDetails = false;
   bool isBankLoading = false;
   String? bankErrorMessage;
@@ -51,7 +54,7 @@ class AgentDashboardViewModel extends ChangeNotifier {
       greeting = _computeGreeting(DateTime.now().hour);
       notifyListeners();
       
-      // Load details sequentially with individual error handling
+      // Load details sequentially
       await _fetchTerminalDetails();
       await _fetchTransactionStats();
       await _fetchBankDetails();
@@ -64,7 +67,6 @@ class AgentDashboardViewModel extends ChangeNotifier {
     isRefreshing = true;
     notifyListeners();
     try {
-      // Refreshing all details
       await _fetchTerminalDetails();
       await _fetchTransactionStats();
       await _fetchBankDetails();
@@ -102,12 +104,29 @@ class AgentDashboardViewModel extends ChangeNotifier {
 
   Future<void> _fetchBankDetails() async {
     final session = await SessionManager.instance;
-    final email = session.agentEmail;
+    String? email = session.agentEmail;
     
+    // Recovery Logic: If email is missing, recover it using agentNumber
+    if ((email == null || email.isEmpty) && agentNumber != 'N/A' && agentNumber.isNotEmpty) {
+      AppLogger.logInfo(_tag, 'Email missing in session for agent $agentNumber. Attempting recovery from profile...');
+      try {
+        final agentRes = await _agentRepo.getAgent(agentNumber: agentNumber);
+        if (agentRes.success && agentRes.data != null) {
+          email = agentRes.data!.email;
+          if (email.isNotEmpty) {
+            await session.setAgentEmail(email);
+            AppLogger.logInfo(_tag, 'Successfully recovered agent email: $email');
+          }
+        }
+      } catch (e) {
+        AppLogger.logWarning(_tag, 'Email recovery from agent profile failed: $e');
+      }
+    }
+
     if (email == null || email.isEmpty) {
-      AppLogger.logWarning(_tag, 'Bank fetch aborted: email is empty in session');
+      AppLogger.logWarning(_tag, 'Bank fetch aborted: email and agentNumber are both missing from session (or recovery failed). Please re-login.');
       hasBankDetails = false;
-      bankErrorMessage = 'Agent email not found. Please re-login.';
+      bankErrorMessage = 'Account session incomplete. Please log out and back in.';
       notifyListeners();
       return;
     }
@@ -117,24 +136,33 @@ class AgentDashboardViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      AppLogger.logInfo(_tag, 'Fetching bank details for email: $email');
+      AppLogger.logInfo(_tag, 'Fetching bank details for: $email');
       final response = await _bankRepo.getCustomerDetails(email: email);
       
       if (response.success && response.data != null) {
         final data = response.data!;
         
-        // Robust mapping for different API response structures
-        bankName = (data['bank_name'] ?? data['BankName'])?.toString() ?? 'N/A';
-        accountNumber = (data['account_number'] ?? data['AccountNumber'])?.toString() ?? 'Not Generated';
-        accountName = (data['account_name'] ?? data['AccountName'] ?? data['name'])?.toString() ?? 'N/A';
+        // Handle the specific data structure provided: data -> bankAccount -> bank
+        final dynamic bankData = data['bankAccount'] ?? data['bank_account'];
         
-        // We set hasBankDetails to true if we got a successful response with data
-        // even if account number isn't fully ready yet.
-        hasBankDetails = data.isNotEmpty;
+        if (bankData != null && bankData is Map) {
+          final bankObj = bankData['bank'] as Map?;
+          bankName = (bankObj?['name'] ?? bankData['bankName'] ?? 'SAFE HAVEN MFB').toString();
+          accountNumber = (bankData['accountNumber'] ?? bankData['account_number'] ?? 'Not Generated').toString();
+          accountName = (bankData['accountName'] ?? bankData['account_name'] ?? data['firstName'] ?? data['name'] ?? 'N/A').toString();
+          // Extract status from bankAccount object
+          paymentStatus = (bankData['status'] ?? data['status'] ?? 'INACTIVE').toString().toUpperCase();
+        } else {
+          bankName = (data['bank_name'] ?? 'N/A').toString();
+          accountNumber = (data['account_number'] ?? 'Not Generated').toString();
+          accountName = (data['account_name'] ?? data['name'] ?? 'N/A').toString();
+          paymentStatus = (data['status'] ?? 'INACTIVE').toString().toUpperCase();
+        }
         
-        AppLogger.logInfo(_tag, 'Bank details loaded: $accountNumber ($bankName)');
+        hasBankDetails = true;
+        AppLogger.logInfo(_tag, 'Bank details loaded: $accountNumber at $bankName, Status: $paymentStatus');
       } else {
-        bankErrorMessage = response.message ?? 'Bank account details not found.';
+        bankErrorMessage = response.message ?? 'Banking profile not found.';
         hasBankDetails = false;
         AppLogger.logWarning(_tag, 'Bank API returned failure: ${response.message}');
       }

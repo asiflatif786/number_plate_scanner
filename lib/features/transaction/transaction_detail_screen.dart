@@ -25,8 +25,11 @@ class _TransactionDetailScreenState
       create: (_) =>
           TransactionDetailViewModel(transaction: transaction),
       child: Scaffold(
+        backgroundColor: Colors.grey.shade50,
         appBar: AppBar(
           title: const Text('Transaction Details'),
+          backgroundColor: const Color(0xFF1A237E),
+          foregroundColor: Colors.white,
           actions: [
             IconButton(
               icon: const Icon(Icons.share),
@@ -42,6 +45,18 @@ class _TransactionDetailScreenState
             child: Column(
               children: [
                 _buildReceipt(vm.transaction),
+                if (vm.errorMessage != null) ...[
+                  const SizedBox(height: 16),
+                  _buildErrorBanner(vm),
+                ],
+                const SizedBox(height: 16),
+                if (vm.hasBankDetails) ...[
+                  _buildBankDetailsCard(vm),
+                  const SizedBox(height: 16),
+                ],
+                if (vm.transaction.status.toLowerCase() == 'pending' || 
+                    vm.transaction.status.toLowerCase() == 'created') 
+                  _buildPaymentButtons(vm),
                 const SizedBox(height: 16),
                 _buildVerifySection(vm),
                 const SizedBox(height: 32),
@@ -50,6 +65,175 @@ class _TransactionDetailScreenState
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildBankDetailsCard(TransactionDetailViewModel vm) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.indigo.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.indigo.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.account_balance, color: Colors.indigo.shade700, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Bank Transfer Details',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo.shade900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Transfer exactly the total amount to the account below:',
+            style: TextStyle(fontSize: 12, color: Colors.black87),
+          ),
+          const SizedBox(height: 12),
+          _buildBankInfoRow('Bank Name', vm.bankName ?? 'N/A'),
+          const SizedBox(height: 8),
+          _buildBankInfoRow(
+            'Account Number', 
+            vm.accountNumber ?? 'N/A', 
+            isCopyable: true,
+          ),
+          const SizedBox(height: 8),
+          _buildBankInfoRow('Account Name', vm.accountName ?? 'N/A'),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Colors.amber.shade900),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'After transfer, click "Verify Current Status" below to confirm payment.',
+                    style: TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBankInfoRow(String label, String value, {bool isCopyable = false}) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        if (isCopyable && value != 'N/A')
+          IconButton(
+            icon: const Icon(Icons.copy, size: 16, color: Colors.indigo),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: value));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('$label copied to clipboard'), duration: const Duration(seconds: 1)),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildErrorBanner(TransactionDetailViewModel vm) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, size: 20, color: Colors.red.shade700),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              vm.errorMessage!,
+              style: TextStyle(fontSize: 13, color: Colors.red.shade800),
+            ),
+          ),
+          InkWell(
+            onTap: vm.clearError,
+            child: Icon(Icons.close, size: 18, color: Colors.red.shade400),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentButtons(TransactionDetailViewModel vm) {
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton.icon(
+            onPressed: vm.isProcessingPayment ? null : () => vm.payWithWallet(),
+            icon: vm.isProcessingPayment
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.account_balance_wallet),
+            label: const Text('Pay with CCA Wallet', style: TextStyle(fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1A237E),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton.icon(
+            onPressed: vm.isProcessingPayment ? null : () => vm.payWithSquadCo(),
+            icon: const Icon(Icons.payment),
+            label: const Text('Pay with SquadCo', style: TextStyle(fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo.shade800,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -108,7 +292,9 @@ class _TransactionDetailScreenState
     sb.writeln('CUSTOMER DETAILS');
     sb.writeln('──────────────────────────────────────');
     sb.writeln('Name:             ${t.customerName}');
+    if (t.customerPhone != null) sb.writeln('Phone:            ${t.customerPhone}');
     sb.writeln('Vehicle:          ${t.vehicleLicense}');
+    if (t.vehicleType != null) sb.writeln('Vehicle Type:     ${t.vehicleType}');
     final tripType =
         t.transactionType == 'single' ? 'Single Trip' : 'Complete Trip';
     sb.writeln('Trip Type:        $tripType');
@@ -116,8 +302,8 @@ class _TransactionDetailScreenState
     sb.writeln('──────────────────────────────────────');
     sb.writeln('ROUTE');
     sb.writeln('──────────────────────────────────────');
-    sb.writeln('From:  ${t.originLga}, ${t.originState}');
-    sb.writeln('To:    ${t.destinationLga}, ${t.destinationState}');
+    sb.writeln('From:  ${t.originLga}, ${t.originState}${t.originTown != null ? ' (${t.originTown})' : ''}');
+    sb.writeln('To:    ${t.destinationLga}, ${t.destinationState}${t.destinationTown != null ? ' (${t.destinationTown})' : ''}');
     sb.writeln();
     sb.writeln('──────────────────────────────────────');
     sb.writeln('PAYMENT');
@@ -145,7 +331,7 @@ class _TransactionDetailScreenState
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -206,7 +392,7 @@ class _TransactionDetailScreenState
                 Icon(Icons.content_copy,
                     size: 16, color: Colors.grey),
                 SizedBox(width: 4),
-                const Text('Copy',
+                Text('Copy',
                     style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -253,9 +439,17 @@ class _TransactionDetailScreenState
       children: [
         _buildInfoRow('Customer Name', t.customerName),
         const SizedBox(height: 6),
+        if (t.customerPhone != null) ...[
+          _buildInfoRow('Customer Phone', t.customerPhone!),
+          const SizedBox(height: 6),
+        ],
         _buildInfoRow('License Plate', t.vehicleLicense,
             isMonospace: true, isSelectable: true),
         const SizedBox(height: 6),
+        if (t.vehicleType != null && t.vehicleType != 'N/A') ...[
+          _buildInfoRow('Vehicle Type', t.vehicleType!),
+          const SizedBox(height: 6),
+        ],
         _buildTripTypeChip(t.transactionType),
       ],
     );
@@ -290,6 +484,9 @@ class _TransactionDetailScreenState
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           fontSize: 11, color: Colors.grey)),
+                  if (t.originTown != null)
+                    Text(t.originTown!,
+                        style: const TextStyle(fontSize: 10, color: Colors.indigo)),
                 ],
               ),
             ),
@@ -313,6 +510,10 @@ class _TransactionDetailScreenState
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           fontSize: 11, color: Colors.grey)),
+                  if (t.destinationTown != null)
+                    Text(t.destinationTown!,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontSize: 10, color: Colors.indigo)),
                 ],
               ),
             ),
@@ -337,13 +538,13 @@ class _TransactionDetailScreenState
           padding: const EdgeInsets.symmetric(
               horizontal: 8, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A237E).withValues(alpha: 0.05),
+            color: const Color(0xFF1A237E).withOpacity(0.05),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
             children: [
               const Expanded(
-                child: Text('Total Paid',
+                child: Text('Total Payable',
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -465,7 +666,7 @@ class _TransactionDetailScreenState
             padding:
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
             decoration: BoxDecoration(
-              color: t.statusColor.withValues(alpha: 0.15),
+              color: t.statusColor.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
@@ -491,8 +692,8 @@ class _TransactionDetailScreenState
           const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: isSingle
-            ? Colors.blue.withValues(alpha: 0.1)
-            : Colors.purple.withValues(alpha: 0.1),
+            ? Colors.blue.withOpacity(0.1)
+            : Colors.purple.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -538,6 +739,9 @@ class _TransactionDetailScreenState
         break;
       case 'transfer':
         icon = Icons.swap_horiz;
+        break;
+      case 'squad':
+        icon = Icons.payment;
         break;
       default:
         icon = Icons.payment;

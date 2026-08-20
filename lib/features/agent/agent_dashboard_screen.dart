@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/routes.dart';
+import '../../core/widgets/app_card.dart';
+import '../../core/widgets/detail_row.dart';
+import '../../core/widgets/section_header.dart';
 import 'agent_dashboard_viewmodel.dart';
 
 class AgentDashboardScreen extends StatefulWidget {
@@ -40,6 +44,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                     _buildQuickActions(vm),
                     _buildTodayActivity(vm),
                     _buildTerminalInfo(vm),
+                    _buildPaymentBankDetails(vm),
                     _buildFooter(),
                   ],
                 ),
@@ -56,7 +61,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       backgroundColor: const Color(0xFF1A237E),
       automaticallyImplyLeading: false,
       title: const Text('Consolidated Haulage Levy',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
       actions: [
         IconButton(
           icon: const Icon(Icons.notifications_outlined, color: Colors.white),
@@ -345,6 +350,87 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentBankDetails(AgentDashboardViewModel vm) {
+    if (vm.isBankLoading) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 20),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (!vm.hasBankDetails) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Payment System Details',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF212121))),
+          const SizedBox(height: 12),
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                Container(
+                  width: 4,
+                  decoration: const BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: BorderRadius.horizontal(left: Radius.circular(12)),
+                  ),
+                ),
+                Expanded(
+                  child: AppCard(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SectionHeader(title: 'PAYMENT SYSTEM STATUS', fontSize: 13),
+                        const Divider(),
+                        DetailRow(
+                          label: 'Status',
+                          value: vm.paymentStatus,
+                          valueColor: vm.paymentStatus == 'ACTIVE' ? Colors.green : Colors.red,
+                        ),
+                        DetailRow(
+                          label: 'Account Number',
+                          value: vm.accountNumber,
+                          isMonospace: true,
+                          trailingIcon: Icons.copy,
+                          onTrailingTap: () {
+                            Clipboard.setData(ClipboardData(text: vm.accountNumber));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Account number copied to clipboard')),
+                            );
+                          },
+                        ),
+                        DetailRow(
+                          label: 'Bank',
+                          value: vm.bankName,
+                        ),
+                        DetailRow(
+                          label: 'Account Name',
+                          value: vm.accountName,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Use this account for wallet funding via bank transfer.',
+            style: TextStyle(fontSize: 11, color: Color(0xFF757575), fontStyle: FontStyle.italic),
           ),
         ],
       ),

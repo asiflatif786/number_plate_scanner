@@ -41,6 +41,8 @@ import '../features/transaction/transaction_success_screen.dart';
 import '../features/transaction/transaction_success_viewmodel.dart';
 import '../features/transaction/payment_type_selection_screen.dart';
 import '../features/transaction/penalty_state_selection_screen.dart';
+import '../features/transaction/transaction_detail_screen.dart';
+import '../data/models/transaction_model.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -64,6 +66,7 @@ class AppRoutes {
   static const String addCustomer = '/add-customer';
   static const String transactionCreation = '/transaction-creation';
   static const String transactionSuccess = '/transaction-success';
+  static const String transactionDetail = '/transaction-detail';
   static const String paymentSuccess = '/payment-success';
   static const String notifications = '/notifications';
   static const String scanner = '/scanner';
@@ -100,6 +103,7 @@ class AppRoutes {
     addCustomer: (context) => const AddCustomerScreen(),
     transactionCreation: (context) => const TransactionCreationScreen(),
     transactionSuccess: (context) => const TransactionSuccessScreen(),
+    transactionDetail: (context) => const TransactionDetailScreen(),
     paymentSuccess: (context) => const PaymentSuccessLinkHandler(),
     notifications: (context) => const NotificationScreen(),
     scanner: (context) => const ScannerView(),

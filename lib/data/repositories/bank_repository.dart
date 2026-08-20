@@ -70,9 +70,12 @@ class BankRepository {
   Future<ApiResponse<Map<String, dynamic>>> addAgentBank(Map<String, dynamic> data) async {
     AppLogger.logInfo(_tag, 'Adding agent to bank system via TMS action');
 
+    // The API expects the data to be wrapped in a 'payload' array
     final response = await ApiClient.instance.tmsPost(
       ApiConstants.actionAddAgentBank,
-      fields: data,
+      fields: {
+        'payload': [data],
+      },
     );
 
     if (response.success) {
@@ -146,12 +149,11 @@ class BankRepository {
   Future<ApiResponse<Map<String, dynamic>>> getCustomerDetails({
     required String email,
   }) async {
-    AppLogger.logInfo(_tag, 'Getting customer details');
+    AppLogger.logInfo(_tag, 'Getting customer details via action-based payload');
 
-    final response = await ApiClient.instance.get(
-      ApiConstants.getCustomerDetails,
-      baseUrl: ApiConstants.cyber1BaseUrl,
-      queryParams: {
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGetCustomerDetail,
+      fields: {
         'email': email,
       },
     );

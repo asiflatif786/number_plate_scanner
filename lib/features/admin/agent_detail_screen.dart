@@ -31,6 +31,7 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
       vm.loadAgentHealth();
       vm.loadTerminalDetails();
       vm.checkAgentExistence();
+      vm.loadCustomerDetails();
     });
   }
 
@@ -129,7 +130,9 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
         );
         
         // Refresh detail view state to show the "Next" button
-        context.read<AgentDetailViewModel>().checkAgentExistence();
+        final detailVm = context.read<AgentDetailViewModel>();
+        await detailVm.checkAgentExistence();
+        await detailVm.loadCustomerDetails();
         
         // We STAY on this screen as requested. The button will change to "Next".
       } else {
@@ -167,6 +170,10 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
             children: [
               _buildAgentHeader(vm),
               const SizedBox(height: 16),
+              if (vm.paymentSystemStatus != null) ...[
+                _buildPaymentSystemStatus(vm),
+                const SizedBox(height: 12),
+              ],
               _buildTerminalDetails(vm),
               const SizedBox(height: 12),
               _buildPersonalInfo(vm.agent),
@@ -245,6 +252,30 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPaymentSystemStatus(AgentDetailViewModel vm) {
+    return _buildSectionCard(
+      title: 'PAYMENT SYSTEM STATUS',
+      accentColor: Colors.blue,
+      children: [
+        DetailRow(
+          label: 'Status',
+          value: vm.paymentSystemStatus ?? 'Unknown',
+          valueColor: vm.paymentSystemStatus == 'ACTIVE' ? Colors.green : Colors.red,
+        ),
+        if (vm.customerDetails != null && vm.customerDetails!['bankAccount'] != null) ...[
+          DetailRow(
+            label: 'Account Number',
+            value: vm.customerDetails!['bankAccount']['accountNumber']?.toString() ?? 'N/A',
+          ),
+          DetailRow(
+            label: 'Bank',
+            value: vm.customerDetails!['bankAccount']['bank']?['name']?.toString() ?? 'N/A',
+          ),
+        ]
+      ],
     );
   }
 
@@ -417,7 +448,7 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
   }
 
   Widget _buildBottomActionButtons(BuildContext context, AgentDetailViewModel vm) {
-    if (vm.isLoadingExistence || vm.isLoadingTerminals) {
+    if (vm.isLoadingExistence || vm.isLoadingTerminals || vm.isLoadingCustomerDetails) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -436,6 +467,14 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
           ),
         ),
       );
+    }
+
+    // Use the payment system status to decide which button to show
+    final bool isActiveInPaymentSystem = vm.paymentSystemStatus == 'ACTIVE';
+
+    if (isActiveInPaymentSystem) {
+      // If the agent is already ACTIVE, per requirements we show NOTHING (only show if NOT active)
+      return const SizedBox.shrink();
     }
 
     if (vm.agentExistsInPaymentSystem == true) {

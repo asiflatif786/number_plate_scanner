@@ -73,20 +73,15 @@ class _TransactionCreationBody extends StatelessWidget {
                 const SizedBox(height: 12),
                 _buildDestinationCard(vm),
                 const SizedBox(height: 12),
-                if (!vm.isCompleteTrip) ...[
-                  _buildPayloadCategoryCard(vm),
-                  const SizedBox(height: 12),
-                ],
+                _buildPayloadCategoryCard(vm),
+                const SizedBox(height: 12),
                 _buildFeeSummaryCard(vm),
                 if (vm.errorMessage != null) ...[
                   const SizedBox(height: 16),
                   _buildErrorBanner(vm),
                 ],
                 const SizedBox(height: 24),
-                if (vm.hasPenalty)
-                  _buildSquadCoButton(vm, context)
-                else
-                  _buildStandardProceedButton(vm, context),
+                _buildGenerateButton(vm, context),
                 const SizedBox(height: 16),
               ],
             ),
@@ -323,27 +318,13 @@ class _TransactionCreationBody extends StatelessWidget {
     );
   }
 
-  Widget _buildSquadCoButton(TransactionCreationViewModel vm, BuildContext context) {
+  Widget _buildGenerateButton(TransactionCreationViewModel vm, BuildContext context) {
     return SizedBox(
       width: double.infinity,
       height: 50,
       child: AppButton(
-        label: vm.isSquadCoProceeding ? 'Proceeding...' : 'Confirm & Proceed With Squad',
-        onPressed: (vm.isLoading || vm.isSquadCoProceeding) ? null : () => vm.proceedWithSquadCo(context),
-        isLoading: vm.isSquadCoProceeding,
-        icon: Icons.payment,
-        color: Colors.indigo,
-      ),
-    );
-  }
-
-  Widget _buildStandardProceedButton(TransactionCreationViewModel vm, BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: AppButton(
-        label: vm.isLoading ? 'Processing...' : 'Confirm & Generate Invoice',
-        onPressed: (vm.isLoading || vm.isSquadCoProceeding) ? null : () => vm.proceedWithStandardPayment(context),
+        label: vm.isLoading ? 'Processing...' : 'Generate Transaction',
+        onPressed: vm.isLoading ? null : () => vm.proceedWithStandardPayment(context),
         isLoading: vm.isLoading,
         icon: Icons.check_circle,
         color: Colors.green.shade700,

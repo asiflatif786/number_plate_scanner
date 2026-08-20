@@ -12,11 +12,16 @@ class AgentDetailViewModel extends ChangeNotifier {
 
   AgentModel agent;
   String? agentStatus;
+  String? paymentSystemStatus;
+  Map<String, dynamic>? customerDetails;
+  
   List<TerminalModel> terminals = [];
   bool isLoadingStatus = false;
   bool isLoadingTerminals = false;
   bool isLoadingExistence = false;
   bool isMappingAgent = false;
+  bool isLoadingCustomerDetails = false;
+  
   bool? agentExistsInPaymentSystem;
   String? errorMessage;
   String? successMessage;
@@ -40,6 +45,41 @@ class AgentDetailViewModel extends ChangeNotifier {
 
     isLoadingStatus = false;
     notifyListeners();
+  }
+
+  Future<void> loadCustomerDetails() async {
+    if (agent.email.isEmpty) return;
+
+    isLoadingCustomerDetails = true;
+    paymentSystemStatus = null;
+    customerDetails = null;
+    notifyListeners();
+
+    try {
+      final result = await _repository.getCustomerDetails(agent.email);
+      if (result.success && result.data != null) {
+        customerDetails = result.data!;
+        AppLogger.logDebug(_tag, 'Customer details loaded: ${customerDetails!.keys.toList()}');
+        
+        final dynamic bankData = customerDetails!['bankAccount'] ?? customerDetails!['bank_account'];
+        
+        if (bankData != null && bankData is Map) {
+          final bankAccount = Map<String, dynamic>.from(bankData);
+          final rawStatus = bankAccount['status']?.toString();
+          paymentSystemStatus = rawStatus?.trim().toUpperCase();
+          AppLogger.logInfo(_tag, 'Extracted Payment System Status: $paymentSystemStatus for ${agent.email}');
+        } else {
+          AppLogger.logWarning(_tag, 'bankAccount not found in customer details for ${agent.email}');
+        }
+      } else {
+        AppLogger.logWarning(_tag, 'Failed to fetch customer details: ${result.failure?.message}');
+      }
+    } catch (e) {
+      AppLogger.logWarning(_tag, 'Error loading customer details: $e');
+    } finally {
+      isLoadingCustomerDetails = false;
+      notifyListeners();
+    }
   }
 
   Future<void> checkAgentExistence() async {
@@ -93,10 +133,10 @@ class AgentDetailViewModel extends ChangeNotifier {
     } catch (e) {
       AppLogger.logWarning(_tag, 'Error checking agent existence: $e');
       agentExistsInPaymentSystem = false;
+    } finally {
+      isLoadingExistence = false;
+      notifyListeners();
     }
-
-    isLoadingExistence = false;
-    notifyListeners();
   }
 
   Future<void> loadTerminalDetails() async {
@@ -144,10 +184,10 @@ class AgentDetailViewModel extends ChangeNotifier {
       }
     } catch (e) {
       AppLogger.logWarning(_tag, 'Error loading terminal details: $e');
+    } finally {
+      isLoadingTerminals = false;
+      notifyListeners();
     }
-
-    isLoadingTerminals = false;
-    notifyListeners();
   }
 
   Future<bool> mapAgentToCompany() async {
@@ -179,10 +219,10 @@ class AgentDetailViewModel extends ChangeNotifier {
       }
     } catch (e) {
       errorMessage = 'An error occurred: $e';
+    } finally {
+      isMappingAgent = false;
+      notifyListeners();
     }
-
-    isMappingAgent = false;
-    notifyListeners();
     return false;
   }
 
@@ -199,5 +239,6 @@ class AgentDetailViewModel extends ChangeNotifier {
     await loadAgentHealth();
     await loadTerminalDetails();
     await checkAgentExistence();
+    await loadCustomerDetails();
   }
 }

@@ -24,7 +24,7 @@ class ApiConstants {
   static const String createCustomerProfile = '/account/create-customer-profile';
   static const String generateAccount = '/account/generate-account';
   static const String regenerateOtp = '/account/regenerate-otp';
-  static const String getCustomerDetails = '/account/get-customer-details';
+  static const String getCustomerDetails = '/account/get-customer-detail';
   static const String processTransaction = '/transaction/process-transaction';
 
   // Official Laravel proxy endpoints used by the Flutter app.
@@ -81,6 +81,7 @@ class ApiConstants {
   static const String actionCreateTerminal = 'create-terminal';
   static const String actionValidateCustomer = 'validate-customer';
   static const String actionCreateTransaction = 'create-transaction';
+  static const String actionCreateCcaTransaction = 'create_cca_transaction';
   static const String actionApproveTransaction = 'approve-transaction';
   static const String actionDeclineTransaction = 'decline-transaction';
   static const String actionVerifyTransaction = 'verify-transaction';
@@ -102,6 +103,7 @@ class ApiConstants {
   static const String actionGenerateAccount = 'generate-account';
   static const String actionRegenerateOtp = 'regenerate-otp';
   static const String actionCheckVendorExist = 'check-vendor-exist';
+  static const String actionGetCustomerDetail = 'get-customer-detail';
 
   static const String validateCustomer = validateVehicle;
   static const String getCompany = '/corporate/get-company';
