@@ -97,6 +97,13 @@ class SessionManager {
     AppLogger.logInfo(_tag, 'agentLastName saved');
   }
 
+  String? get walletNumber => _p.getString('wallet_number');
+
+  Future<void> setWalletNumber(String value) async {
+    await _p.setString('wallet_number', value);
+    AppLogger.logInfo(_tag, 'walletNumber saved');
+  }
+
   String? get assignedState => _p.getString('assigned_state');
 
   Future<void> setAssignedState(String? value) async {
@@ -195,6 +202,7 @@ class SessionManager {
     String? assignedState,
     String? serviceNumberIntraState,
     String? serviceNumberPenalty,
+    String? walletNumber,
   }) async {
     if (companyNumber != null) await setCompanyNumber(companyNumber);
     if (agentNumber != null) await setAgentNumber(agentNumber);
@@ -207,6 +215,7 @@ class SessionManager {
     if (assignedState != null) await setAssignedState(assignedState);
     if (serviceNumberIntraState != null) await setServiceNumberIntraState(serviceNumberIntraState);
     if (serviceNumberPenalty != null) await setServiceNumberPenalty(serviceNumberPenalty);
+    if (walletNumber != null) await setWalletNumber(walletNumber);
     await setOnboarded(true);
 
     AppLogger.logInfo(_tag, 'onboarding complete — all fields saved');
@@ -292,6 +301,7 @@ class SessionManager {
     await _p.remove(ApiConstants.serviceNumberIntraStateKey);
     await _p.remove(ApiConstants.serviceNumberPenaltyKey);
     await _p.remove('assigned_state');
+    await _p.remove('wallet_number');
     AppLogger.logWarning(_tag, 'session cleared — all data wiped');
   }
 

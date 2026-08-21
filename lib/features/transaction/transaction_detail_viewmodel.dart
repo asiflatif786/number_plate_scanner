@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/session/session_manager.dart';
@@ -8,12 +9,14 @@ import '../../core/utils/logger.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/bank_repository.dart';
+import '../../data/repositories/agent_repository.dart';
 
 class TransactionDetailViewModel extends ChangeNotifier {
   static const String _tag = 'TxDetVM';
 
   final TransactionRepository _repository = TransactionRepository();
   final BankRepository _bankRepo = BankRepository();
+  final AgentRepository _agentRepo = AgentRepository();
 
   TransactionModel transaction;
   bool isVerifying = false;
@@ -26,11 +29,13 @@ class TransactionDetailViewModel extends ChangeNotifier {
   String? bankName;
   String? accountNumber;
   String? accountName;
+  String? agentWalletNumber;
   bool hasBankDetails = false;
 
   TransactionDetailViewModel({required this.transaction}) {
     AppLogger.logDebug(_tag, 'Init: ${transaction.transactionReference} (${transaction.status})');
     _fetchBankDetails();
+    _fetchAgentWalletDetails();
   }
 
   Future<void> _fetchBankDetails() async {
@@ -70,6 +75,37 @@ class TransactionDetailViewModel extends ChangeNotifier {
     } finally {
       isBankLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _fetchAgentWalletDetails() async {
+    try {
+      final session = await SessionManager.instance;
+      
+      // First try to get from session
+      agentWalletNumber = session.walletNumber;
+      if (agentWalletNumber != null && agentWalletNumber!.isNotEmpty) {
+        notifyListeners();
+      }
+
+      final email = session.agentEmail;
+      if (email != null && email.isNotEmpty) {
+        final response = await _agentRepo.checkAgentExists(email);
+        if (response.success && response.data != null) {
+          final data = response.data!;
+          final agentWallet = data['agent_wallet'];
+          if (agentWallet != null && agentWallet is Map) {
+            final newWalletNumber = agentWallet['wallet_number']?.toString();
+            if (newWalletNumber != null && newWalletNumber != agentWalletNumber) {
+              agentWalletNumber = newWalletNumber;
+              await session.setWalletNumber(agentWalletNumber!);
+              notifyListeners();
+            }
+          }
+        }
+      }
+    } catch (e) {
+      AppLogger.logError(_tag, 'Error fetching agent wallet details', e);
     }
   }
 
@@ -149,35 +185,43 @@ class TransactionDetailViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      if (accountNumber == null || accountNumber!.isEmpty) {
-        errorMessage = 'Wallet/Bank account number not found. Please wait for bank details to load or contact support.';
+      // Strictly use agentWalletNumber for CCA transaction
+      final walletToUse = agentWalletNumber;
+
+      if (walletToUse == null || walletToUse.isEmpty) {
+        errorMessage = 'Wallet number not found. Please wait for details to load or contact support.';
         isProcessingPayment = false;
         notifyListeners();
         return false;
       }
+
+      final transactionDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
       
+      // Payload structure aligned with the backend createCCATransaction validator
       final payload = {
         'payer_name': transaction.customerName,
         'payer_phone': transaction.customerPhone ?? '',
         'payer_email': transaction.customerEmail ?? '',
         'amount': transaction.amount,
         'fee': transaction.serviceFee,
-        'payment_method': 'wallet',
+        'payment_method': 'transfer',
         'terminal_id': transaction.terminalId,
         'vehicle_license': transaction.vehicleLicense,
-        'vehicle_type': transaction.vehicleType ?? '',
-        'transaction_type': transaction.transactionType,
-        'transaction_state': transaction.transactionState ?? '',
+        'vehicle_type': transaction.vehicleType ?? 'N/A',
+        'transaction_type': transaction.transactionType.contains('single') ? 'single' : 'complete',
+        'transaction_state': transaction.transactionState ?? 'Inter State',
+        'transaction_ref': transaction.transactionReference, // Matches backend $request->transaction_ref
+        'transaction_date': transactionDate,
         'origin_state': transaction.originState,
         'origin_lga': transaction.originLga,
-        'destination_state': transaction.destinationState,
         'origin_town': transaction.originTown ?? transaction.originLga, 
-        'destination_town': transaction.destinationTown,
+        'destination_state': transaction.destinationState,
         'destination_lga': transaction.destinationLga,
+        'destination_town': transaction.destinationTown,
         'destination_location': transaction.destinationTown,
         'origin_location': transaction.originTown,
         'payload': transaction.rawPayload,
-        'wallet_number': accountNumber, // Updated to use the bank transfer account number
+        'wallet_number': walletToUse,
       };
 
       final result = await _repository.createCcaTransaction(payload);

@@ -364,7 +364,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       );
     }
 
-    if (!vm.hasBankDetails) return const SizedBox.shrink();
+    if (!vm.hasBankDetails && vm.agentWalletNumber.isEmpty) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -400,26 +400,41 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                           value: vm.paymentStatus,
                           valueColor: vm.paymentStatus == 'ACTIVE' ? Colors.green : Colors.red,
                         ),
-                        DetailRow(
-                          label: 'Account Number',
-                          value: vm.accountNumber,
-                          isMonospace: true,
-                          trailingIcon: Icons.copy,
-                          onTrailingTap: () {
-                            Clipboard.setData(ClipboardData(text: vm.accountNumber));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Account number copied to clipboard')),
-                            );
-                          },
-                        ),
-                        DetailRow(
-                          label: 'Bank',
-                          value: vm.bankName,
-                        ),
-                        DetailRow(
-                          label: 'Account Name',
-                          value: vm.accountName,
-                        ),
+                        if (vm.agentWalletNumber.isNotEmpty)
+                          DetailRow(
+                            label: 'Wallet Number',
+                            value: vm.agentWalletNumber,
+                            isMonospace: true,
+                            trailingIcon: Icons.copy,
+                            onTrailingTap: () {
+                              Clipboard.setData(ClipboardData(text: vm.agentWalletNumber));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Wallet number copied to clipboard')),
+                              );
+                            },
+                          ),
+                        if (vm.hasBankDetails) ...[
+                          DetailRow(
+                            label: 'Account Number',
+                            value: vm.accountNumber,
+                            isMonospace: true,
+                            trailingIcon: Icons.copy,
+                            onTrailingTap: () {
+                              Clipboard.setData(ClipboardData(text: vm.accountNumber));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Account number copied to clipboard')),
+                              );
+                            },
+                          ),
+                          DetailRow(
+                            label: 'Bank',
+                            value: vm.bankName,
+                          ),
+                          DetailRow(
+                            label: 'Account Name',
+                            value: vm.accountName,
+                          ),
+                        ],
                       ],
                     ),
                   ),

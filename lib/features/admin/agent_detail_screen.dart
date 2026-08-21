@@ -170,7 +170,7 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
             children: [
               _buildAgentHeader(vm),
               const SizedBox(height: 16),
-              if (vm.paymentSystemStatus != null) ...[
+              if (vm.paymentSystemStatus != null || vm.agentWalletNumber != null) ...[
                 _buildPaymentSystemStatus(vm),
                 const SizedBox(height: 12),
               ],
@@ -260,15 +260,41 @@ class _AgentDetailScreenState extends State<AgentDetailScreen> {
       title: 'PAYMENT SYSTEM STATUS',
       accentColor: Colors.blue,
       children: [
-        DetailRow(
-          label: 'Status',
-          value: vm.paymentSystemStatus ?? 'Unknown',
-          valueColor: vm.paymentSystemStatus == 'ACTIVE' ? Colors.green : Colors.red,
-        ),
+        if (vm.paymentSystemStatus != null)
+          DetailRow(
+            label: 'Status',
+            value: vm.paymentSystemStatus ?? 'Unknown',
+            valueColor: vm.paymentSystemStatus == 'ACTIVE' ? Colors.green : Colors.red,
+          ),
+        if (vm.agentWalletNumber != null)
+          DetailRow(
+            label: 'Wallet Number',
+            value: vm.agentWalletNumber!,
+            isMonospace: true,
+            isSelectable: true,
+            trailingIcon: Icons.copy,
+            onTrailingTap: () {
+              Clipboard.setData(ClipboardData(text: vm.agentWalletNumber!));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Wallet number copied')),
+              );
+            },
+          ),
         if (vm.customerDetails != null && vm.customerDetails!['bankAccount'] != null) ...[
           DetailRow(
             label: 'Account Number',
             value: vm.customerDetails!['bankAccount']['accountNumber']?.toString() ?? 'N/A',
+            isSelectable: true,
+            trailingIcon: Icons.copy,
+            onTrailingTap: () {
+              final acc = vm.customerDetails!['bankAccount']['accountNumber']?.toString();
+              if (acc != null) {
+                Clipboard.setData(ClipboardData(text: acc));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Account number copied')),
+                );
+              }
+            },
           ),
           DetailRow(
             label: 'Bank',

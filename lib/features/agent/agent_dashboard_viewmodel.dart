@@ -31,6 +31,7 @@ class AgentDashboardViewModel extends ChangeNotifier {
   String bankName = '';
   String accountNumber = '';
   String accountName = '';
+  String agentWalletNumber = '';
   String paymentStatus = 'INACTIVE';
   bool hasBankDetails = false;
   bool isBankLoading = false;
@@ -137,6 +138,19 @@ class AgentDashboardViewModel extends ChangeNotifier {
 
     try {
       AppLogger.logInfo(_tag, 'Fetching bank details for: $email');
+      
+      // Check agent existence to get wallet number
+      final existRes = await _agentRepo.checkAgentExists(email);
+      if (existRes.success && existRes.data != null) {
+        final walletData = existRes.data!['agent_wallet'];
+        if (walletData != null && walletData is Map) {
+          agentWalletNumber = walletData['wallet_number']?.toString() ?? '';
+          if (agentWalletNumber.isNotEmpty) {
+            await session.setWalletNumber(agentWalletNumber);
+          }
+        }
+      }
+
       final response = await _bankRepo.getCustomerDetails(email: email);
       
       if (response.success && response.data != null) {
@@ -160,7 +174,7 @@ class AgentDashboardViewModel extends ChangeNotifier {
         }
         
         hasBankDetails = true;
-        AppLogger.logInfo(_tag, 'Bank details loaded: $accountNumber at $bankName, Status: $paymentStatus');
+        AppLogger.logInfo(_tag, 'Bank details loaded: $accountNumber at $bankName, Status: $paymentStatus, Wallet: $agentWalletNumber');
       } else {
         bankErrorMessage = response.message ?? 'Banking profile not found.';
         hasBankDetails = false;

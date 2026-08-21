@@ -13,6 +13,7 @@ class AgentDetailViewModel extends ChangeNotifier {
   AgentModel agent;
   String? agentStatus;
   String? paymentSystemStatus;
+  String? agentWalletNumber;
   Map<String, dynamic>? customerDetails;
   
   List<TerminalModel> terminals = [];
@@ -120,13 +121,19 @@ class AgentDetailViewModel extends ChangeNotifier {
           newRc = data['corporate_id'].toString();
         }
 
+        // Extract wallet number
+        final agentWallet = data['agent_wallet'];
+        if (agentWallet != null && agentWallet is Map) {
+          agentWalletNumber = agentWallet['wallet_number']?.toString();
+        }
+
         agent = agent.copyWith(
           rcNumber: newRc ?? agent.rcNumber,
           mapToCompany: newMtc ?? agent.mapToCompany,
         );
 
         agentExistsInPaymentSystem = true;
-        AppLogger.logInfo(_tag, 'Agent exists in payment system. RC: ${agent.rcNumber}, MTC: ${agent.mapToCompany}');
+        AppLogger.logInfo(_tag, 'Agent exists in payment system. Wallet: $agentWalletNumber');
       } else {
         agentExistsInPaymentSystem = false;
       }

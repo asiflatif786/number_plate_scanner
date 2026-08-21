@@ -50,8 +50,8 @@ class _TransactionDetailScreenState
                   _buildErrorBanner(vm),
                 ],
                 const SizedBox(height: 16),
-                if (vm.hasBankDetails) ...[
-                  _buildBankDetailsCard(vm),
+                if (vm.hasBankDetails || vm.agentWalletNumber != null) ...[
+                  _buildPaymentSystemDetailsCard(vm),
                   const SizedBox(height: 16),
                 ],
                 if (vm.transaction.status.toLowerCase() == 'pending' || 
@@ -68,7 +68,7 @@ class _TransactionDetailScreenState
     );
   }
 
-  Widget _buildBankDetailsCard(TransactionDetailViewModel vm) {
+  Widget _buildPaymentSystemDetailsCard(TransactionDetailViewModel vm) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -85,7 +85,7 @@ class _TransactionDetailScreenState
               Icon(Icons.account_balance, color: Colors.indigo.shade700, size: 20),
               const SizedBox(width: 8),
               Text(
-                'Bank Transfer Details',
+                'Payment System Details',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -95,21 +95,36 @@ class _TransactionDetailScreenState
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Transfer exactly the total amount to the account below:',
-            style: TextStyle(fontSize: 12, color: Colors.black87),
-          ),
-          const SizedBox(height: 12),
-          _buildBankInfoRow('Bank Name', vm.bankName ?? 'N/A'),
-          const SizedBox(height: 8),
-          _buildBankInfoRow(
-            'Account Number', 
-            vm.accountNumber ?? 'N/A', 
-            isCopyable: true,
-          ),
-          const SizedBox(height: 8),
-          _buildBankInfoRow('Account Name', vm.accountName ?? 'N/A'),
-          const SizedBox(height: 12),
+          if (vm.hasBankDetails) ...[
+            const Text(
+              'Bank Transfer Details:',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+            const SizedBox(height: 8),
+            _buildBankInfoRow('Bank Name', vm.bankName ?? 'N/A'),
+            const SizedBox(height: 8),
+            _buildBankInfoRow(
+              'Account Number', 
+              vm.accountNumber ?? 'N/A', 
+              isCopyable: true,
+            ),
+            const SizedBox(height: 8),
+            _buildBankInfoRow('Account Name', vm.accountName ?? 'N/A'),
+            const Divider(height: 24),
+          ],
+          if (vm.agentWalletNumber != null) ...[
+            const Text(
+              'Agent Wallet Details:',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+            const SizedBox(height: 8),
+            _buildBankInfoRow(
+              'Wallet Number', 
+              vm.agentWalletNumber!, 
+              isCopyable: true,
+            ),
+            const SizedBox(height: 12),
+          ],
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -122,7 +137,7 @@ class _TransactionDetailScreenState
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
-                    'After transfer, click "Verify Current Status" below to confirm payment.',
+                    'After payment, click "Verify Current Status" below to confirm.',
                     style: TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.w500),
                   ),
                 ),
