@@ -163,13 +163,32 @@ class TransactionDetailViewModel extends ChangeNotifier {
       ).timeout(const Duration(seconds: 25));
 
       final responseBody = jsonDecode(response.body);
+
+      // Handle the status_code: "00" format provided by the user for direct success
+      final statusCode = responseBody['status_code']?.toString();
+      if (statusCode == '00') {
+        if (responseBody['data'] != null) {
+          transaction = TransactionModel.fromJson(responseBody['data']);
+          // Force status to 'paid' for successful wallet/direct debit
+          if (transaction.status == 'pending') {
+            transaction = transaction.copyWith(status: 'paid');
+          }
+        }
+        return true;
+      }
+
       if (responseBody['success'] != true) throw Exception(responseBody['message'] ?? 'Payment initialization failed');
 
       final data = responseBody['data'];
       final String checkoutUrl = (data['checkout_url'] ?? '').toString();
       
-      await launchUrl(Uri.parse(checkoutUrl), mode: LaunchMode.externalApplication);
-      return true;
+      if (checkoutUrl.isNotEmpty) {
+        await launchUrl(Uri.parse(checkoutUrl), mode: LaunchMode.externalApplication);
+        // We return true but the status is likely still pending since it's a redirect
+        return true;
+      }
+      
+      return false;
     } catch (e) {
       errorMessage = e.toString();
       return false;
@@ -210,7 +229,7 @@ class TransactionDetailViewModel extends ChangeNotifier {
         'vehicle_type': transaction.vehicleType ?? 'N/A',
         'transaction_type': transaction.transactionType.contains('single') ? 'single' : 'complete',
         'transaction_state': transaction.transactionState ?? 'Inter State',
-        'transaction_ref': transaction.transactionReference, // Matches backend $request->transaction_ref
+        'transaction_ref': transaction.transactionReference, 
         'transaction_date': transactionDate,
         'origin_state': transaction.originState,
         'origin_lga': transaction.originLga,
@@ -228,6 +247,10 @@ class TransactionDetailViewModel extends ChangeNotifier {
 
       if (result.success && result.data != null) {
         transaction = result.data!;
+        // Force status to 'paid' if API indicate success (status_code 00) but data says pending
+        if (transaction.status == 'pending') {
+          transaction = transaction.copyWith(status: 'paid');
+        }
         verifyMessage = 'Wallet payment successful';
         notifyListeners();
         return true;

@@ -33,6 +33,7 @@ class AgentDashboardViewModel extends ChangeNotifier {
   String accountName = '';
   String agentWalletNumber = '';
   String paymentStatus = 'INACTIVE';
+  double walletBalance = 0.0;
   bool hasBankDetails = false;
   bool isBankLoading = false;
   String? bankErrorMessage;
@@ -42,6 +43,9 @@ class AgentDashboardViewModel extends ChangeNotifier {
   int pendingCount = 0;
   int declinedCount = 0;
   bool isRefreshing = false;
+
+  String get formattedWalletBalance =>
+      NumberFormat.currency(symbol: '₦', decimalDigits: 2).format(walletBalance);
 
   Future<void> loadSession() async {
     try {
@@ -164,8 +168,15 @@ class AgentDashboardViewModel extends ChangeNotifier {
           bankName = (bankObj?['name'] ?? bankData['bankName'] ?? 'SAFE HAVEN MFB').toString();
           accountNumber = (bankData['accountNumber'] ?? bankData['account_number'] ?? 'Not Generated').toString();
           accountName = (bankData['accountName'] ?? bankData['account_name'] ?? data['firstName'] ?? data['name'] ?? 'N/A').toString();
-          // Extract status from bankAccount object
           paymentStatus = (bankData['status'] ?? data['status'] ?? 'INACTIVE').toString().toUpperCase();
+          
+          // Extract balance
+          final dynamic bal = bankData['balance'] ?? 0;
+          if (bal is num) {
+            walletBalance = bal.toDouble();
+          } else if (bal is String) {
+            walletBalance = double.tryParse(bal.replaceAll(',', '')) ?? 0.0;
+          }
         } else {
           bankName = (data['bank_name'] ?? 'N/A').toString();
           accountNumber = (data['account_number'] ?? 'Not Generated').toString();
@@ -174,7 +185,7 @@ class AgentDashboardViewModel extends ChangeNotifier {
         }
         
         hasBankDetails = true;
-        AppLogger.logInfo(_tag, 'Bank details loaded: $accountNumber at $bankName, Status: $paymentStatus, Wallet: $agentWalletNumber');
+        AppLogger.logInfo(_tag, 'Bank details loaded: $accountNumber at $bankName, Status: $paymentStatus, Wallet: $agentWalletNumber, Balance: $walletBalance');
       } else {
         bankErrorMessage = response.message ?? 'Banking profile not found.';
         hasBankDetails = false;

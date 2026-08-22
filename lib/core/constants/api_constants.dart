@@ -82,6 +82,7 @@ class ApiConstants {
   static const String actionValidateCustomer = 'validate-customer';
   static const String actionCreateTransaction = 'create-transaction';
   static const String actionCreateCcaTransaction = 'create_cca_transaction';
+  static const String actionGetCcaTransaction = 'get_cca_transaction';
   static const String actionApproveTransaction = 'approve-transaction';
   static const String actionDeclineTransaction = 'decline-transaction';
   static const String actionVerifyTransaction = 'verify-transaction';

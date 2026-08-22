@@ -15,6 +15,7 @@ import 'features/onboarding/corporate_registration_viewmodel.dart';
 import 'features/onboarding/onboarding_complete_viewmodel.dart';
 import 'features/onboarding/terminal_profiling_viewmodel.dart';
 import 'features/splash/splash_viewmodel.dart';
+import 'features/transaction/wallet_transactions_viewmodel.dart';
 
 class DevHttpOverrides extends HttpOverrides {
   @override
@@ -52,6 +53,7 @@ class HaulageLevyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AdminDashboardViewModel()),
         ChangeNotifierProvider(create: (_) => AgentDashboardViewModel()),
         ChangeNotifierProvider(create: (_) => AddBankAccountViewModel()),
+        ChangeNotifierProvider(create: (_) => WalletTransactionsViewModel()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

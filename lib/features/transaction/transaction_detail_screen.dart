@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app/routes.dart';
 import '../../data/models/transaction_model.dart';
 import 'transaction_detail_viewmodel.dart';
 
@@ -217,7 +218,16 @@ class _TransactionDetailScreenState
           width: double.infinity,
           height: 50,
           child: ElevatedButton.icon(
-            onPressed: vm.isProcessingPayment ? null : () => vm.payWithWallet(),
+            onPressed: vm.isProcessingPayment ? null : () async {
+              final success = await vm.payWithWallet();
+              if (success && mounted) {
+                Navigator.pushReplacementNamed(
+                  context,
+                  AppRoutes.transactionSuccess,
+                  arguments: vm.transaction,
+                );
+              }
+            },
             icon: vm.isProcessingPayment
                 ? const SizedBox(
                     width: 20,
@@ -238,7 +248,14 @@ class _TransactionDetailScreenState
           width: double.infinity,
           height: 50,
           child: ElevatedButton.icon(
-            onPressed: vm.isProcessingPayment ? null : () => vm.payWithSquadCo(),
+            onPressed: vm.isProcessingPayment ? null : () async {
+              final success = await vm.payWithSquadCo();
+              if (success && mounted) {
+                // For SquadCo, we stay on this screen because they're redirected to browser.
+                // When they return via deep link, handled in main.dart/AppRoutes.
+                // But we could also show a dialog or instruction here.
+              }
+            },
             icon: const Icon(Icons.payment),
             label: const Text('Pay with SquadCo', style: TextStyle(fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(
@@ -256,7 +273,18 @@ class _TransactionDetailScreenState
     return Column(
       children: [
         OutlinedButton.icon(
-          onPressed: vm.isVerifying ? null : () => vm.verifyStatus(),
+          onPressed: vm.isVerifying ? null : () async {
+             await vm.verifyStatus();
+             if (vm.transaction.status.toLowerCase() != 'pending' && 
+                 vm.transaction.status.toLowerCase() != 'created' &&
+                 mounted) {
+               Navigator.pushReplacementNamed(
+                 context, 
+                 AppRoutes.transactionSuccess, 
+                 arguments: vm.transaction
+               );
+             }
+          },
           icon: vm.isVerifying
               ? const SizedBox(
                   width: 16,

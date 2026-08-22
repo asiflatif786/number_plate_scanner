@@ -3,6 +3,7 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_response.dart';
 import '../../core/utils/logger.dart';
 import '../models/transaction_model.dart';
+import '../models/wallet_transaction_model.dart';
 
 class TransactionRepository {
   static const String _tag = 'TxRepo';
@@ -50,6 +51,29 @@ class TransactionRepository {
     }
 
     AppLogger.logWarning(_tag, 'CCA Creation failed: ${response.failure?.message}');
+    return ApiResponse.failure(response.failure!);
+  }
+
+  Future<ApiResponse<List<WalletTransactionModel>>> getCcaWalletTransactions({
+    required String walletNumber,
+  }) async {
+    AppLogger.logInfo(_tag, 'Fetching CCA wallet transactions for: $walletNumber');
+
+    final response = await ApiClient.instance.tmsPost(
+      ApiConstants.actionGetCcaTransaction,
+      fields: {
+        'wallet_number': walletNumber,
+      },
+    );
+
+    if (response.success && response.data != null) {
+      final rawData = response.data!['data'] as List<dynamic>? ?? [];
+      final transactions = rawData
+          .map((e) => WalletTransactionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return ApiResponse.success(transactions, response.message);
+    }
+
     return ApiResponse.failure(response.failure!);
   }
 

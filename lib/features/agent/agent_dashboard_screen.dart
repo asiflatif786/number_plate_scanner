@@ -121,7 +121,34 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           const SizedBox(height: 4),
           Text('Agent: ${vm.agentNumber}',
               style: const TextStyle(fontSize: 13, color: Colors.white60)),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Wallet Balance',
+                      style: TextStyle(fontSize: 12, color: Colors.white70)),
+                  const SizedBox(height: 2),
+                  Text(vm.formattedWalletBalance,
+                      style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
+                ],
+              ),
+              if (vm.isRefreshing)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white70),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
           Row(
             children: [
               _chip(Icons.terminal, vm.terminalId),
@@ -171,28 +198,54 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF212121))),
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => vm.navigateToVehicleSearch(context),
-              icon: const Icon(Icons.payment, color: Colors.white),
-              label: const Text(
-                'Pay For Trips',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => vm.navigateToVehicleSearch(context),
+                  icon: const Icon(Icons.payment, color: Colors.white),
+                  label: const Text(
+                    'Pay For Trips',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A237E),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
                 ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1A237E),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pushNamed(context, AppRoutes.walletTransactions),
+                  icon: const Icon(Icons.history, color: Colors.white),
+                  label: const Text(
+                    'All Transaction',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo.shade700,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
                 ),
-                elevation: 2,
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -208,7 +261,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Transaction History",
+              const Text("Today's Statistics",
                   style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
